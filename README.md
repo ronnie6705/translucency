@@ -27,8 +27,6 @@ npm.cmd run dev
 
 Do not run development and production on the same port simultaneously. Stop the running command with Ctrl+C before switching. The service worker only registers in production. If switching back to development after installing the PWA, unregister the worker in browser DevTools → Application → Service Workers; this does not delete IndexedDB.
 
-## Use on mobile
-
 ## Work on the project across computers
 
 Source code is held in the private repository https://github.com/ronnie6705/translucency. Sign in to GitHub with access to that repository, then clone it on each computer:
