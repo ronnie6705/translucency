@@ -1,4 +1,4 @@
-const CACHE = "translucency-shell-v2-instances";
+const CACHE = "translucency-shell-v5-login";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -9,6 +9,8 @@ self.addEventListener("install", (event) => {
         "/icon-192.png",
         "/icon-512.png",
         "/icon-maskable.png",
+        "/rhythm/chronotype-axis.svg",
+        "/rhythm/lion-axis.svg",
       ]);
       const html = await (await cache.match("/")).text();
       const assets = [
@@ -37,6 +39,8 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== self.location.origin) return;
+  // Auth and API responses must never become offline app-shell cache entries.
+  if (url.pathname.startsWith('/auth/') || url.pathname.startsWith('/api/')) return;
   if (req.mode === "navigate") {
     event.respondWith(
       fetch(req)
@@ -54,6 +58,7 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icon-") ||
+    url.pathname.startsWith("/rhythm/") ||
     url.pathname === "/manifest.webmanifest"
   ) {
     event.respondWith(

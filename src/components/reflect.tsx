@@ -552,7 +552,7 @@ export function SettingsScreen({
       <Heading
         eyebrow="YOUR SPACE, YOUR CHOICES"
         title={privacy ? "Private by design." : "Make yourself at home."}
-        description="No account. No advertising. Your reflections stay in this browser on this device."
+        description="No advertising. Choose device-only use, or sign in to sync your private workspace."
       />
       <div className="settings-grid">
         <div className="form-stack">
@@ -639,16 +639,18 @@ export function SettingsScreen({
           )}
           <section className="form-section">
             <LockKeyhole size={23} />
-            <h2>Your local data</h2>
+            <h2>Your Translucency data</h2>
             <p>
-              Check-ins, roles, and reflections are stored in IndexedDB. They
-              are not sent to us. This is local storage, not an encrypted vault:
-              someone using your browser profile may be able to access it.
+              Guest check-ins, roles, and reflections stay in this browser. When
+              signed in, account records sync to Supabase and are also cached in
+              IndexedDB for offline use. Neither copy is an end-to-end encrypted
+              vault: someone using your browser profile may be able to access it.
             </p>
             <p>
-              Different browsers and devices have separate histories. Clearing
-              browser data also removes your reflections. Export a copy if you’d
-              like to keep them.
+              Guest histories are separate on each browser. Signing in opens your
+              account history; guest data is uploaded only through an explicit
+              import. Clearing browser data removes local copies and any unsynced
+              changes, not records already synced to your account. Export backups.
             </p>
             <Button secondary onClick={exportData}>
               <Download size={16} />
@@ -697,11 +699,12 @@ export function SettingsScreen({
               </Button>
             </div>
             <details className="delete-controls">
-              <summary>Delete all local user data</summary>
+              <summary>Delete all Translucency data</summary>
               <p>
                 This removes your profile, check-ins, influence moments, custom
-                sources, custom roles, and sessions from this browser. This
-                cannot be undone. Export first if you want a copy.
+                sources, custom roles, and sessions from the active workspace.
+                If signed in, this deletion also syncs to your account and other
+                devices. Export first if you want a copy. Rhythm planning data is managed separately below.
               </p>
               <label>
                 Type DELETE to confirm
@@ -718,7 +721,7 @@ export function SettingsScreen({
                   if (
                     await commit(
                       () => emptyData(),
-                      "All local user data deleted.",
+                      "All Translucency data deleted.",
                     )
                   ) {
                     try {
@@ -734,7 +737,7 @@ export function SettingsScreen({
                   setBusy(false);
                 }}
               >
-                Delete all local data
+                Delete Translucency data
               </Button>
             </details>
           </section>

@@ -3,18 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
-  Circle,
   Droplets,
-  Feather,
-  Grid2X2,
-  History,
   Leaf,
-  LockKeyhole,
-  Menu,
   Plus,
-  Settings,
-  Sparkles,
-  X,
 } from "lucide-react";
 import { defaultRoles, sources, suggestRole } from "@/lib/catalog";
 import { loadData, updateData } from "@/lib/storage";
@@ -41,7 +32,14 @@ import { Button, Chips, Heading, TextLink } from "./ui";
 import { CheckInScreen, SourceScreen } from "./check-in";
 import { RolesScreen, SessionScreen } from "./roles";
 import { JourneyScreen, InsightsScreen, SettingsScreen } from "./reflect";
+import { PlatformShell } from "./platform-shell";
+import Rhythm from "@/modules/rhythm/App";
+import { RhythmDataSettings } from "@/modules/rhythm/data-settings";
+import { AccountControls } from './account';
 export type Page =
+  | "rhythm"
+  | "rhythm-tasks"
+  | "rhythm-timeblocks"
   | "home"
   | "check-in"
   | "water"
@@ -64,18 +62,16 @@ export interface ScreenProps {
   go: (page: Page) => void;
   roles: Role[];
 }
-const navigation = [
-  { id: "home", label: "Home", icon: Grid2X2 },
-  { id: "journey", label: "Journey", icon: History },
-  { id: "roles", label: "Perspectives", icon: Feather },
-  { id: "insights", label: "Insights", icon: Sparkles },
-] as const;
 export default function App() {
   const [data, setData] = useState<AppData>();
-  const [page, setPage] = useState<Page>("home");
+  const [page, setCurrentPage] = useState<Page>("home");
+  const [reflectionPage, setReflectionPage] = useState<Page>("home");
+  const setPage = useCallback((target: Page) => {
+    setCurrentPage(target);
+    if (!target.startsWith("rhythm")) setReflectionPage(target);
+  }, []);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [menu, setMenu] = useState(false);
   const [roleId, setRoleId] = useState("observer");
   const main = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -94,10 +90,14 @@ export default function App() {
     const channel = new BroadcastChannel("translucency");
     channel.onmessage = sync;
     window.addEventListener("focus", sync);
+    window.addEventListener("cloud-refreshed", sync);
     const hash = () => {
       const value = location.hash.slice(1) as Page;
       if (
         [
+          "rhythm",
+          "rhythm-tasks",
+          "rhythm-timeblocks",
           "home",
           "check-in",
           "water",
@@ -127,6 +127,7 @@ export default function App() {
     return () => {
       channel.close();
       window.removeEventListener("focus", sync);
+      window.removeEventListener("cloud-refreshed", sync);
       window.removeEventListener("hashchange", hash);
     };
   }, []);
@@ -139,9 +140,8 @@ export default function App() {
   const go = useCallback((target: Page) => {
     location.hash = target;
     setPage(target);
-    setMenu(false);
     window.scrollTo(0, 0);
-    requestAnimationFrame(() => main.current?.focus());
+    requestAnimationFrame(() => main.current?.focus({ preventScroll: true }));
   }, []);
   const commit: Commit = async (fn, message) => {
     try {
@@ -162,7 +162,8 @@ export default function App() {
   };
   if (!data)
     return (
-      <main className="loading">
+      <main className="platform-loading">
+        <AccountControls />
         <div className="brand-mark" />
         <h1>Translucency</h1>
         <p role="status">{error || "Making a little space…"}</p>
@@ -176,185 +177,49 @@ export default function App() {
     go("session");
   };
   return (
-    <>
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
-      {!data.profile.onboarded ? (
-        <>
-          {error && (
-            <div role="alert" className="notice">
-              {error}
-            </div>
-          )}
-          <Onboarding {...props} />
-        </>
-      ) : (
-        <div className="app-shell">
-          <aside className={`sidebar ${menu ? "open" : ""}`}>
-            <a className="brand" href="#home">
-              <span className="brand-mark" />
-              translucency<span className="brand-dot">®</span>
-            </a>
-            <p className="nav-caption">YOUR SPACE</p>
-            <nav aria-label="Main navigation">
-              {navigation.map((n) => (
-                <a
-                  key={n.id}
-                  href={`#${n.id}`}
-                  onClick={() => go(n.id)}
-                  className={page === n.id ? "active" : ""}
-                  aria-current={page === n.id ? "page" : undefined}
-                >
-                  <n.icon size={19} />
-                  {n.label}
-                  {page === n.id && <span className="nav-dot" />}
-                </a>
-              ))}
-            </nav>
-            <div className="sidebar-divider" />
-            <p className="nav-caption">THE EVERYDAY</p>
-            <nav aria-label="Your sources">
-              <a
-                href="#water"
-                className={page === "water" ? "active" : ""}
-                onClick={() => go("water")}
-              >
-                <Droplets size={18} />
-                Water sources
-              </a>
-              <a
-                href="#drying"
-                className={page === "drying" ? "active" : ""}
-                onClick={() => go("drying")}
-              >
-                <Leaf size={18} />
-                Drying sources
-              </a>
-              <a
-                href="#signals"
-                className={page === "signals" ? "active" : ""}
-                onClick={() => go("signals")}
-              >
-                <Circle size={17} />
-                Optional signals
-              </a>
-            </nav>
-            <div className="sidebar-bottom">
-              <div className="sidebar-note">
-                <span>◌</span>
-                <p>
-                  Understand yourself.
-                  <br />
-                  Then return to your life.
-                </p>
-              </div>
-              <a
-                className="settings-link"
-                href="#settings"
-                onClick={() => go("settings")}
-              >
-                <Settings size={18} />
-                Settings & privacy
-              </a>
-              <span className="local-caption">
-                <span /> On this device. Just for you.
-              </span>
-            </div>
-          </aside>
-          <div className="workspace">
-            <div className="topbar">
-              <span className="topbar-title">
-                A little space to understand.
-              </span>
-              <button
-                className="mobile-menu"
-                aria-label={menu ? "Close navigation" : "Open navigation"}
-                onClick={() => setMenu(!menu)}
-              >
-                {menu ? <X /> : <Menu />}
-              </button>
-              <span className="topbar-date">
-                {new Date().toLocaleDateString("en-AU", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                })}
-              </span>
-              <button
-                className="avatar"
-                aria-label="Open settings"
-                onClick={() => go("settings")}
-              >
-                {data.profile.name ? (
-                  data.profile.name[0].toUpperCase()
-                ) : (
-                  <Leaf size={17} />
-                )}
-              </button>
-            </div>
-            <main id="main" ref={main} tabIndex={-1}>
-              {error && (
-                <div role="alert" className="notice">
-                  {error}
-                </div>
+    <PlatformShell page={page} reflectionPage={reflectionPage} go={go} name={data.profile.name}>
+      <main id="main" ref={main} tabIndex={-1} className="platform-main">
+        <AccountControls />
+        {error && <div role="alert" className="platform-notice">{error}</div>}
+        <div hidden={!page.startsWith("rhythm")} className="rhythm-module">
+          <header className="module-heading"><p>PLAN WITH YOUR ENERGY</p><h1>Find your rhythm.</h1><span>A little structure. More room for life.</span></header>
+          <Rhythm section={page} />
+        </div>
+        <div className="translucency-module" hidden={page.startsWith("rhythm")}>
+          {!data.profile.onboarded && reflectionPage !== "settings" && reflectionPage !== "privacy" ? <Onboarding {...props} /> : <>
+              {reflectionPage === "home" && <Home {...props} useRole={useRole} />}
+              {reflectionPage === "check-in" && <CheckInScreen {...props} />}
+              {(["water", "drying", "signals"] as string[]).includes(reflectionPage) && (
+                <SourceScreen key={reflectionPage} {...props} kind={reflectionPage as Kind} />
               )}
-              {page === "home" && <Home {...props} useRole={useRole} />}
-              {page === "check-in" && <CheckInScreen {...props} />}
-              {(["water", "drying", "signals"] as string[]).includes(page) && (
-                <SourceScreen key={page} {...props} kind={page as Kind} />
-              )}
-              {(page === "roles" || page === "custom-roles") && (
+              {(reflectionPage === "roles" || reflectionPage === "custom-roles") && (
                 <RolesScreen
                   {...props}
-                  custom={page === "custom-roles"}
+                  custom={reflectionPage === "custom-roles"}
                   useRole={useRole}
                 />
               )}
-              {page === "session" && (
+              {reflectionPage === "session" && (
                 <SessionScreen
                   key={roleId}
                   {...props}
                   role={roles.find((r) => r.id === roleId) || defaultRoles[2]}
                 />
               )}
-              {page === "journey" && <JourneyScreen {...props} />}
-              {page === "insights" && <InsightsScreen {...props} />}
-              {(page === "settings" || page === "privacy") && (
-                <SettingsScreen {...props} privacy={page === "privacy"} />
+              {reflectionPage === "journey" && <JourneyScreen {...props} />}
+              {reflectionPage === "insights" && <InsightsScreen {...props} />}
+              {(reflectionPage === "settings" || reflectionPage === "privacy") && (
+                <SettingsScreen {...props} privacy={reflectionPage === "privacy"} />
               )}
-            </main>
-            <footer className="app-footer">
-              <span>Translucent does not mean damaged.</span>
-              <button onClick={() => go("privacy")}>
-                <LockKeyhole size={12} />
-                Local by design
-              </button>
-            </footer>
-          </div>
-          <nav className="bottom-nav" aria-label="Mobile navigation">
-            {navigation.map((n) => (
-              <a
-                key={n.id}
-                href={`#${n.id}`}
-                onClick={() => go(n.id)}
-                aria-current={page === n.id ? "page" : undefined}
-              >
-                <n.icon size={20} />
-                {n.label}
-              </a>
-            ))}
-          </nav>
+          </>}
+          {(reflectionPage === "settings" || reflectionPage === "privacy") && <RhythmDataSettings />}
         </div>
-      )}
-      {notice && (
-        <div className="toast" role="status">
-          {notice}
-        </div>
-      )}
-    </>
+        {notice && <div className="platform-toast" role="status">{notice}</div>}
+      </main>
+    </PlatformShell>
   );
 }
+
 function Home({
   data,
   commit,
@@ -563,7 +428,7 @@ function Onboarding({ data, commit, roles, go }: ScreenProps) {
   const [demo, setDemo] = useState(true);
   const [busy, setBusy] = useState(false);
   return (
-    <main className="onboarding">
+    <div className="onboarding">
       <a className="brand" href="#">
         <span className="brand-mark" />
         translucency
@@ -660,8 +525,9 @@ function Onboarding({ data, commit, roles, go }: ScreenProps) {
                 Include labelled demo history to explore Journey and Insights
               </label>
               <p className="small">
-                Private on this browser. No account, advertising, or data sent
-                to a server. You can export or delete your data at any time.
+                No advertising. Guest records stay in this browser; signed-in
+                account records sync to the cloud. You can export or delete
+                your workspace data in Settings.
               </p>
               <details>
                 <summary>About this app and appropriate care</summary>
@@ -724,6 +590,6 @@ function Onboarding({ data, commit, roles, go }: ScreenProps) {
           </div>
         </section>
       </div>
-    </main>
+    </div>
   );
 }

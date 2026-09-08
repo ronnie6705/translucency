@@ -1,10 +1,11 @@
+const baseURL = process.env.BASE_URL || "http://127.0.0.1:3001";
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 fs.mkdirSync("test-results", { recursive: true });
 const profile = `test-results/influences-profile-${Date.now()}`;
 let context = await chromium.launchPersistentContext(profile, {
-  channel: "msedge",
+  channel: process.env.BROWSER_CHANNEL || (process.platform === "darwin" ? "chrome" : "msedge"),
   headless: true,
   viewport: { width: 1440, height: 1050 },
 });
@@ -31,7 +32,7 @@ const read = () =>
       }),
   );
 async function go(route = "home") {
-  await page.goto(`http://localhost:3000/#${route}`);
+  await page.goto(`${baseURL}/#${route}`);
   await page.locator("#main").waitFor();
 }
 async function add(type, category, note, impact) {
@@ -61,13 +62,13 @@ async function add(type, category, note, impact) {
 }
 try {
   // Genuine v1 IndexedDB fixture, before any new application code runs.
-  await page.route("http://localhost:3000/", (route) =>
+  await page.route(`${baseURL}/`, (route) =>
     route.fulfill({
       contentType: "text/html",
       body: "<html><body>Migration fixture</body></html>",
     }),
   );
-  await page.goto("http://localhost:3000/");
+  await page.goto(`${baseURL}/`);
   await page.evaluate(async () => {
     const now = new Date();
     now.setHours(7, 0, 0, 0);
@@ -114,7 +115,7 @@ try {
       };
     });
   });
-  await page.unroute("http://localhost:3000/");
+  await page.unroute(`${baseURL}/`);
   await page.reload();
   await go();
   let data = await read();
@@ -213,7 +214,7 @@ try {
   const expected = (await read()).influences;
   await context.close();
   context = await chromium.launchPersistentContext(profile, {
-    channel: "msedge",
+    channel: process.env.BROWSER_CHANNEL || (process.platform === "darwin" ? "chrome" : "msedge"),
     headless: true,
     viewport: { width: 1440, height: 1050 },
   });

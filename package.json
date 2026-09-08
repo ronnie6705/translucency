@@ -1,28 +1,33 @@
 {
-  "name": "translucency",
-  "version": "1.0.0",
+  "name": "rhythm-platform",
+  "version": "1.1.0",
   "private": true,
+  "engines": { "node": "22.x" },
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
+    "dev": "next dev --hostname 127.0.0.1",
     "build": "next build --webpack",
-    "start": "next start --hostname 0.0.0.0",
+    "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "node --import tsx --test tests/*.test.ts",
     "test:e2e": "node tests/browser-check.mjs",
-    "test:influences": "node tests/influences-browser.mjs"
+    "test:influences": "node tests/influences-browser.mjs",
+    "test:platform": "node tests/platform-browser.mjs",
+    "test:accounts": "node tests/account-browser.mjs"
   },
   "dependencies": {
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "lucide-react": "^0.468.0"
+    "@supabase/supabase-js": "^2.116.0",
+    "lucide-react": "^0.468.0",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
+    "@electric-sql/pglite": "^0.5.8",
+    "@playwright/test": "^1.58.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "tsx": "^4.19.0",
-    "@playwright/test": "^1.58.0"
+    "typescript": "^5.7.0"
   }
 }

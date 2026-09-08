@@ -1,10 +1,11 @@
+const baseURL = process.env.BASE_URL || "http://127.0.0.1:3001";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 const context = await chromium.launchPersistentContext(
   `test-results/profile-${Date.now()}`,
   {
-    channel: "msedge",
+    channel: process.env.BROWSER_CHANNEL || (process.platform === "darwin" ? "chrome" : "msedge"),
     headless: true,
     viewport: { width: 1440, height: 1100 },
   },
@@ -15,7 +16,7 @@ page.on("pageerror", (e) => errors.push(e.message));
 fs.mkdirSync("test-results", { recursive: true });
 const button = (name) => page.getByRole("button", { name, exact: true });
 async function go(hash) {
-  await page.goto(`http://localhost:3000/#${hash}`);
+  await page.goto(`${baseURL}/#${hash}`);
   await page.locator("#main").waitFor();
 }
 async function db() {
@@ -36,10 +37,11 @@ async function db() {
   );
 }
 try {
-  await page.goto("http://localhost:3000");
+  await page.goto(`${baseURL}`);
   await page
     .getByRole("heading", {
       name: "Understand yourself. Then return to your life.",
+      level: 1,
     })
     .waitFor();
   await page.evaluate(() => {
@@ -54,7 +56,7 @@ try {
   await button("Continue").click();
   await button("Continue").click();
   await button("Enter your space").click();
-  await page.locator("#main").waitFor();
+  await page.getByRole("heading", { name: /Good .*Alex/ }).waitFor();
   assert.equal((await db()).profile.onboarded, true);
   await page.reload();
   await page.getByRole("heading", { name: /Good .*Alex/ }).waitFor();
@@ -83,6 +85,7 @@ try {
   await go("drying");
   await page.getByLabel("Add your own").fill("A slow breakfast");
   await button("Add source").click();
+  await button("A slow breakfast").waitFor();
   assert.ok(
     (await db()).profile.customSources.drying.includes("A slow breakfast"),
   );
@@ -209,7 +212,7 @@ try {
       );
       assert.equal(overflow, false, `overflow at ${width} ${route}`);
       if (width === 390 && ["home", "roles", "journey"].includes(route)) {
-        await page.locator("h1").click();
+        await page.locator(".translucency-module h1").click();
         await page.evaluate(() => {
           document.activeElement?.blur();
           window.scrollTo(0, 0);
@@ -271,7 +274,7 @@ try {
   await page
     .getByRole("heading", { name: "Your material has a history." })
     .waitFor();
-  await page.goto("http://localhost:3000/#check-in");
+  await page.goto(`${baseURL}/#check-in`);
   await button("Opaque").click();
   await button("Save & return to my day").click();
   await page.getByRole("heading", { name: /Good .*Alex/ }).waitFor();
@@ -280,18 +283,20 @@ try {
   assert.equal((await db()).checkIns.filter((c) => !c.demo).length, 2);
   await context.setOffline(false);
   await go("privacy");
-  await page.getByText("Delete all local user data", { exact: true }).click();
+  await page.getByText("Delete all Translucency data", { exact: true }).click();
   await page.getByLabel("Type DELETE to confirm").fill("DELETE");
-  await button("Delete all local data").click();
+  await button("Delete Translucency data").click();
   await page
     .getByRole("heading", {
       name: "Understand yourself. Then return to your life.",
+      level: 1,
     })
     .waitFor();
   await page.reload();
   await page
     .getByRole("heading", {
       name: "Understand yourself. Then return to your life.",
+      level: 1,
     })
     .waitFor();
   saved = await db();

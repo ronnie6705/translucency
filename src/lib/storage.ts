@@ -1,6 +1,7 @@
 import { emptyData, seedData } from "./seed";
 import type { AppData } from "./types";
 import { migrateData } from "./migration";
+import { activeAccount, readAccount, writeAccount } from './cloud/storage';
 const DB = "translucency-v1";
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -56,10 +57,15 @@ async function initialize(data: AppData) {
   });
 }
 export async function loadData() {
+  const account = activeAccount();
+  if (account) return readAccount(account, 'translucency', emptyData);
+  return loadGuestData();
+}
+export async function loadGuestData() {
   const existing = await read();
   if (existing) {
     if (existing.version === 2) return existing;
-    return updateData((d) => d);
+    return initialize(migrateData(existing));
   }
   const fresh = seedData();
   return initialize(fresh);
@@ -67,6 +73,8 @@ export async function loadData() {
 export async function updateData(
   change: (data: AppData) => AppData,
 ): Promise<AppData> {
+  const account = activeAccount();
+  if (account) return writeAccount(account, 'translucency', change);
   const update = async () => {
     const db = await open();
     return new Promise<AppData>((resolve, reject) => {
