@@ -59,7 +59,7 @@ export function PlatformShell({ page, reflectionPage, go, name, children }: { pa
       <aside ref={rail} id="product-navigation" className={`product-rail ${expanded ? "expanded" : ""} ${mobile ? "mobile-open" : ""}`}
         aria-label="Product navigation" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
         onFocusCapture={() => setFocused(true)} onBlurCapture={e => { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); }}>
-        <div className="rail-brand"><span className="platform-mark"><AudioLines size={23} /></span><span className="rail-label">Your space<span className="rail-brand-caption">REFLECT. PLAN. LIVE.</span></span></div>
+        <div className="rail-brand"><span className="platform-mark"><AudioLines size={23} /></span><span className="rail-label">Rhythm<span className="rail-brand-caption">REFLECT. PLAN. LIVE.</span></span></div>
         <div className="rail-section-label rail-label">YOUR APPS</div>
         <nav aria-label="Switch app" className="product-switcher">
           <a href={`#${reflectionPage}`} title="Translucency" aria-label="Translucency" aria-current={!rhythm ? "true" : undefined} className={!rhythm ? "selected" : ""} onClick={e => { e.preventDefault(); navigate(reflectionPage); }}>
@@ -85,7 +85,7 @@ export function PlatformShell({ page, reflectionPage, go, name, children }: { pa
       <div className="platform-workspace" inert={mobile || undefined}>
         <header className="platform-topbar">
           <button ref={trigger} className="platform-menu" aria-label="Open navigation" aria-expanded={mobile} aria-controls="product-navigation" onClick={() => setMobile(true)}><Menu size={22} /></button>
-          <div className="platform-breadcrumb">Your space<span>/</span><strong>{rhythm ? "Rhythm" : "Translucency"}</strong></div>
+          <div className="platform-breadcrumb">Rhythm<span>/</span><strong>{rhythm ? "Planning" : "Translucency"}</strong></div>
           <span className="platform-private"><LockKeyhole size={13} /> {activeAccount() ? 'Account workspace' : 'Only on this device'}</span>
           <button className="platform-avatar" aria-label="Open settings" onClick={() => go("settings")}>{name?.[0]?.toUpperCase() || <Circle size={17} />}</button>
         </header>

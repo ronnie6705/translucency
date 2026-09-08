@@ -165,7 +165,7 @@ export default function App() {
       <main className="platform-loading">
         <AccountControls />
         <div className="brand-mark" />
-        <h1>Translucency</h1>
+        <h1>Rhythm</h1>
         <p role="status">{error || "Making a little space…"}</p>
         {error && <Button onClick={() => location.reload()}>Try again</Button>}
       </main>

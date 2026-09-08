@@ -7,7 +7,7 @@ import { authErrorMessage, rememberReturnPage } from '@/lib/cloud/auth-ui';
 type Mode = 'signin' | 'signup' | 'reset' | 'link';
 export function AuthFrame({ children }: { children: ReactNode }) {
   return <main className="auth-screen">
-    <div className="auth-brand"><Waves size={27} aria-hidden="true" /><span>rhythm<span className="auth-brand-caption">WITH TRANSLUCENCY</span></span></div>
+    <div className="auth-brand"><Waves size={27} aria-hidden="true" /><span>rhythm<span className="auth-brand-caption">REFLECT. PLAN. LIVE.</span></span></div>
     <section className="auth-card" aria-label="Your account">{children}</section>
     <p className="auth-footer">A little structure. A little space. All yours.</p>
   </main>;

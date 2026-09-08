@@ -4,14 +4,15 @@ import "./influences.css";
 import "@/modules/rhythm/App.css";
 import "./design-system.css";
 export const metadata: Metadata = {
-  title: "Your space — Translucency & Rhythm",
+  title: "Rhythm",
+  applicationName: "Rhythm",
   description:
-    "Understand what you are carrying, then plan a day that respects it. Translucency and Rhythm, together.",
+    "Rhythm brings reflection and energy-aware planning together. Understand what you are carrying, then plan a day that respects it.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Your space",
+    title: "Rhythm",
   },
   icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
 };

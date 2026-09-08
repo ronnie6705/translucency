@@ -1,4 +1,4 @@
-const CACHE = "translucency-shell-v5-login";
+const CACHE = "rhythm-shell-v6-brand";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -29,7 +29,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       for (const name of await caches.keys())
-        if (name.startsWith("translucency-shell-") && name !== CACHE)
+        if ((name.startsWith("translucency-shell-") || name.startsWith("rhythm-shell-")) && name !== CACHE)
           await caches.delete(name);
       await self.clients.claim();
     })(),

@@ -1,6 +1,6 @@
-# Your space — Translucency & Rhythm
+# Rhythm
 
-A local-first Next.js PWA that brings reflection and energy-aware planning into one application. The shared visual system comes from Rhythm: system typography, black and indigo backgrounds, glass surfaces, rounded cards and controls, and light/indigo task-building dialogs.
+A local-first Next.js PWA that brings reflection and energy-aware planning into one application. Rhythm is the name of the unified project; Translucency remains its reflection module. The shared visual system comes from Rhythm: system typography, black and indigo backgrounds, glass surfaces, rounded cards and controls, and light/indigo task-building dialogs.
 
 ## Run locally
 

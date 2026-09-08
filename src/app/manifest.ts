@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Your space — Translucency & Rhythm",
-    short_name: "Your space",
-    description: "A little space to understand. Then return to your life.",
+    name: "Rhythm",
+    short_name: "Rhythm",
+    description: "Reflection and energy-aware planning, together in Rhythm.",
     start_url: "/",
     scope: "/",
     display: "standalone",
