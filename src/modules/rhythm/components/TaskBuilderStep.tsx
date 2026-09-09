@@ -13,6 +13,8 @@ interface TaskBuilderStepProps {
   timeZone: string;
   onTimeZoneChange(timeZone: string): void;
   onExport(): void;
+  onStartLiveTimer?(exportCalendar?: boolean): void;
+  startingTimer?: boolean;
   onDone(): void;
   startTime: string;
   endTime: string;
@@ -229,6 +231,8 @@ export const TaskBuilderStep: React.FC<TaskBuilderStepProps> = ({
   timeZone,
   onTimeZoneChange,
   onExport,
+  onStartLiveTimer,
+  startingTimer,
   onDone,
   startTime,
   endTime,
@@ -473,7 +477,7 @@ useEffect(() => {
 
 useEffect(() => {
   if (currentStep === 'adjust') {
-    adjustListRef.current?.focus();
+    adjustListRef.current?.focus({ preventScroll: true });
   }
 }, [currentStep, orderedAdjustItems.length]);
 
@@ -491,6 +495,7 @@ useEffect(() => {
   };
 
   const handleAdjustKey = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
     if (!orderedAdjustItems.length) return;
     const key = event.key;
     if (
@@ -680,6 +685,8 @@ useEffect(() => {
           endTime={endTime}
           onTimeZoneChange={onTimeZoneChange}
           onExport={onExport}
+          onStartLiveTimer={onStartLiveTimer}
+          startingTimer={startingTimer}
           onRangeChange={onRangeChange}
           onBack={() => setCurrentStep('adjust')}
           onDone={onDone}
@@ -771,12 +778,13 @@ useEffect(() => {
                               <TimeIcon />
                             </span>
                             <select
+                              aria-label={`Duration for ${item.task.name}`}
                               value={item.task.durationMinutes}
                               onChange={e =>
                                 handleAdjustTimeChange(item.task.id, Number(e.target.value))
                               }
                             >
-                              {ADJUST_TIME_OPTIONS.map(minutes => (
+                              {Array.from(new Set([...ADJUST_TIME_OPTIONS, item.task.durationMinutes])).sort((a, b) => a - b).map(minutes => (
                                 <option key={`time-${item.id}-${minutes}`} value={minutes}>
                                   {formatDuration(minutes)}
                                 </option>
@@ -784,12 +792,14 @@ useEffect(() => {
                             </select>
                           </label>
                           {!item.task.isBreak ? (
-                            <div className="adjust-pill energy">
+                            <label className="adjust-pill energy">
                               <span className="pill-icon">
                                 <EnergyIcon />
                               </span>
-                              <span>{item.task.energyRequired}</span>
-                            </div>
+                              <select aria-label={`Energy for ${item.task.name}`} value={item.task.energyRequired} onChange={event => onUpdate(item.task.id, { energyRequired: Number(event.target.value) as Task['energyRequired'] })}>
+                                {[1, 2, 3, 4, 5].map(value => <option key={value} value={value}>{value}</option>)}
+                              </select>
+                            </label>
                           ) : (
                             <span className="adjust-pill break-pill">Break</span>
                           )}

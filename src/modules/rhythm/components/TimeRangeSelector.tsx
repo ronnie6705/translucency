@@ -3,6 +3,7 @@ import type { Chronotype, Task } from '../types';
 import { TIME_ZONE_OPTIONS } from '../utils/timezone';
 import { planSequentialTasks } from '../utils/manualSchedule';
 import { generateSchedule } from '../rhythmScheduler';
+import { TimerIcon } from './LiveTimer';
 
 interface TimeRangeSelectorProps {
   tasks: Task[];
@@ -12,6 +13,8 @@ interface TimeRangeSelectorProps {
   onDone?: () => void;
   onReorder?: (nextOrder: Task[]) => void;
   onExport?: () => void;
+  onStartLiveTimer?: (exportCalendar?: boolean) => void;
+  startingTimer?: boolean;
   timeZone: string;
   startTime: string;
   endTime: string;
@@ -194,6 +197,8 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
   onDone,
   onReorder,
   onExport,
+  onStartLiveTimer,
+  startingTimer,
   timeZone,
   startTime,
   endTime,
@@ -474,7 +479,7 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
           <p className="eyebrow">Create a Timeblock</p>
           <h3>
             {mode === 'export'
-              ? "Let's move to your calendar"
+              ? "Let's get you all set up!"
               : mode === 'blocks'
               ? 'Edit your Time Block'
               : 'Set your Time Range'}
@@ -482,13 +487,13 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
         </div>
         <div className="time-range-header-actions">
           {onDone && (
-            <button type="button" className="task-step-done" onClick={onDone}>
-              Cancel
+            <button type="button" className="task-step-done" aria-label={mode === 'export' ? 'Close timeblock' : undefined} onClick={onDone}>
+              {mode === 'export' ? <TimerIcon name="close" /> : 'Cancel'}
             </button>
           )}
           {onBack && (
-            <button type="button" className="task-remove-toggle" onClick={handleBackClick}>
-              Back
+            <button type="button" className="task-remove-toggle" aria-label={mode === 'export' ? 'Back' : undefined} onClick={handleBackClick}>
+              {mode === 'export' ? <TimerIcon name="back" /> : 'Back'}
             </button>
           )}
           {onSaveTimeblock && (
@@ -604,13 +609,7 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
 
       {mode === 'export' && summary && (
         <div className="calendar-handoff-screen">
-          <div className="calendar-handoff-title">
-            <ListIcon />
-            <div>
-              <p>Create a Timeblock</p>
-              <h4>Let's get you all set up!</h4>
-            </div>
-          </div>
+          <p className="calendar-handoff-eyebrow">Your Timeblock</p>
 
           <div className="calendar-handoff-summary">
             <div>
@@ -630,7 +629,6 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
           </div>
 
           <div className="calendar-handoff-tasklist">
-            <p>Your Timeblock</p>
             <div className="calendar-handoff-taskrows">
               {timelineBlocks.map(
                 ({ task, title, key, startLabel, endLabel, scheduledMinutes }) => (
@@ -664,14 +662,20 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
 
           <div className="calendar-handoff-options">
             <p>Choose an option</p>
+            <button type="button" className="calendar-action secondary" onClick={() => onStartLiveTimer?.()} disabled={!onStartLiveTimer || !tasks.length || startingTimer}>
+              <TimerIcon name="timer" /><span>{startingTimer ? 'Starting…' : 'Start a Live Timer'}</span>
+            </button>
             <button
               type="button"
               className="calendar-action secondary"
               onClick={onExport}
               disabled={!onExport || !tasks.length}
             >
-              <CalendarIcon />
+              <TimerIcon name="calendar" />
               <span>Export to ICS</span>
+            </button>
+            <button type="button" className="calendar-action secondary" onClick={() => onStartLiveTimer?.(true)} disabled={!onStartLiveTimer || !tasks.length || startingTimer}>
+              <TimerIcon name="calendar" /><TimerIcon name="timer" /><span>Both Live Timer &amp; ICS</span>
             </button>
           </div>
         </div>

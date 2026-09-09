@@ -1,0 +1,92 @@
+.rhythm-module .timer-icon { width: 24px; height: 24px; flex: 0 0 auto; object-fit: contain; }
+.rhythm-module .live-timer-modal { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; padding: 80px 24px 54px; overflow: auto; color: #fff; background: transparent; box-sizing: border-box; }
+.rhythm-module .live-timer-modal::backdrop { background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.9)); backdrop-filter: blur(10px); }
+.rhythm-module .live-timer-stage { width: 580px; max-width: 100%; padding-left: 79px; margin: 0 auto; box-sizing: border-box; }
+.rhythm-module .live-timer-card { position: relative; padding: 20px; border: 1px solid var(--glass-border); border-radius: 24px; background: var(--glass); box-shadow: 0 4px 63px rgba(0,0,0,.55); backdrop-filter: blur(10px); color: #fff; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif; text-align: left; }
+.rhythm-module .live-timer-card { line-height: normal; }
+.rhythm-module .live-timer-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.rhythm-module .live-timer-kicker { margin: 0 0 4px; font-size: 12px; font-weight: 300; letter-spacing: 2.5px; text-transform: uppercase; color: var(--white-muted); }
+.rhythm-module .live-timer-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rhythm-module .live-timer-title h2 { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 500; overflow-wrap: anywhere; }
+.rhythm-module .live-timer-title > span { border-radius: 12px; padding: 6px 10px; background: var(--glass); font-size: 12px; white-space: nowrap; }
+.rhythm-module .live-timer-close { display: grid; place-items: center; width: 36px; height: 36px; padding: 3px; border: 0; background: none; color: white; box-shadow: none; flex-shrink: 0; }
+.rhythm-module .live-timer-close .timer-icon { width: 29px; height: 29px; }
+.rhythm-module .live-timer-status { margin: -8px 0 16px; font-size: 12px; color: #bfc1f1; }
+.rhythm-module .live-timer-blocks { position: relative; display: flex; flex-direction: column; gap: 12px; }
+.rhythm-module .live-timer-block { position: relative; display: flex; align-items: flex-start; gap: 12px; box-sizing: border-box; padding: 12px; border: 2px solid transparent; border-radius: 20px; background: rgba(191,193,241,.04); transition: border-color 1s ease, background-color 1s ease, box-shadow 1s ease; isolation: isolate; }
+.rhythm-module .live-timer-block::before { content: ''; position: absolute; z-index: -1; inset: -2px; border-radius: inherit; background: linear-gradient(180deg,rgba(191,193,241,.2),rgba(191,193,241,.4) 50%,rgba(191,193,241,.6) 75%,rgba(191,193,241,.8)); opacity: 1; transition: opacity 1s ease; }
+.rhythm-module .live-timer-block.past { border-color: rgba(191,193,241,.2); }
+.rhythm-module .live-timer-block.past::before { opacity: 0; }
+.rhythm-module .live-timer-block.active { border-color: #bfc1f1; background-color: rgba(109,114,245,.22); box-shadow: 0 0 32px rgba(109,114,245,.18); }
+.rhythm-module .live-timer-block.active::before { opacity: .78; }
+.rhythm-module .live-timer-block.is-break { padding-block: 10px; }
+.rhythm-module .live-timer-task-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 12px; background: var(--glass); transition: box-shadow 1s ease; }
+.rhythm-module .live-timer-task-icon .timer-icon { width: 20px; height: 20px; }
+.rhythm-module .active .live-timer-task-icon { box-shadow: 0 0 20px rgba(191,193,241,.35); }
+.rhythm-module .live-timer-copy { min-width: 0; flex: 1; }
+.rhythm-module .live-timer-copy time { display: block; font-size: 10px; line-height: 1.25; letter-spacing: .5px; font-weight: 300; color: var(--white-muted); }
+.rhythm-module .live-timer-copy h3 { margin: 2px 0 0; font-size: 14px; line-height: 1.25; font-weight: 600; overflow-wrap: anywhere; }
+.rhythm-module .live-timer-badges { display: flex; gap: 8px; flex-shrink: 0; }
+.rhythm-module .live-timer-badges > span { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 12px; background: var(--glass); font-size: 10px; line-height: 12px; white-space: nowrap; }
+.rhythm-module .live-timer-badges .timer-icon { width: 12px; height: 12px; }
+.rhythm-module .live-timer-now { position: absolute; left: -20px; right: -20px; height: 0; z-index: 2; pointer-events: none; transition: top 1s linear; }
+.rhythm-module .live-timer-effects { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; z-index: 1; }
+.rhythm-module .live-timer-effects .live-timer-now { left: 0; right: 0; }
+.rhythm-module .live-timer-glow-window { position: absolute; top: -578px; height: 604px; width: 100%; overflow: hidden; pointer-events: none; }
+.rhythm-module .live-timer-glow { position: absolute; left: -4%; top: 0; width: 108%; height: 604px; max-width: none; object-fit: fill; }
+.rhythm-module .live-timer-now > span { position: absolute; right: calc(100% + 12px); top: -11px; color: #bfc1f1; font-size: 16px; font-weight: 500; line-height: 22px; white-space: nowrap; letter-spacing: .5px; text-shadow: 0 4px 17.7px rgba(109,114,245,.8); }
+.rhythm-module .live-timer-section { margin-bottom: 32px; }
+.rhythm-module .live-timer-section > h2 { margin: 0 0 18px; }
+.rhythm-module .live-timer-preview { display: block; position: relative; width: min(501px,100%); padding: 0; border: 0; border-radius: 24px; background: none; color: #fff; text-align: left; overflow: hidden; box-shadow: none; }
+.rhythm-module .live-timer-preview-content { max-height: 340px; overflow: hidden; pointer-events: none; mask-image: linear-gradient(#000 65%,transparent); }
+.rhythm-module .live-timer-preview .live-timer-now > span { display: none; }
+.rhythm-module .live-timer-preview .live-timer-glow { opacity: .65; }
+.rhythm-module .live-timer-open-hint { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 16px; background: var(--glass); font-size: 14px; }
+.rhythm-module .live-timer-preview:hover .live-timer-open-hint { background: rgba(191,193,241,.2); }
+.rhythm-module .live-timer-preview:focus-visible, .rhythm-module .live-timer-close:focus-visible { outline: 2px solid #bfc1f1; outline-offset: 4px; }
+@media (max-width: 640px) {
+  .rhythm-module .live-timer-modal { padding: 24px 12px; }
+  .rhythm-module .live-timer-stage { padding-left: 0; width: 501px; }
+  .rhythm-module .live-timer-card { padding: 14px; }
+  .rhythm-module .live-timer-block { flex-wrap: wrap; gap: 8px; }
+  .rhythm-module .live-timer-badges { margin-left: 48px; }
+  .rhythm-module .live-timer-copy { flex-basis: calc(100% - 56px); }
+  .rhythm-module .live-timer-now { left: -14px; right: -14px; }
+  .rhythm-module .live-timer-now > span { right: 10px; top: 4px; padding: 2px 6px; border-radius: 6px; background: #22213e; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rhythm-module .live-timer-block, .rhythm-module .live-timer-block::before, .rhythm-module .live-timer-task-icon, .rhythm-module .live-timer-now { transition: none; }
+}
+
+/* Final handoff: the neutral glass finish from the Figma reference. */
+.rhythm-module .flow-modal.modal-task[data-modal-size='calendar'] {
+  box-sizing: border-box;
+  width: min(904px, calc(100vw - 32px)); height: auto; min-height: 0; max-height: calc(100dvh - 24px);
+  padding: 28px; border-radius: 24px; background: rgba(33,33,35,.92); backdrop-filter: blur(20px);
+}
+.rhythm-module .flow-modal-backdrop:has([data-modal-size='calendar']) { background: rgba(0,0,0,.65); backdrop-filter: blur(10px); }
+.rhythm-module .flow-modal[data-modal-size='calendar'] .task-step.range-mode { min-height: 0; overflow: hidden; }
+.rhythm-module .flow-modal .time-range-card.calendar-mode { gap: 24px; min-height: 0; overflow: auto; }
+.rhythm-module .time-range-card.calendar-mode .time-range-header { gap: 20px; }
+.rhythm-module .time-range-card.calendar-mode .time-range-header h3 { font-size: 16px; line-height: 1.25; margin: 4px 0 0; font-weight: 500; }
+.rhythm-module .time-range-card.calendar-mode .time-range-header .eyebrow { font-size: 12px; letter-spacing: 2.5px; }
+.rhythm-module .time-range-card.calendar-mode .time-range-header-actions { gap: 12px; }
+.rhythm-module .flow-modal .time-range-card.calendar-mode .time-range-header-actions :is(.task-step-save,.task-remove-toggle,.task-step-done) { height: 48px; min-width: 48px; padding: 12px; border-radius: 12px; font-size: 16px; font-weight: 500; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.1); box-sizing: border-box; }
+.rhythm-module .time-range-card.calendar-mode .time-range-header-actions .task-step-save { padding: 12px 20px; }
+.rhythm-module .flow-modal .time-range-card.calendar-mode .time-range-header-actions .task-step-done { order: 3; min-width: 30px; border: 0; background: none; padding: 0; }
+.rhythm-module .time-range-card.calendar-mode .time-range-header-actions .task-remove-toggle span { font-size: 26px; line-height: 1; }
+.rhythm-module .calendar-mode > .time-range-summary { display: none; }
+.rhythm-module .calendar-mode .calendar-handoff-screen { flex: none; min-height: auto; border: 0; border-radius: 0; box-shadow: none; background: none; padding: 0; gap: 20px; overflow: visible; backdrop-filter: none; }
+.rhythm-module .calendar-handoff-eyebrow { margin: 0; font-size: 12px; font-weight: 300; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,.7); }
+.rhythm-module .calendar-mode .calendar-handoff-summary div { min-height: 72px; }
+.rhythm-module .calendar-mode .calendar-handoff-summary strong { font-weight: 400; }
+.rhythm-module .calendar-mode .calendar-handoff-taskrow { min-height: 82px; padding: 12px 20px; }
+.rhythm-module .calendar-mode .calendar-handoff-options { gap: 20px; }
+.rhythm-module .calendar-mode .calendar-action { font-weight: 600; }
+@media (max-width: 640px) {
+ .rhythm-module .flow-modal.modal-task[data-modal-size='calendar'] { padding: 18px; }
+ .rhythm-module .time-range-card.calendar-mode .time-range-header { flex-wrap: wrap; }
+ .rhythm-module .time-range-card.calendar-mode .calendar-handoff-summary { grid-template-columns: 1fr 1fr; }
+ .rhythm-module .calendar-mode .calendar-handoff-summary > div:last-child { grid-column: 1 / -1; }
+ .rhythm-module .calendar-mode .calendar-handoff-taskrow { flex-wrap: wrap; }
+}

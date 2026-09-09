@@ -1,0 +1,98 @@
+/* Shared dark-glass shell and controls for the entire timeblocking flow. */
+.rhythm-module .flow-modal-backdrop:has(.flow-unified) { padding: 16px; align-items: center; background: rgba(0,0,0,.65); backdrop-filter: blur(10px); box-sizing: border-box; }
+.rhythm-module .flow-modal.flow-unified[data-modal-size] { --modal-scale: 1; --flow-muted: #bcbcc7; color-scheme: dark; box-sizing: border-box; width: min(960px,100%); height: auto; min-height: 0; max-height: calc(100dvh - 32px); padding: 28px; border: 1px solid rgba(255,255,255,.2); border-radius: 24px; background: rgba(33,33,35,.96); color: #f6f5fb; box-shadow: 0 24px 80px #0008; overflow: auto; transform: none; transition: none; scrollbar-width: thin; scrollbar-color: #64646f transparent; }
+.rhythm-module .flow-modal.flow-unified[data-modal-size='compact'] { width: min(760px,100%); }
+.rhythm-module .flow-modal.flow-unified[data-modal-size='calendar'] { width: min(904px,100%); }
+.rhythm-module .flow-unified *, .rhythm-module .flow-unified *::before, .rhythm-module .flow-unified *::after { box-sizing: border-box; }
+.rhythm-module .flow-modal.flow-unified[data-modal-size] :is(.task-step,.task-step.range-mode,.task-step.adjust-mode,.time-range-card,.time-range-card.calendar-mode) { width: 100%; height: auto; min-height: 0; max-height: none; margin: 0; overflow: visible; flex: none; color: inherit; gap: 24px; }
+.rhythm-module .flow-modal.flow-unified :is(.task-step-header,.time-range-header) { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.rhythm-module .flow-modal.flow-unified :is(.task-step-header,.time-range-header) > div:first-child { flex: 1 1 240px; min-width: 0; }
+.rhythm-module .flow-modal.flow-unified :is(.task-step-header,.time-range-header) h3 { color: #f6f5fb; font-size: 20px; font-weight: 500; line-height: 1.35; margin: 5px 0 0; overflow-wrap: anywhere; }
+.rhythm-module .flow-modal.flow-unified :is(.eyebrow,.adjust-section-label) { font-size: 11px; letter-spacing: 2px; color: var(--flow-muted); line-height: 1.5; }
+.rhythm-module .flow-modal.flow-unified .task-step-subhead { font-size: 14px; line-height: 1.5; color: var(--flow-muted); margin: 8px 0 0; }
+.rhythm-module .flow-modal.flow-unified :is(.task-header-actions,.task-step-header-actions,.time-range-header-actions) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: 0 1 auto; }
+.rhythm-module .flow-modal.flow-unified :is(.task-header-actions,.task-step-header-actions,.time-range-header-actions) button { min-width: 44px; min-height: 44px; height: auto; margin: 0; padding: 10px 16px; border: 1px solid #ffffff30; border-radius: 12px; background: #ffffff12; color: #f6f5fb; font-size: 14px; line-height: 22px; font-weight: 500; box-shadow: none; transform: none; white-space: nowrap; }
+.rhythm-module .flow-modal.flow-unified :is(.task-header-actions,.task-step-header-actions,.time-range-header-actions) :is(.task-step-primary,.time-range-next) { background: #c5c3ed; border-color: #c5c3ed; color: #21212b; }
+.rhythm-module .flow-modal.flow-unified :is(.task-header-actions,.task-step-header-actions,.time-range-header-actions) .task-step-done { background: transparent; border-color: transparent; }
+.rhythm-module .flow-modal.flow-unified button:disabled { opacity: .45; cursor: not-allowed; }
+.rhythm-module .flow-modal.flow-unified :is(button,select,input):focus-visible { outline: 2px solid #c5c3ed; outline-offset: 3px; }
+.rhythm-module .flow-modal.flow-unified select { color-scheme: dark; }
+.rhythm-module .flow-modal.flow-unified select option { color: #f6f5fb; background: #29292f; }
+/* Chronotype: four equally weighted choices, with a single quiet selection. */
+.rhythm-module .flow-modal.flow-unified .chronotype-options { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 0; }
+.rhythm-module .flow-modal.flow-unified .chronotype-card { min-width: 0; min-height: 120px; padding: 18px 12px; gap: 10px; border: 1px solid #ffffff30; border-radius: 20px; background: #ffffff0d; color: #f6f5fb; font-size: 15px; font-weight: 500; box-shadow: none; }
+.rhythm-module .flow-modal.flow-unified .chronotype-card.selected { border-color: #c5c3ed; background: #c5c3ed20; box-shadow: inset 0 0 0 1px #c5c3ed; }
+.rhythm-module .flow-modal.flow-unified .chronotype-card .icon { height: 48px; display: grid; place-items: center; }
+.rhythm-module .flow-modal.flow-unified .chronotype-card svg { max-width: 70px; height: 44px; }
+.rhythm-module .flow-modal.flow-unified .chronotype-card path { fill: #deddf5; }
+.rhythm-module .flow-modal.flow-unified .energy-graph { padding: 16px; border-radius: 20px; background: #ffffff05; border: 1px solid #ffffff15; }
+.rhythm-module .flow-modal.flow-unified .graph-stage { max-width: 570px; }
+.rhythm-module .flow-modal.flow-unified .graph-axis { filter: brightness(0) invert(.8); }
+.rhythm-module .flow-modal.flow-unified .curve-svg path[stroke] { stroke: #c5c3ed; }
+.rhythm-module .flow-modal.flow-unified .curve-svg stop { stop-color: #bfc1f1; }
+/* Estimates and schedule cards share neutral surfaces; badges carry the data. */
+.rhythm-module .flow-modal.flow-unified :is(.adjust-task-card,.calendar-block) { background: linear-gradient(145deg,#ffffff12,#ffffff06); border: 1px solid #ffffff26; color: #f6f5fb; border-radius: 20px; box-shadow: none; padding: 18px; transform: none; }
+.rhythm-module .flow-modal.flow-unified .adjust-grid { margin: 0; gap: 12px; }
+.rhythm-module .flow-modal.flow-unified .adjust-task-card.selected { border-color: #c5c3ed; background: #c5c3ed15; }
+.rhythm-module .flow-modal.flow-unified .adjust-task-card.selected::after { display: none; }
+.rhythm-module .flow-modal.flow-unified .adjust-task-header { margin: 0; gap: 16px; flex-wrap: wrap; }
+.rhythm-module .flow-modal.flow-unified .adjust-task-header > div:first-child { flex: 1 1 200px; min-width: 0; }
+.rhythm-module .flow-modal.flow-unified .adjust-task-header p { font-size: 11px; color: var(--flow-muted); }
+.rhythm-module .flow-modal.flow-unified .adjust-task-header strong { margin-top: 4px; font-size: 16px; line-height: 1.45; overflow-wrap: anywhere; color: #f6f5fb; }
+.rhythm-module .flow-modal.flow-unified .adjust-chip-row { flex-wrap: wrap; gap: 8px; }
+.rhythm-module .flow-modal.flow-unified .adjust-pill { min-height: 44px; padding: 8px 10px; gap: 6px; border: 1px solid #ffffff26; border-radius: 12px; background: #ffffff0d; color: #f6f5fb; }
+.rhythm-module .flow-modal.flow-unified .adjust-pill select { color: #f6f5fb; font-size: 14px; padding: 0 4px; min-height: 26px; min-width: 48px; background: transparent; }
+.rhythm-module .flow-modal.flow-unified :is(.adjust-hint,.time-block-tip) { margin: 0; color: var(--flow-muted); font-size: 13px; line-height: 1.5; }
+/* Time selection keeps each list scrollable without forcing the whole dialog taller. */
+.rhythm-module .flow-modal.flow-unified .time-picker-columns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 0; min-height: 0; }
+.rhythm-module .flow-modal.flow-unified .time-column { min-width: 0; height: auto; gap: 10px; padding: 0; background: none; }
+.rhythm-module .flow-modal.flow-unified .time-column > p { margin: 0; color: #f6f5fb; font-size: 14px; font-weight: 500; }
+.rhythm-module .flow-modal.flow-unified .time-column-inner { width: 100%; height: clamp(180px,32dvh,300px); max-height: none; padding: 8px; border: 1px solid #ffffff20; border-radius: 20px; background: #ffffff08; overflow: auto; scrollbar-width: thin; scrollbar-color: #64646f transparent; }
+.rhythm-module .flow-modal.flow-unified .time-slot { width: 100%; min-height: 44px; margin: 0 0 4px; padding: 10px 6px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: #cdccd5; font-size: 14px; line-height: 22px; box-shadow: none; }
+.rhythm-module .flow-modal.flow-unified .time-slot.active { background: #c5c3ed; color: #21212b; border-color: #c5c3ed; }
+.rhythm-module .flow-modal.flow-unified .time-slot:not(:disabled):hover { border-color: #c5c3ed; }
+.rhythm-module .flow-modal.flow-unified .time-zone-selector { margin: 0; }
+.rhythm-module .flow-modal.flow-unified .time-zone-selector label { gap: 8px; font-size: 13px; color: var(--flow-muted); }
+.rhythm-module .flow-modal.flow-unified .time-zone-selector select { width: 100%; min-height: 44px; height: auto; padding: 12px; border: 1px solid #ffffff30; border-radius: 12px; background: #ffffff0d; color: #f6f5fb; font-size: 14px; appearance: auto; }
+.rhythm-module .flow-modal.flow-unified .time-range-summary.visible { padding: 18px; margin: 0; max-height: none; background: #ffffff08; border: 1px solid #ffffff20; border-radius: 20px; text-align: left; }
+.rhythm-module .flow-modal.flow-unified .time-range-summary h4 { margin: 0 0 16px; font-size: 14px; font-weight: 500; }
+.rhythm-module .flow-modal.flow-unified .time-summary-grid { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 16px; }
+.rhythm-module .flow-modal.flow-unified .time-summary-grid div { min-width: 0; }
+.rhythm-module .flow-modal.flow-unified .time-summary-grid strong { font-size: 16px; font-weight: 500; line-height: 1.4; margin-top: 6px; }
+.rhythm-module .flow-modal.flow-unified .time-summary-grid .label { font-size: 10px; letter-spacing: 1px; color: var(--flow-muted); }
+.rhythm-module .flow-modal.flow-unified .time-block-preview { flex: none; padding: 16px; border: 1px solid #ffffff20; border-radius: 20px; background: #ffffff05; }
+.rhythm-module .flow-modal.flow-unified .timeline-stack { height: auto !important; min-height: 0; flex: none; padding: 0; background: none; overflow: visible; gap: 12px; }
+.rhythm-module .flow-modal.flow-unified .calendar-block { height: auto !important; min-height: 100px; }
+.rhythm-module .flow-modal.flow-unified .block-content { align-items: flex-start; flex-wrap: wrap; }
+.rhythm-module .flow-modal.flow-unified .block-info { flex: 1 1 220px; }
+.rhythm-module .flow-modal.flow-unified .block-title { white-space: normal; overflow-wrap: anywhere; font-size: 15px; color: #f6f5fb; }
+.rhythm-module .flow-modal.flow-unified .block-reduced { color: #d9d6f4; font-size: 12px; line-height: 1.5; }
+.rhythm-module .flow-modal.flow-unified .meta-pill { padding: 6px 9px; border-radius: 10px; background: #ffffff12; color: #f6f5fb; font-size: 12px; }
+@media (max-width: 640px) {
+ .rhythm-module .flow-modal-backdrop:has(.flow-unified) { padding: 10px; }
+ .rhythm-module .flow-modal.flow-unified[data-modal-size] { width: 100%; max-height: calc(100dvh - 20px); padding: 18px; border-radius: 20px; }
+ .rhythm-module .flow-modal.flow-unified .chronotype-options { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .rhythm-module .flow-modal.flow-unified .chronotype-card { min-height: 104px; padding: 12px; }
+ .rhythm-module .flow-modal.flow-unified .energy-graph { padding: 8px; }
+ .rhythm-module .flow-modal.flow-unified .time-summary-grid { grid-template-columns: 1fr 1fr; }
+ .rhythm-module .flow-modal.flow-unified .time-summary-grid > div:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+ .rhythm-module .flow-modal.flow-unified .time-picker-columns { gap: 10px; }
+ .rhythm-module .flow-modal.flow-unified .time-range-header-actions { width: 100%; }
+ .rhythm-module .flow-modal.flow-unified .adjust-task-card { padding: 14px; }
+ .rhythm-module .flow-modal.flow-unified .time-block-preview { padding: 10px; }
+ .rhythm-module .flow-modal.flow-unified .calendar-block { padding: 14px; }
+}
+
+.rhythm-module .flow-modal.flow-unified :is(.task-step-header,.time-range-header) { flex-direction: row; }
+.rhythm-module .flow-modal.flow-unified .graph-axis-labels { position: absolute; inset: 0 8% 9% 4%; border-left: 1px solid #a8a8b5; border-bottom: 1px solid #a8a8b5; color: #c7c7d1; font-size: 12px; }
+.rhythm-module .flow-modal.flow-unified .graph-energy-label { position: absolute; left: -8px; top: 8px; writing-mode: vertical-rl; transform: rotate(180deg); translate: -100% 0; font-size: 11px; }
+.rhythm-module .flow-modal.flow-unified .graph-hour-label { position: absolute; right: 0; bottom: 8px; font-size: 11px; }
+.rhythm-module .flow-modal.flow-unified .graph-hour-ticks { position: absolute; top: calc(100% + 6px); width: 100%; display: flex; justify-content: space-between; line-height: 1; }
+@media (max-width: 640px) {
+ .rhythm-module .flow-modal.flow-unified .graph-stage { width: calc(100% - 18px); margin-left: 18px; }
+ .rhythm-module .flow-modal.flow-unified .graph-hour-ticks { font-size: 11px; }
+}
+@media (max-width: 760px) {
+ .rhythm-module .flow-modal.flow-unified[data-modal-size] :is(.task-step-header,.time-range-header) { flex-direction: column; align-items: stretch; gap: 16px; }
+ .rhythm-module .flow-modal.flow-unified[data-modal-size] :is(.task-step-header,.time-range-header) > div:first-child { flex: none; }
+}
