@@ -1,6 +1,7 @@
 import type { SavedTaskList, SavedTimeblock, Task } from './types';
 import { activeAccount, readAccount, writeAccount } from '../../lib/cloud/storage';
-export interface RhythmLibrary { version: 1; taskLists: SavedTaskList[]; timeblocks: SavedTimeblock[] }
+import { validLiveTimer, type LiveTimer } from './live-timer';
+export interface RhythmLibrary { version: 1; taskLists: SavedTaskList[]; timeblocks: SavedTimeblock[]; liveTimer?: LiveTimer }
 export const emptyLibrary = (): RhythmLibrary => ({ version: 1, taskLists: [], timeblocks: [] });
 const DB = 'rhythm-library-v1';
 function object(v: unknown): v is Record<string, unknown> { return !!v && typeof v === 'object' && !Array.isArray(v); }
@@ -13,6 +14,7 @@ function tasks(v: unknown): v is Task[] {
 function entry(v: unknown): v is SavedTaskList { return object(v) && typeof v.id === 'string' && typeof v.name === 'string' && typeof v.createdAt === 'string' && Number.isFinite(Date.parse(v.createdAt)) && tasks(v.tasks); }
 export function validateLibrary(value: unknown): RhythmLibrary {
   if (!object(value) || value.version !== 1 || !Array.isArray(value.taskLists) || !Array.isArray(value.timeblocks) || !value.taskLists.every(entry)) throw new Error('This is not a valid Rhythm backup.');
+  if (value.liveTimer !== undefined && !validLiveTimer(value.liveTimer)) throw new Error('Invalid live timer in backup.');
   for (const block of value.timeblocks) {
     if (!entry(block) || !object(block) || !object(block.dayConfig)) throw new Error('Invalid timeblock in backup.');
     const config = block.dayConfig;
@@ -79,5 +81,5 @@ export async function loadGuestLibrary(): Promise<RhythmLibrary> {
 export function mergeLibraries(existing: RhythmLibrary, incoming: RhythmLibrary): RhythmLibrary {
   // Import never overwrites an existing record; duplicate IDs keep the local version.
   const merge = <T extends { id: string }>(a: T[], b: T[]) => [...a,...b.filter(item => !a.some(old => old.id === item.id))];
-  return {version:1,taskLists:merge(existing.taskLists,incoming.taskLists),timeblocks:merge(existing.timeblocks,incoming.timeblocks)};
+  return {...existing,...(existing.liveTimer || incoming.liveTimer ? {liveTimer: existing.liveTimer ?? incoming.liveTimer} : {}),version:1,taskLists:merge(existing.taskLists,incoming.taskLists),timeblocks:merge(existing.timeblocks,incoming.timeblocks)};
 }

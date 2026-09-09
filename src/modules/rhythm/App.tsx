@@ -7,9 +7,11 @@ import type { ReactNode } from 'react';
 import { TaskBuilderStep } from './components/TaskBuilderStep';
 import type { Chronotype, DayConfig, SavedTaskList, SavedTimeblock, Task } from './types';
 import { generateICS } from './ics';
-const chronotypeAxis = "/rhythm/chronotype-axis.svg";
 import { DEVICE_TIME_ZONE } from './utils/timezone';
 import { buildManualSchedule } from './utils/manualSchedule';
+import { LiveTimerModal, LiveTimerPreview } from './components/LiveTimer';
+import './live-timer.css';
+import './timeblock-flow.css';
 
 const today = new Date();
 const todayStr = [
@@ -101,12 +103,9 @@ const chronotypeIconMap: Record<Chronotype, ReactNode> = {
 };
 
 function App({ section = "rhythm" }: { section?: string }) {
-  useEffect(() => {
-    if (section === "rhythm-tasks" || section === "rhythm-timeblocks") {
-      document.getElementById(section === "rhythm-tasks" ? "rhythm-task-lists" : "rhythm-timeblocks")?.scrollIntoView({ block: "start" });
-    }
-  }, [section]);
-  const { taskLists: savedTaskLists, timeblocks: savedTimeblocks, setSavedTaskLists, setSavedTimeblocks, ready, error: storageError, reload } = useRhythmLibrary();
+  const { taskLists: savedTaskLists, timeblocks: savedTimeblocks, liveTimer, save, setSavedTaskLists, setSavedTimeblocks, ready, error: storageError, reload } = useRhythmLibrary();
+  const [timerOpen, setTimerOpen] = useState(false);
+  const [startingTimer, setStartingTimer] = useState(false);
 
   const [dayConfig, setDayConfig] = useState<DayConfig>({
     date: todayStr,
@@ -138,6 +137,12 @@ function App({ section = "rhythm" }: { section?: string }) {
   const [taskFlowStage, setTaskFlowStage] = useState<
     'tasks' | 'adjust' | 'range-select' | 'range-blocks' | 'range-export'
   >('tasks');
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      flowDialog.current?.querySelector('.flow-modal')?.scrollTo({ top: 0 });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [flowStep, taskFlowStage, showFlowModal]);
 
   const [expandedTaskListId, setExpandedTaskListId] = useState<string | null>(
     () => savedTaskLists[0]?.id ?? 'preview-task-list-1'
@@ -191,6 +196,25 @@ function App({ section = "rhythm" }: { section?: string }) {
     if (!scheduleBlocks.length) return;
     const fileName = formatICSFileName(dayConfig.date);
     generateICS(scheduleBlocks, fileName, dayConfig.timezone);
+  };
+
+  const handleStartLiveTimer = async (exportCalendar = false) => {
+    if (startingTimer) return;
+    const blocks = buildManualSchedule(tasks, dayConfig);
+    if (!blocks.length) return;
+    setStartingTimer(true);
+    const timer = {
+      id: crypto.randomUUID(),
+      name: savedTimeblocks.find(block => block.id === activeTimeblockId)?.name ?? "Today's Plan",
+      timezone: dayConfig.timezone,
+      blocks,
+    };
+    const saved = await save(data => ({ ...data, liveTimer: timer }));
+    setStartingTimer(false);
+    if (!saved) return;
+    if (exportCalendar) generateICS(blocks, formatICSFileName(dayConfig.date), dayConfig.timezone);
+    closeFlowModal();
+    setTimerOpen(true);
   };
 
   const handleTimezoneChange = (timezone: string) => {
@@ -410,8 +434,9 @@ function App({ section = "rhythm" }: { section?: string }) {
     <div className="app">
       {storageError && <div className="platform-notice" role="alert">{storageError}</div>}
       <div className="app-main">
-        <section className="dashboard-shell" aria-label="Rhythm dashboard">
-          <div className="task-panel" id="rhythm-task-lists">
+        {section === 'rhythm-timeblocks' && liveTimer && <LiveTimerPreview timer={liveTimer} onOpen={() => setTimerOpen(true)} />}
+        <section className={`dashboard-shell${section === "rhythm-tasks" || section === "rhythm-timeblocks" ? " single-panel" : ""}`} aria-label="Rhythm dashboard">
+          {section !== "rhythm-timeblocks" && <div className="task-panel" id="rhythm-task-lists">
             <div className="dashboard-header task-panel-header">
               <div>
                 <p className="section-kicker">Task List</p>
@@ -544,9 +569,9 @@ function App({ section = "rhythm" }: { section?: string }) {
                 </p>
               )}
             </div>
-          </div>
+          </div>}
 
-          <aside className="timeblocks-panel" id="rhythm-timeblocks">
+          {section !== "rhythm-tasks" && <aside className="timeblocks-panel" id="rhythm-timeblocks">
             <div className="dashboard-header">
               <div className="timeblocks-title-row">
                 <div>
@@ -629,12 +654,12 @@ function App({ section = "rhythm" }: { section?: string }) {
                 </p>
               )}
             </div>
-          </aside>
+          </aside>}
         </section>
       </div>
       {showFlowModal && (
         <dialog ref={flowDialog} className="flow-modal-backdrop" aria-label={flowContext === 'task-list' ? 'Build a task list' : 'Create a timeblock'} onCancel={e => { e.preventDefault(); closeFlowModal(); }}>
-          <div className={`flow-modal ${modalThemeClass}`} data-modal-size={modalSize}>
+          <div className={`flow-modal flow-unified ${modalThemeClass}`} data-modal-size={modalSize}>
             {flowStep === 'chronotype' ? (
               <div className="task-step chronotype-step">
                 <div className="task-step-header">
@@ -665,6 +690,7 @@ function App({ section = "rhythm" }: { section?: string }) {
                         (dayConfig.chronotype === option.id ? ' selected' : '')
                       }
                       onClick={() => handleChronotypeSelect(option.id)}
+                      aria-pressed={dayConfig.chronotype === option.id}
                     >
                       <span className="icon" aria-hidden="true">
                         {option.icon}
@@ -689,6 +715,8 @@ function App({ section = "rhythm" }: { section?: string }) {
                 timeZone={dayConfig.timezone}
                 onTimeZoneChange={handleTimezoneChange}
                 onExport={handleExportTimeblocks}
+                onStartLiveTimer={handleStartLiveTimer}
+                startingTimer={startingTimer}
                 startTime={draftTimeRange?.startTime ?? ''}
                 endTime={draftTimeRange?.endTime ?? ''}
                 onRangeChange={(startTime, endTime) => {
@@ -712,6 +740,7 @@ function App({ section = "rhythm" }: { section?: string }) {
           </div>
         </dialog>
       )}
+      {timerOpen && liveTimer && <LiveTimerModal timer={liveTimer} onClose={() => setTimerOpen(false)} />}
     </div>
   );
 }
@@ -1017,9 +1046,9 @@ function ChronotypeGraph({ type }: { type: Chronotype }) {
   }
 
   return (
-    <div className="energy-graph custom-graph">
+    <div className="energy-graph custom-graph" role="img" aria-label={`${type} energy pattern over the day`}>
       <div className="graph-stage">
-        <img src={chronotypeAxis} alt="" aria-hidden="true" className="graph-axis" />
+        <div className="graph-axis-labels" aria-hidden="true"><span className="graph-energy-label">Energy level</span><span className="graph-hour-label">Hour</span><div className="graph-hour-ticks">{[3,6,9,12,15,18,21,24].map(hour => <span key={hour}>{hour}</span>)}</div></div>
         <div className="curve-layer">
           <div className="curve-content" key={type}>
             {customCurve}

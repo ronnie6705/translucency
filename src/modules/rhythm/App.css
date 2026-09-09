@@ -94,6 +94,10 @@
   min-height: calc(100vh - 80px);
 }
 
+.rhythm-module .dashboard-shell.single-panel {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .rhythm-module .task-panel {
   display: flex;
   flex-direction: column;
