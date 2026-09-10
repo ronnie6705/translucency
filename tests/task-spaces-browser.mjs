@@ -223,6 +223,11 @@ try {
     .poll(async () => (await cached()).spaces[0].tasks[0].completed)
     .toBe(true);
   await button("Edit energy for Task Name").click();
+  // Some browsers do not retain focus when a popover button is clicked.
+  // Its stacking order must follow the open state, rather than :focus-within.
+  await page.evaluate(() => document.activeElement?.blur());
+  await expect(page.locator('.task-quick-editor')).toBeVisible();
+  assert.equal(await page.locator('[data-task-id="a"]').evaluate(e => getComputedStyle(e).zIndex), '4');
   await page
     .locator(".task-quick-editor")
     .getByRole("button", { name: "2", exact: true })
@@ -353,6 +358,24 @@ try {
           ?.tasks.length,
     )
     .toBe(3);
+  await group.getByRole('button', {name: 'Edit energy for Third Task', exact: true}).click();
+  await page.evaluate(() => {
+    const original = navigator.locks.request.bind(navigator.locks);
+    navigator.locks.request = (...args) => {
+      navigator.locks.request = original;
+      return Promise.reject(new Error('Simulated storage failure'));
+    };
+  });
+  await group.locator('.task-quick-editor').getByRole('button', {name: '2', exact: true}).click();
+  await expect(group.locator('.task-quick-editor [role="alert"]')).toBeVisible();
+  await group.locator('.task-quick-editor').getByRole('button', {name: '2', exact: true}).click();
+  await expect(group.locator('.task-quick-editor')).toHaveCount(0);
+  await expect.poll(async () => (await cached()).taskLists.find(l => l.name === 'Grouped tasks').tasks.find(t => t.id === 'c').energyRequired).toBe(2);
+  await group.getByRole('button', {name: 'Edit duration for Third Task', exact: true}).click();
+  await group.locator('.task-quick-editor').getByLabel('Hours').fill('1');
+  await group.locator('.task-quick-editor').getByLabel('Minutes').fill('15');
+  await group.locator('.task-quick-editor').getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect.poll(async () => (await cached()).taskLists.find(l => l.name === 'Grouped tasks').tasks.find(t => t.id === 'c').durationMinutes).toBe(75);
   await group.getByRole("button", { name: "Rename", exact: true }).click();
   await dialog("Rename Task List").getByLabel("Task List name").fill("Chores");
   await dialog("Rename Task List")

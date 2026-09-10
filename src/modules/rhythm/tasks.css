@@ -181,6 +181,9 @@
   border-color: #ffffff80;
   z-index: 3;
 }
+.rhythm-module .tasks-row.quick-editor-open {
+  z-index: 4;
+}
 .rhythm-module .tasks-row.dragging {
   opacity: 0.4;
 }

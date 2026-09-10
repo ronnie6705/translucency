@@ -370,27 +370,28 @@ function TaskRow({
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!quick) return;
-    const outside = (e: MouseEvent | FocusEvent) => {
+    const outside = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) setQuick(null);
     };
-    document.addEventListener("mousedown", outside);
-    document.addEventListener("focusin", outside);
+    document.addEventListener("pointerdown", outside);
     return () => {
-      document.removeEventListener("mousedown", outside);
-      document.removeEventListener("focusin", outside);
+      document.removeEventListener("pointerdown", outside);
     };
   }, [quick]);
   const change = async (updates: Partial<Task>) => {
     setBusy(true);
     setOptimistic(updates);
-    await onUpdate(updates);
-    setOptimistic(null);
-    setBusy(false);
+    try {
+      return await onUpdate(updates);
+    } finally {
+      setOptimistic(null);
+      setBusy(false);
+    }
   };
   return (
     <div
       ref={ref}
-      className={`tasks-row ${task.completed ? "completed" : ""} ${dragging ? "dragging" : ""} ${dropTarget ? "task-drop-target" : ""}`}
+      className={`tasks-row ${quick ? "quick-editor-open" : ""} ${task.completed ? "completed" : ""} ${dragging ? "dragging" : ""} ${dropTarget ? "task-drop-target" : ""}`}
       data-task-id={task.id}
       draggable={!quick}
       {...dragEvents}
@@ -423,7 +424,7 @@ function TaskRow({
             <QuickTaskValue
               task={task}
               mode="energy"
-              onChange={(u) => void change(u)}
+              onChange={change}
               onClose={() => setQuick(null)}
             />
           )}
@@ -442,7 +443,7 @@ function TaskRow({
             <QuickTaskValue
               task={task}
               mode="time"
-              onChange={(u) => void change(u)}
+              onChange={change}
               onClose={() => setQuick(null)}
             />
           )}

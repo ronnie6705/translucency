@@ -204,13 +204,31 @@ export function QuickTaskValue({
 }: {
   task: Pick<Task, "durationMinutes" | "energyRequired">;
   mode: "energy" | "time";
-  onChange(updates: Partial<Task>): void;
+  onChange(updates: Partial<Task>): void | boolean | Promise<boolean>;
   onClose(): void;
 }) {
   const [hours, setHours] = useState(
     String(Math.floor(task.durationMinutes / 60)),
   );
   const [minutes, setMinutes] = useState(String(task.durationMinutes % 60));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const save = async (updates: Partial<Task>) => {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      if (await onChange(updates) === false) {
+        setError("Your change wasn’t saved. Please try again.");
+      } else {
+        onClose();
+      }
+    } catch {
+      setError("Your change wasn’t saved. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <div
       className="task-quick-editor"
@@ -231,10 +249,10 @@ export function QuickTaskValue({
                 autoFocus={n === task.energyRequired}
                 type="button"
                 key={n}
+                disabled={saving}
                 aria-pressed={n === task.energyRequired}
                 onClick={() => {
-                  onChange({ energyRequired: n as Task["energyRequired"] });
-                  onClose();
+                  void save({ energyRequired: n as Task["energyRequired"] });
                 }}
               >
                 {n}
@@ -271,6 +289,7 @@ export function QuickTaskValue({
           <button
             type="button"
             disabled={
+              saving ||
               Number(hours) * 60 + Number(minutes) <= 0 ||
               Number(hours) < 0 ||
               Number(hours) > 168 ||
@@ -278,16 +297,16 @@ export function QuickTaskValue({
               Number(minutes) > 59
             }
             onClick={() => {
-              onChange({
+              void save({
                 durationMinutes: Number(hours) * 60 + Number(minutes),
               });
-              onClose();
             }}
           >
             Apply
           </button>
         </>
       )}
+      {error && <p role="alert">{error}</p>}
     </div>
   );
 }
