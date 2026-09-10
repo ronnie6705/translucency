@@ -1,9 +1,10 @@
 "use client";
 // src/App.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRhythmLibrary } from "./use-library";
+import { useTaskWorkspace } from "./task-workspace";
 import type { ReactNode } from 'react';
 
+import { TasksPanel } from './components/TasksPanel';
 import { TaskBuilderStep } from './components/TaskBuilderStep';
 import type { Chronotype, DayConfig, SavedTaskList, SavedTimeblock, Task } from './types';
 import { generateICS } from './ics';
@@ -103,7 +104,7 @@ const chronotypeIconMap: Record<Chronotype, ReactNode> = {
 };
 
 function App({ section = "rhythm" }: { section?: string }) {
-  const { taskLists: savedTaskLists, timeblocks: savedTimeblocks, liveTimer, save, setSavedTaskLists, setSavedTimeblocks, ready, error: storageError, reload } = useRhythmLibrary();
+  const { taskLists: savedTaskLists, timeblocks: savedTimeblocks, liveTimer, save, setSavedTaskLists, setSavedTimeblocks, ready, error: storageError, reload } = useTaskWorkspace().library;
   const [timerOpen, setTimerOpen] = useState(false);
   const [startingTimer, setStartingTimer] = useState(false);
 
@@ -144,25 +145,15 @@ function App({ section = "rhythm" }: { section?: string }) {
     return () => cancelAnimationFrame(frame);
   }, [flowStep, taskFlowStage, showFlowModal]);
 
-  const [expandedTaskListId, setExpandedTaskListId] = useState<string | null>(
-    () => savedTaskLists[0]?.id ?? 'preview-task-list-1'
-  );
   const [activeTaskListId, setActiveTaskListId] = useState<string | null>(null);
 
   const [activeTimeblockId, setActiveTimeblockId] = useState<string | null>(null);
-  const [taskListSearch, setTaskListSearch] = useState('');
   const [timeblockSearch, setTimeblockSearch] = useState('');
   const [isTimeblockEditMode, setIsTimeblockEditMode] = useState(false);
   const [draftTimeRange, setDraftTimeRange] = useState<{
     startTime: string;
     endTime: string;
   } | null>(null);
-
-  const filteredTaskLists = useMemo(() => {
-    if (!taskListSearch.trim()) return savedTaskLists;
-    const query = taskListSearch.toLowerCase();
-    return savedTaskLists.filter(list => list.name.toLowerCase().includes(query));
-  }, [savedTaskLists, taskListSearch]);
 
   const filteredTimeblocks = useMemo(() => {
     if (!timeblockSearch.trim()) return savedTimeblocks;
@@ -284,18 +275,6 @@ function App({ section = "rhythm" }: { section?: string }) {
     setActiveTimeblockId(current => (current === timeblockId ? null : current));
   };
 
-  const handleStartTaskList = () => {
-    resetFlowVisualState();
-    setFlowContext('task-list');
-    setFlowStep('tasks');
-    setTaskBuilderInitialStep('tasks');
-    setActiveTimeblockId(null);
-    setActiveTaskListId(null);
-    setTasks([]);
-    setDraftTimeRange(null);
-    setShowFlowModal(true);
-  };
-
   const handleLoadSavedTaskList = (taskListId: string) => {
     const list = savedTaskLists.find(item => item.id === taskListId);
     if (!list) return;
@@ -316,7 +295,6 @@ function App({ section = "rhythm" }: { section?: string }) {
     const shouldDelete = window.confirm(`Delete "${list.name}"?`);
     if (!shouldDelete) return;
     setSavedTaskLists(prev => prev.filter(item => item.id !== taskListId));
-    setExpandedTaskListId(current => (current === taskListId ? null : current));
     setActiveTaskListId(current => (current === taskListId ? null : current));
   };
 
@@ -351,6 +329,7 @@ function App({ section = "rhythm" }: { section?: string }) {
     const trimmed = nameInput.trim();
     if (!trimmed) return;
     const payload: SavedTaskList = {
+      spaceId: existing?.spaceId,
       id: existing?.id ?? crypto.randomUUID(),
       name: trimmed,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
@@ -436,140 +415,7 @@ function App({ section = "rhythm" }: { section?: string }) {
       <div className="app-main">
         {section === 'rhythm-timeblocks' && liveTimer && <LiveTimerPreview timer={liveTimer} onOpen={() => setTimerOpen(true)} />}
         <section className={`dashboard-shell${section === "rhythm-tasks" || section === "rhythm-timeblocks" ? " single-panel" : ""}`} aria-label="Rhythm dashboard">
-          {section !== "rhythm-timeblocks" && <div className="task-panel" id="rhythm-task-lists">
-            <div className="dashboard-header task-panel-header">
-              <div>
-                <p className="section-kicker">Task List</p>
-                <h1>Saved task-lists appear in this section</h1>
-              </div>
-              <label className="dashboard-search">
-                  <span className="sr-only">Search task lists</span>
-                  <input
-                    type="search"
-                    placeholder="Search Task Lists"
-                    value={taskListSearch}
-                    onChange={e => setTaskListSearch(e.target.value)}
-                  />
-              </label>
-            </div>
-
-            <button type="button" className="add-list-card" onClick={handleStartTaskList}>
-              <ListIcon />
-              <span>Add Task List</span>
-            </button>
-
-            <div className="task-list-stack">
-              {filteredTaskLists.map(list => {
-                const isExpanded = expandedTaskListId === list.id;
-                return (
-                  <article
-                    key={list.id}
-                    className={`task-list-card${isExpanded ? ' expanded' : ''}`}
-                    onClick={() => {
-                      handleLoadSavedTaskList(list.id);
-                    }}
-                  >
-                    <div className="task-card-topline">
-                      <div className="task-card-identity">
-                        <ListIcon />
-                        <div>
-                          <p className="card-eyebrow">Task List</p>
-                          <h2>{list.name}</h2>
-                          <p>Created on {new Date(list.createdAt).toLocaleDateString()}</p>
-                        </div>
-                        <div className="meta-row">
-                          <MetaChip icon={<FileIcon />} label={`${list.tasks.length} tasks`} />
-                          <MetaChip
-                            icon={<ClockIcon />}
-                            label={formatMinutesFromTasks(list.tasks)}
-                          />
-                        </div>
-                      </div>
-                      <div className="task-card-actions">
-                        <button
-                          type="button"
-                          className="glass-action"
-                          onClick={event => {
-                            event.stopPropagation();
-                            handleLoadSavedTaskList(list.id);
-                          }}
-                        >
-                          <span>Edit</span>
-                          <EditIcon />
-                        </button>
-                        <button
-                          type="button"
-                          className="glass-action danger"
-                          onClick={event => {
-                            event.stopPropagation();
-                            handleDeleteTaskList(list.id);
-                          }}
-                        >
-                          <span>Delete</span>
-                          <TrashIcon />
-                        </button>
-                        <button
-                          type="button"
-                          className="glass-action emphasis"
-                          onClick={event => {
-                            event.stopPropagation();
-                            handleTimeblockSavedTaskList(list.id);
-                          }}
-                        >
-                          <span>Timeblock</span>
-                          <GridIcon />
-                        </button>
-                        <button
-                          type="button"
-                          className="chevron-button"
-                          aria-label={isExpanded ? 'Collapse task list' : 'Expand task list'}
-                          aria-expanded={isExpanded}
-                          onClick={event => {
-                            event.stopPropagation();
-                            setExpandedTaskListId(current =>
-                              current === list.id ? null : list.id
-                            );
-                          }}
-                        >
-                          <ChevronIcon flipped={isExpanded} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="task-card-details">
-                        <p className="card-eyebrow">Tasks</p>
-                        <div className="task-rows">
-                          {list.tasks.slice(0, 5).map((task, taskIndex) => (
-                            <div className="task-row" key={task.id}>
-                              <div>
-                                <p className="card-eyebrow">Task {taskIndex + 1}</p>
-                                <h3>{task.name}</h3>
-                              </div>
-                              <div className="meta-row">
-                                <MetaChip icon={<BoltIcon />} label={String(task.energyRequired)} />
-                                <MetaChip
-                                  icon={<ClockIcon />}
-                                  label={formatMinutesValue(task.durationMinutes)}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
-              {!filteredTaskLists.length && (
-                <p className="dashboard-empty">
-                  {taskListSearch.trim()
-                    ? 'No matching task lists.'
-                    : 'No saved task lists yet.'}
-                </p>
-              )}
-            </div>
-          </div>}
+          {section !== "rhythm-timeblocks" && <TasksPanel onTimeblock={handleTimeblockSavedTaskList} onEditList={handleLoadSavedTaskList} onDeleteList={handleDeleteTaskList} />}
 
           {section !== "rhythm-tasks" && <aside className="timeblocks-panel" id="rhythm-timeblocks">
             <div className="dashboard-header">

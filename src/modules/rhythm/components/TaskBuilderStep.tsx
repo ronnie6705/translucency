@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Chronotype, Task } from '../types';
+import { TaskDetailFields } from './TaskDetailFields';
+import { fixedTimeDuration } from '../task-spaces';
 import { TimeRangeSelector } from './TimeRangeSelector';
 
 interface TaskBuilderStepProps {
@@ -254,8 +256,6 @@ export const TaskBuilderStep: React.FC<TaskBuilderStepProps> = ({
   const [fixedStart, setFixedStart] = useState('');
   const [fixedEnd, setFixedEnd] = useState('');
   const [fixedTimeError, setFixedTimeError] = useState('');
-  const sliderRef = useRef<HTMLInputElement | null>(null);
-  const [sliderWidth, setSliderWidth] = useState(0);
   const [isTaskInputFocused, setTaskInputFocused] = useState(false);
   const [quickEditMode, setQuickEditMode] = useState<'none' | 'time' | 'energy'>('none');
   const [savedQuickEdit, setSavedQuickEdit] = useState<{
@@ -356,27 +356,6 @@ export const TaskBuilderStep: React.FC<TaskBuilderStepProps> = ({
   }, [hasName]);
 
   useEffect(() => {
-    const updateWidth = () => {
-      if (sliderRef.current) {
-        setSliderWidth(sliderRef.current.clientWidth);
-      }
-    };
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
-  }, []);
-
-  useEffect(() => {
-    if (!detailsOpen) return;
-    const id = requestAnimationFrame(() => {
-      if (sliderRef.current) {
-        setSliderWidth(sliderRef.current.clientWidth);
-      }
-    });
-    return () => cancelAnimationFrame(id);
-  }, [detailsOpen]);
-
-  useEffect(() => {
     if (!hasName) {
       setQuickEditMode('none');
     }
@@ -432,11 +411,6 @@ export const TaskBuilderStep: React.FC<TaskBuilderStepProps> = ({
       document.removeEventListener('focusin', handleGlobalInteraction);
     };
   }, [quickEditMode]);
-
-  const sliderPercent = (energy - 1) / 4;
-  const thumbWidth = 32;
-  const sliderLeft =
-    sliderPercent * Math.max(sliderWidth - thumbWidth, 0) + thumbWidth / 2;
 
   const toggleSavedQuickEdit = (taskId: string, mode: 'time' | 'energy') => {
     setSavedQuickEdit(prev =>
@@ -530,20 +504,6 @@ useEffect(() => {
     onUpdate(taskId, { durationMinutes: minutes });
   };
 
-  const getMinutesDifference = (start: string, end: string) => {
-    const [sh, sm] = start.split(':').map(Number);
-    const [eh, em] = end.split(':').map(Number);
-    if (
-      Number.isNaN(sh) ||
-      Number.isNaN(sm) ||
-      Number.isNaN(eh) ||
-      Number.isNaN(em)
-    ) {
-      return 0;
-    }
-    return eh * 60 + em - (sh * 60 + sm);
-  };
-
   const handleFixedTimeChange = (field: 'start' | 'end', value: string) => {
     const nextStart = field === 'start' ? value : fixedStart;
     const nextEnd = field === 'end' ? value : fixedEnd;
@@ -555,7 +515,7 @@ useEffect(() => {
     setFixedTimeError('');
 
     if (nextStart && nextEnd) {
-      const diff = getMinutesDifference(nextStart, nextEnd);
+      const diff = fixedTimeDuration(nextStart, nextEnd)!;
       if (diff <= 0) {
         setFixedTimeError('End time must be after start time');
         return;
@@ -1028,128 +988,10 @@ useEffect(() => {
               </span>
             </button>
 
-            <div
-              className={
-                'task-step-details' +
-                (detailsOpen && hasName ? ' open' : ' collapsed')
-              }
-            >
-              <p className="eyebrow">Task Elements</p>
-              <div className="detail-columns">
-                <div className="detail-col energy-field">
-                  <label>
-                    <div className="detail-heading">
-                      <span>Estimated Energy</span>
-                      <EnergyIcon active={hasName} />
-                    </div>
-                    <div className="energy-slider">
-                      <input
-                        ref={sliderRef}
-                        type="range"
-                        min="1"
-                        max="5"
-                        step="1"
-                        value={energy}
-                        onChange={e => setEnergy(Number(e.target.value))}
-                        disabled={!hasName}
-                      />
-                      <span
-                        key={energy}
-                        className="slider-value"
-                        style={{ left: `${sliderLeft}px` }}
-                      >
-                        {energy}
-                      </span>
-                    </div>
-                  </label>
-                </div>
-                <div className="detail-col time-field">
-                  <label>
-                    <div className="detail-heading">
-                      <span>Estimated Time</span>
-                      <TimeIcon active={hasName} />
-                    </div>
-                    <div className="time-inputs">
-                      <input
-                        type="number"
-                        min="0"
-                        max="12"
-                        value={hours}
-                        onChange={e =>
-                          setHours(Math.max(0, Number(e.target.value)))
-                        }
-                        aria-label="Hours"
-                        disabled={!hasName}
-                      />
-                      <span>:</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="55"
-                        step="5"
-                        value={minutes}
-                        onChange={e =>
-                          setMinutes(
-                            Math.min(55, Math.max(0, Number(e.target.value)))
-                          )
-                        }
-                        aria-label="Minutes"
-                        disabled={!hasName}
-                      />
-                    </div>
-                    <small>hh:mm</small>
-                  </label>
-                </div>
-              </div>
-            </div>
-            <div className="timing-block">
-              <div className={`fixed-time-section${isBreak ? ' break-selected' : ''}`}>
-                <div className="fixed-time-header">
-                  <div>
-                    <p className="eyebrow">Fixed Time Slot</p>
-                    <small>Lock this task to a specific window</small>
-                  </div>
-                </div>
-                <div className="fixed-time-fields">
-                  <label>
-                    Start
-                    <input
-                      type="time"
-                      value={fixedStart}
-                      onChange={e => handleFixedTimeChange('start', e.target.value)}
-                      disabled={!hasName}
-                    />
-                  </label>
-                  <label>
-                    End
-                    <input
-                      type="time"
-                      value={fixedEnd}
-                      onChange={e => handleFixedTimeChange('end', e.target.value)}
-                      disabled={!hasName}
-                    />
-                  </label>
-                </div>
-                {fixedTimeError && (
-                  <p className="fixed-time-error">{fixedTimeError}</p>
-                )}
-              </div>
-              <label
-                className={
-                  `break-checkbox` +
-                  (isBreak ? ' checked' : '') +
-                  (!hasName ? ' disabled' : '')
-                }
-              >
-                <input
-                  type="checkbox"
-                  checked={isBreak}
-                  onChange={e => setIsBreak(e.target.checked)}
-                  disabled={!hasName}
-                />
-                <span>Is this a break?</span>
-              </label>
-            </div>
+            <TaskDetailFields open={detailsOpen} hasName={hasName} energy={energy} hours={hours} minutes={minutes}
+              isBreak={isBreak} fixedStart={fixedStart} fixedEnd={fixedEnd} fixedTimeError={fixedTimeError}
+              setEnergy={setEnergy} setHours={setHours} setMinutes={setMinutes} setIsBreak={setIsBreak}
+              handleFixedTimeChange={handleFixedTimeChange} />
           </div>
         </div>
       </form>

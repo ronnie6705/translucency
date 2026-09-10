@@ -1,0 +1,908 @@
+@font-face {
+  font-family: Roboto;
+  src: url("/rhythm/tasks/roboto-400.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: Roboto;
+  src: url("/rhythm/tasks/roboto-500.ttf") format("truetype");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: Roboto;
+  src: url("/rhythm/tasks/roboto-600.ttf") format("truetype");
+  font-weight: 600;
+  font-display: swap;
+}
+/* Figma 1686:4509 / 1694:6276. Drawer motion inherits the existing
+   task-step-details-wrapper and task-step-details transitions from App.css. */
+.space-icon {
+  display: inline-block;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+.task-asset {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+.rail-spaces {
+  display: grid;
+  gap: 3px;
+  padding-left: 0;
+}
+.module-navigation .rail-spaces a,
+.module-navigation .rail-spaces button {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  border-radius: 10px;
+  padding: 9px 18px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}
+.rail-spaces .space-icon {
+  width: 18px;
+  height: 18px;
+}
+.module-navigation .rail-spaces a.active,
+.module-navigation .rail-spaces :is(a, button):hover {
+  background: #ffffff14;
+}
+.rhythm-module .tasks-panel {
+  min-width: 0;
+  width: 100%;
+  color: white;
+}
+.rhythm-module .tasks-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.rhythm-module .tasks-page-header h1 {
+  font-size: 22px;
+  margin: 8px 0;
+}
+.rhythm-module .tasks-page-header input {
+  width: 200px;
+  border: 1px solid #ffffff33;
+  background: #ffffff0d;
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: white;
+}
+.rhythm-module .tasks-add-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 1px dashed #ffffff40;
+  border-radius: 20px;
+  padding: 18px;
+  background: #ffffff08;
+  color: white;
+  font-size: 16px;
+  margin-bottom: 28px;
+  cursor: pointer;
+}
+.rhythm-module .tasks-add-button .task-asset {
+  width: 24px;
+  height: 24px;
+}
+.rhythm-module .tasks-add-button kbd {
+  margin-left: auto;
+  color: #ffffff80;
+  font-size: 12px;
+  font-family: inherit;
+}
+.rhythm-module .tasks-space {
+  margin: 0 0 28px;
+}
+.rhythm-module .tasks-space-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-radius: 20px;
+}
+.rhythm-module .tasks-space-heading > div {
+  display: flex;
+  gap: 8px;
+}
+.rhythm-module .tasks-space-heading button,
+.rhythm-module .tasks-list-actions button {
+  border: 0;
+  background: #ffffff0d;
+  color: #ffffffb3;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.rhythm-module .tasks-space-heading .tasks-space-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  color: white;
+  padding: 0;
+}
+.rhythm-module .tasks-space-title h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.rhythm-module .tasks-row-stack {
+  display: grid;
+  gap: 12px;
+}
+.rhythm-module .tasks-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  min-height: 58px;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #ffffff33;
+  border-radius: 20px;
+  background: #ffffff1a;
+  box-shadow: 0 4px 63px #0009;
+  backdrop-filter: blur(10px);
+  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+  cursor: grab;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    opacity 0.18s ease;
+}
+.rhythm-module .tasks-row:hover {
+  background: #ffffff24;
+}
+.rhythm-module .tasks-row:focus-within {
+  border-color: #ffffff80;
+  z-index: 3;
+}
+.rhythm-module .tasks-row.dragging {
+  opacity: 0.4;
+}
+.rhythm-module .tasks-row-name {
+  margin-right: auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 19px;
+}
+.rhythm-module .tasks-row.completed .tasks-row-name {
+  text-decoration: line-through;
+  color: #ffffff80;
+}
+.rhythm-module .task-completion {
+  width: 32px;
+  height: 32px;
+  position: relative;
+  flex: none;
+  display: block;
+  cursor: pointer;
+}
+.rhythm-module .task-completion input {
+  opacity: 0;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+.rhythm-module .task-completion > span {
+  display: block;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  margin: 2px;
+  background: #ffffff1f;
+  border: 1px solid #ffffff40;
+  border-radius: 8px;
+}
+.rhythm-module .task-completion input:checked + span {
+  background: none;
+  border: 0;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+}
+.rhythm-module .task-completion .task-asset {
+  width: 32px;
+  height: 32px;
+}
+.rhythm-module .task-completion input:focus-visible + span {
+  outline: 2px solid #b4a4ff;
+  outline-offset: 3px;
+}
+.rhythm-module .tasks-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 9.719px;
+  flex: none;
+}
+.rhythm-module .tasks-row-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4.859px;
+  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14.578px;
+  font-weight: 400;
+  line-height: 17px;
+  padding: 8px 12px;
+  border: 0.607px solid transparent;
+  border-radius: 12px;
+  background: #ffffff1a;
+  color: white;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.rhythm-module .tasks-row-controls .task-settings-button {
+  padding: 8px;
+  background: #ffffff0d;
+}
+.rhythm-module .task-quick-anchor {
+  position: relative;
+}
+.rhythm-module .task-quick-editor {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 10;
+  background: #29292e;
+  border: 1px solid #ffffff40;
+  box-shadow: 0 12px 32px #0008;
+  border-radius: 16px;
+  padding: 16px;
+  min-width: 220px;
+  cursor: default;
+  color: white;
+}
+.rhythm-module .task-quick-editor p {
+  font-size: 13px;
+  margin: 0 0 12px;
+  color: #ffffffb3;
+}
+.rhythm-module .task-energy-options {
+  display: flex;
+  gap: 6px;
+}
+.rhythm-module .task-energy-options button {
+  padding: 8px 12px;
+}
+.rhythm-module .task-energy-options button[aria-pressed="true"] {
+  background: #ffffff40;
+  outline: 1px solid white;
+}
+.rhythm-module .task-duration-inputs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.rhythm-module .task-duration-inputs label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+}
+.rhythm-module .task-duration-inputs input {
+  width: 80px;
+  min-width: 0;
+  padding: 8px;
+  background: #ffffff0d;
+  border: 1px solid #ffffff33;
+  border-radius: 8px;
+  color: white;
+}
+.rhythm-module .tasks-list-group {
+  border: 1px solid #ffffff33;
+  border-radius: 24px;
+  margin-top: 16px;
+  padding: 12px;
+  background: #ffffff05;
+}
+.rhythm-module .tasks-list-group summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  min-height: 40px;
+}
+.rhythm-module .tasks-list-group summary::after {
+  content: "⌄";
+  margin-left: auto;
+}
+.rhythm-module .tasks-list-group:not([open]) summary::after {
+  content: "›";
+}
+.rhythm-module .tasks-list-group summary > span:not(.task-icon-tile) {
+  color: #ffffff80;
+  font-size: 12px;
+}
+.rhythm-module .tasks-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.rhythm-module .tasks-list-empty {
+  color: #ffffff80;
+  padding: 12px;
+  font-size: 14px;
+}
+.rhythm-module .tasks-empty {
+  padding: 32px;
+  text-align: center;
+  border: 1px solid #ffffff20;
+  border-radius: 24px;
+}
+.rhythm-module .tasks-empty h2 {
+  font-size: 20px;
+}
+.rhythm-module .tasks-empty button {
+  color: white;
+  background: #ffffff1a;
+  border: 1px solid #ffffff33;
+  padding: 12px 20px;
+  border-radius: 12px;
+}
+.rhythm-module .task-drop-target {
+  outline: 2px solid #b4a4ff;
+  outline-offset: 3px;
+  background: #b4a4ff26;
+}
+.rhythm-module .task-group-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: #b4a4ff;
+  color: #141020;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.rhythm-module.task-modal {
+  color: white;
+  background: #252528;
+  border: 1px solid #ffffff33;
+  border-radius: 28px;
+  padding: 0;
+  width: min(600px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  box-shadow: 0 4px 63px #0009;
+  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.rhythm-module.task-modal::backdrop {
+  background: #000a;
+  backdrop-filter: blur(10px);
+}
+.rhythm-module.task-modal-wide {
+  width: 847px;
+  max-width: calc(100vw - 32px);
+  margin: max(24px, calc((100dvh - 700px) / 2)) auto auto;
+  overflow: visible;
+  border: 0;
+  border-radius: 30px;
+  background: transparent;
+  box-shadow: none;
+}
+.rhythm-module .task-composer {
+  position: relative;
+  width: 100%;
+}
+.rhythm-module .task-composer-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  height: 99px;
+  padding: 28px;
+  box-sizing: border-box;
+  border-radius: 30px;
+  border: 1px solid #ffffff33;
+  background: #ffffff1a;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 63px #0009;
+  position: relative;
+  z-index: 2;
+}
+.rhythm-module .task-composer-input > input {
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  outline: none;
+  border-radius: 0;
+  background: transparent;
+  color: white;
+  font-size: 20px;
+  font-weight: 400;
+  box-shadow: none;
+  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.rhythm-module .task-composer-input > input::placeholder {
+  color: white;
+  opacity: 1;
+}
+.rhythm-module .task-composer-input:focus-within {
+  border-color: #ffffff66;
+}
+.rhythm-module .task-composer-controls {
+  display: flex;
+  gap: 11.839px;
+  align-items: center;
+}
+.rhythm-module .task-composer-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff1a;
+  border: 0.74px solid transparent;
+  border-radius: 14.618px;
+  padding: 9.745px 14.618px;
+  height: 43px;
+  color: white;
+  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+  cursor: pointer;
+}
+.rhythm-module .task-composer-controls > div > button > .task-asset {
+  width: 19.49px;
+  height: 19.49px;
+}
+.rhythm-module .task-composer-controls .task-save {
+  font-size: 16px;
+  font-weight: 500;
+  padding: 12px 20px;
+  border: 0.715px solid #ffffff66;
+  border-radius: 12px;
+}
+.rhythm-module .task-destination-drawer.task-step-details-wrapper {
+  margin-top: -99px;
+  width: 100%;
+  border-radius: 28px;
+  padding: 120px 16px 16px;
+  backdrop-filter: blur(10px);
+  transform: translateY(0);
+  min-height: 99px;
+}
+.rhythm-module .task-destination-drawer.task-step-details-wrapper.hidden {
+  padding: 0 16px;
+  min-height: 99px;
+  max-height: 99px;
+  transform: translateY(-31px);
+}
+.rhythm-module
+  .task-destination-drawer.task-step-details-wrapper.visible.expanded {
+  min-height: 99px;
+  max-height: 999px;
+}
+.rhythm-module .task-destinations.task-step-details {
+  padding: 0;
+  margin: 0;
+  gap: 16px;
+  border-radius: 0;
+}
+.rhythm-module .task-destinations.task-step-details.open {
+  max-height: min(720px, calc(100dvh - 200px));
+  overflow: auto;
+  padding: 0;
+}
+.rhythm-module .task-destination-label {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300;
+  font-size: 12px;
+  letter-spacing: 2.5px;
+  line-height: 14px;
+  color: #ffffffb3;
+  margin: 0;
+}
+.rhythm-module .task-destination-space {
+  flex: none;
+}
+.rhythm-module .task-destination-space.expanded {
+  border: 1px solid #ffffff33;
+  border-radius: 30px;
+  background: rgba(107, 107, 107, 0.05);
+}
+.rhythm-module .task-destination-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 64px;
+  border: 1px solid #ffffff33;
+  border-radius: 20px;
+  background: #ffffff1a;
+  box-sizing: border-box;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 12px;
+  gap: 12px;
+  text-align: left;
+  flex: none;
+  box-shadow: 0 4px 63px #0009;
+}
+.rhythm-module .task-destination-space.expanded > .task-destination-header {
+  margin: -1px;
+  width: calc(100% + 2px);
+}
+.rhythm-module .task-destination-header > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rhythm-module .task-destination-header > button:first-child {
+  flex: 1;
+}
+.rhythm-module .task-destination-header > button:last-child > .task-asset {
+  width: 29.8px;
+  height: 18.9px;
+}
+.rhythm-module .task-icon-tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #ffffff1a;
+}
+.rhythm-module .task-icon-tile .task-asset {
+  width: 24px;
+  height: 24px;
+}
+.rhythm-module .task-destination-lists {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 12px 12px;
+}
+.rhythm-module .task-destination-list {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  border: 1px solid #ffffff33;
+  border-radius: 20px;
+  background: #ffffff0d;
+  padding: 12px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.rhythm-module .task-destination-list .task-icon-tile {
+  width: 34px;
+  height: 34px;
+  border-radius: 10.2px;
+}
+.rhythm-module .task-destination-list .task-asset {
+  width: 20.4px;
+  height: 20.4px;
+}
+.rhythm-module .task-create-destination {
+  border-style: dashed;
+  background: transparent;
+  justify-content: flex-start;
+  cursor: pointer;
+}
+.rhythm-module .task-destination-lists .task-create-destination {
+  order: -1;
+}
+.rhythm-module .chosen {
+  border-color: #ffffff99;
+  background: #ffffff1f;
+}
+.rhythm-module .task-small-form {
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+}
+.rhythm-module .task-modal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.rhythm-module .task-modal-heading h2 {
+  font-size: 22px;
+  margin: 0;
+  color: white;
+}
+.rhythm-module .task-small-form button {
+  background: #ffffff1a;
+  border: 1px solid #ffffff33;
+  border-radius: 12px;
+  color: white;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+.rhythm-module .task-modal-heading button {
+  font-size: 24px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+}
+.rhythm-module .task-small-form label {
+  color: #ffffffb3;
+  font-size: 14px;
+  display: grid;
+  gap: 8px;
+}
+.rhythm-module
+  .task-small-form
+  input:not([type="checkbox"]):not([type="range"]) {
+  background: #ffffff0d;
+  border: 1px solid #ffffff33;
+  border-radius: 10px;
+  color: white;
+  padding: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.rhythm-module .task-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.rhythm-module .space-name-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+.rhythm-module .space-name-input label {
+  flex: 1;
+  min-width: 0;
+}
+.rhythm-module .space-name-input .space-preview {
+  display: flex;
+  padding: 12px;
+}
+.rhythm-module .space-picker {
+  width: 260px;
+  max-width: 100%;
+  padding: 12px;
+  border: 1px solid #ffffff33;
+  border-radius: 16px;
+  background: #ffffff08;
+  box-sizing: border-box;
+}
+.rhythm-module .space-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.rhythm-module .space-icon-grid button {
+  padding: 8px;
+  display: flex;
+  border: 1px solid transparent;
+}
+.rhythm-module .space-icon-grid button[aria-pressed="true"] {
+  border-color: white;
+  background: #ffffff33;
+}
+.rhythm-module .space-colors {
+  display: flex;
+  gap: 7px;
+  border-top: 1px solid #ffffff26;
+  padding-top: 12px;
+  margin-top: 12px;
+}
+.rhythm-module .space-colors button {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  color: #222;
+  font-size: 15px;
+}
+.rhythm-module .space-colors button[aria-pressed="true"] {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+.rhythm-module .task-settings .task-step-details {
+  padding: 0;
+  border-radius: 0;
+}
+.rhythm-module .task-settings .detail-columns {
+  gap: 20px;
+}
+.rhythm-module .task-settings .detail-col {
+  min-width: 0;
+}
+.rhythm-module .task-settings .timing-block {
+  padding: 0;
+}
+.rhythm-module .task-settings .break-checkbox {
+  display: flex;
+}
+.rhythm-module
+  :is(.tasks-panel, .task-composer, .task-small-form)
+  button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.rhythm-module
+  :is(.tasks-panel, .task-composer, .task-small-form)
+  button:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+.rhythm-module
+  :is(.tasks-panel, .task-composer, .task-small-form)
+  :is(button, input):focus-visible {
+  outline: 2px solid #b4a4ff;
+  outline-offset: 3px;
+}
+@media (max-width: 640px) {
+  .rhythm-module .tasks-page-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .rhythm-module .tasks-page-header input {
+    width: 100%;
+  }
+  .rhythm-module .tasks-space-heading {
+    flex-wrap: wrap;
+  }
+  .rhythm-module .tasks-row {
+    flex-wrap: wrap;
+  }
+  .rhythm-module .tasks-row-name {
+    width: calc(100% - 50px);
+  }
+  .rhythm-module .tasks-row-controls {
+    margin-left: auto;
+  }
+  .rhythm-module .tasks-add-button kbd {
+    display: none;
+  }
+  .rhythm-module .task-composer-input {
+    padding: 18px;
+    gap: 8px;
+    flex-wrap: wrap;
+    height: 132px;
+  }
+  .rhythm-module .task-composer-input > input {
+    flex-basis: 100%;
+    font-size: 18px;
+  }
+  .rhythm-module .task-composer-controls {
+    margin-left: auto;
+  }
+  .rhythm-module .task-destination-drawer.task-step-details-wrapper {
+    margin-top: -132px;
+    padding-top: 152px;
+    min-height: 132px;
+  }
+  .rhythm-module .task-destination-drawer.task-step-details-wrapper.hidden {
+    min-height: 132px;
+    max-height: 132px;
+  }
+  .rhythm-module .task-destinations.task-step-details.open {
+    max-height: calc(100dvh - 224px);
+  }
+  .rhythm-module .task-small-form {
+    padding: 20px;
+  }
+  .rhythm-module .task-quick-editor {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: 20px;
+    min-width: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rhythm-module .task-step-details-wrapper,
+  .rhythm-module .task-step-details,
+  .rhythm-module .tasks-row {
+    transition: none;
+  }
+}
+/* Neutralize legacy global button margins and accent shadows on task surfaces. */
+.rhythm-module :is(.tasks-panel, .task-composer, .task-small-form) button {
+  margin-top: 0;
+  box-shadow: none;
+  letter-spacing: 0;
+}
+.rhythm-module
+  :is(.tasks-panel, .task-composer, .task-small-form)
+  button:not(:disabled):hover {
+  transform: none;
+  opacity: 1;
+}
+.rhythm-module .task-small-form :is(button, input),
+.rhythm-module .task-destinations button {
+  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.rhythm-module.task-modal:not(.task-modal-wide) {
+  margin: auto;
+}
+.rhythm-module.task-modal-wide::backdrop {
+  background: rgba(30, 30, 30, 0.96);
+}
+.rhythm-module .task-composer-input > input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.rhythm-module .tasks-row-controls > button,
+.rhythm-module .tasks-row-controls > .task-quick-anchor > button {
+  height: 34px;
+  box-sizing: border-box;
+}
+.rhythm-module .task-destination-header {
+  min-height: 64px;
+  padding: 11px 12px;
+}
+.rhythm-module .task-destination-list {
+  min-height: 58px;
+  padding: 11px 12px;
+}
+.rhythm-module .task-settings .eyebrow {
+  color: #ffffffb3;
+}
+.rhythm-module .task-settings .slider-value {
+  color: white;
+}
+.rhythm-module .tasks-row-controls > button,
+.rhythm-module .tasks-row-controls > .task-quick-anchor > button {
+  height: 32px;
+}
+.rhythm-module .task-destination-space.expanded {
+  border-top-color: transparent;
+}
+.rhythm-module .task-destination-drawer.task-step-details-wrapper.hidden {
+  transform: translateY(-6px);
+}
+.rhythm-module .task-destination-lists.scoped .task-create-destination {
+  order: initial;
+}
+/* Keep padding constant during reveal: only the original height, opacity and
+   translation transitions animate. This avoids an initial padding jump. */
+.rhythm-module .task-destination-drawer.task-step-details-wrapper,
+.rhythm-module .task-destination-drawer.task-step-details-wrapper.hidden{padding:0 16px 16px}
+.rhythm-module .task-destinations.task-step-details{margin-top:119px}
+@media(max-width:640px){.rhythm-module .task-destinations.task-step-details{margin-top:151px}}

@@ -89,7 +89,7 @@ button { color: inherit; }
 .product-switcher .rail-label { font-size: 14px; font-weight: 550; }
 .product-switcher small { display: block; margin-top: 4px; font-size: 10px; font-weight: 400; color: var(--muted); }
 .rail-divider { height: 1px; background: var(--line); margin: 22px 12px; flex-shrink: 0; }
-.module-navigation a,.rail-bottom a,.rail-bottom button { display: flex; align-items: center; gap: 18px; padding: 12px 18px; min-height: 43px; font-size: 12px; border: 0; border-radius: 12px; background: transparent; color: #b7b0c9; text-align: left; }
+.module-navigation a,.module-navigation .rail-spaces button,.rail-bottom a,.rail-bottom button { display: flex; align-items: center; gap: 18px; padding: 12px 18px; min-height: 43px; font-size: 12px; border: 0; border-radius: 12px; background: transparent; color: #b7b0c9; text-align: left; }
 .module-navigation svg,.rail-bottom svg { flex: 0 0 18px; }
 .module-navigation .active { background: var(--glass); color: #fff; }
 .product-rail a:hover,.product-rail button:hover { background: var(--glass-strong); color: #fff; }
@@ -113,7 +113,7 @@ button { color: inherit; }
 .platform-toast { position: fixed; right: 24px; bottom: 24px; max-width: min(440px,calc(100vw - 32px)); padding: 16px 22px; border-radius: 16px; background: #262132; border: 1px solid var(--line); color: #fff; z-index: 150; box-shadow: 0 10px 40px #0008; font-size: 13px; }
 
 /* The original Rhythm UI, contained in the platform shell. */
-.rhythm-module { background: transparent; color: #fff; }
+.rhythm-module { width: 100%; max-width: 1186px; margin-inline: auto; background: transparent; color: #fff; }
 .rhythm-module .app { min-height: 0; background: none; overflow: visible; }
 .rhythm-module .app::before { display: none; }
 .rhythm-module .app-main { padding: 0; }

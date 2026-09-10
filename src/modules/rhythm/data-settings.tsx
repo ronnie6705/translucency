@@ -10,11 +10,11 @@ export function RhythmDataSettings() {
   const [busy,setBusy] = useState(false);
   return <section className="form-section rhythm-data-settings">
     <p className="eyebrow">RHYTHM</p><h2>Your planning data</h2>
-    <p>{library.taskLists.length} task lists · {library.timeblocks.length} timeblocks. {activeAccount() ? 'Saved in your account workspace, with an offline device copy.' : 'Stored only on this device.'} Your planning records remain separate from your reflections.</p>
+    <p>{library.spaces?.length ?? 0} spaces · {library.taskLists.length} task lists · {library.timeblocks.length} timeblocks. {activeAccount() ? 'Saved in your account workspace, with an offline device copy.' : 'Stored only on this device.'} Your planning records remain separate from your reflections.</p>
     <p>For another browser or address, import a Rhythm JSON backup. Imports keep existing records with the same ID. When signed in, imported records are uploaded to your account.</p>
     {(library.error || message) && <p role={library.error ? 'alert' : 'status'}>{library.error || message}</p>}
     <div className="settings-actions"><button className="button secondary" disabled={!library.ready || busy} onClick={() => {
-      const blob = new Blob([JSON.stringify({version:1,taskLists:library.taskLists,timeblocks:library.timeblocks},null,2)],{type:'application/json'});
+      const blob = new Blob([JSON.stringify({version:1,spaces:library.spaces,taskLists:library.taskLists,timeblocks:library.timeblocks},null,2)],{type:'application/json'});
       const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='rhythm-backup.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
     }}>Export Rhythm data</button></div>
     <label>Import Rhythm backup<input type="file" accept=".json,application/json" disabled={!library.ready || busy} onChange={async e => {

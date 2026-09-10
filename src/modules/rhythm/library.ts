@@ -1,15 +1,15 @@
-import type { SavedTaskList, SavedTimeblock, Task } from './types';
+import type { SavedTaskList, SavedTimeblock, Space, Task } from './types';
 import { activeAccount, readAccount, writeAccount } from '../../lib/cloud/storage';
 import { validLiveTimer, type LiveTimer } from './live-timer';
-export interface RhythmLibrary { version: 1; taskLists: SavedTaskList[]; timeblocks: SavedTimeblock[]; liveTimer?: LiveTimer }
-export const emptyLibrary = (): RhythmLibrary => ({ version: 1, taskLists: [], timeblocks: [] });
+export interface RhythmLibrary { version: 1; spaces?: Space[]; taskLists: SavedTaskList[]; timeblocks: SavedTimeblock[]; liveTimer?: LiveTimer }
+export const emptyLibrary = (): RhythmLibrary => ({ version: 1, spaces: [], taskLists: [], timeblocks: [] });
 const DB = 'rhythm-library-v1';
 function object(v: unknown): v is Record<string, unknown> { return !!v && typeof v === 'object' && !Array.isArray(v); }
 function tasks(v: unknown): v is Task[] {
   return Array.isArray(v) && v.every(t => object(t) && typeof t.id === 'string' && typeof t.name === 'string' &&
     Number.isFinite(t.durationMinutes) && Number(t.durationMinutes) > 0 && [1,2,3,4,5].includes(Number(t.energyRequired)) &&
     [1,2,3].includes(Number(t.priority)) && (t.fixedStart === undefined || /^([01]\d|2[0-3]):[0-5]\d$/.test(String(t.fixedStart))) &&
-    (t.isBreak === undefined || typeof t.isBreak === 'boolean'));
+    (t.completed === undefined || typeof t.completed === 'boolean') && (t.isBreak === undefined || typeof t.isBreak === 'boolean'));
 }
 function entry(v: unknown): v is SavedTaskList { return object(v) && typeof v.id === 'string' && typeof v.name === 'string' && typeof v.createdAt === 'string' && Number.isFinite(Date.parse(v.createdAt)) && tasks(v.tasks); }
 export function validateLibrary(value: unknown): RhythmLibrary {
@@ -21,7 +21,17 @@ export function validateLibrary(value: unknown): RhythmLibrary {
     if (!['Lion','Bear','Wolf','Dolphin'].includes(String(config.chronotype)) || !/^\d{4}-\d{2}-\d{2}$/.test(String(config.date)) || ![config.startTime,config.endTime].every(t => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(t)))) throw new Error('Invalid day settings in backup.');
     try { new Intl.DateTimeFormat('en',{timeZone: String(config.timezone)}).format(); } catch { throw new Error('Invalid time zone in backup.'); }
   }
-  return value as unknown as RhythmLibrary;
+  const spaces = value.spaces === undefined ? [] : value.spaces;
+  if (!Array.isArray(spaces) || !spaces.every(s => entry(s) && object(s) && typeof s.icon === 'string' && typeof s.color === 'string' && /^#[0-9a-f]{6}$/i.test(s.color))) throw new Error('Invalid Spaces in backup.');
+  if (new Set(spaces.map(s => s.id)).size !== spaces.length) throw new Error('Duplicate Space IDs.');
+  const library = { ...value, spaces: [...spaces], taskLists: [...value.taskLists] } as unknown as RhythmLibrary;
+  // Additive migration: keep the existing lists and task IDs, including account and backup data.
+  if (library.taskLists.some(l => !l.spaceId)) {
+    if (!library.spaces!.some(s => s.id === 'legacy-space')) library.spaces!.push({id:'legacy-space',name:'Personal',icon:'personal',color:'#b4a4ff',createdAt:'2026-01-01T00:00:00.000Z',tasks:[]});
+    library.taskLists = library.taskLists.map(l => l.spaceId ? l : {...l,spaceId:'legacy-space'});
+  }
+  if (library.taskLists.some(l => !library.spaces!.some(s => s.id === l.spaceId))) throw new Error('Task list must belong to an existing Space.');
+  return library;
 }
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve,reject) => {
@@ -41,7 +51,7 @@ function legacy(): RhythmLibrary {
 export async function updateLibrary(change: (data: RhythmLibrary) => RhythmLibrary): Promise<RhythmLibrary> {
   const account = activeAccount();
   if (account) {
-    const next = await writeAccount<RhythmLibrary>(account, 'rhythm', data => validateLibrary(change(data)));
+    const next = await writeAccount<RhythmLibrary>(account, 'rhythm', data => validateLibrary(change(validateLibrary(data))));
     window.dispatchEvent(new Event('rhythm-library-updated'));
     return next;
   }
@@ -81,5 +91,10 @@ export async function loadGuestLibrary(): Promise<RhythmLibrary> {
 export function mergeLibraries(existing: RhythmLibrary, incoming: RhythmLibrary): RhythmLibrary {
   // Import never overwrites an existing record; duplicate IDs keep the local version.
   const merge = <T extends { id: string }>(a: T[], b: T[]) => [...a,...b.filter(item => !a.some(old => old.id === item.id))];
-  return {...existing,...(existing.liveTimer || incoming.liveTimer ? {liveTimer: existing.liveTimer ?? incoming.liveTimer} : {}),version:1,taskLists:merge(existing.taskLists,incoming.taskLists),timeblocks:merge(existing.timeblocks,incoming.timeblocks)};
+  existing = validateLibrary(existing); incoming = validateLibrary(incoming);
+  const spaces = merge(existing.spaces ?? [], incoming.spaces ?? []).map(space => {
+    const added = incoming.spaces?.find(s => s.id === space.id);
+    return added ? {...space,tasks:merge(space.tasks,added.tasks)} : space;
+  });
+  return validateLibrary({...existing,spaces,...(existing.liveTimer || incoming.liveTimer ? {liveTimer: existing.liveTimer ?? incoming.liveTimer} : {}),version:1,taskLists:merge(existing.taskLists,incoming.taskLists),timeblocks:merge(existing.timeblocks,incoming.timeblocks)});
 }

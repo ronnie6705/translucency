@@ -1,6 +1,8 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { AudioLines, Layers2, LayoutDashboard, ListTodo, CalendarDays, Feather, History, Sparkles, Droplets, Leaf, Circle, Settings, PanelLeftClose, PanelLeftOpen, Menu, X, LockKeyhole, Plus } from "lucide-react";
+import { useTaskWorkspace } from "@/modules/rhythm/task-workspace";
+import { SpaceIcon } from "@/modules/rhythm/components/space-icons";
 import type { Page } from "./app";
 import { activeAccount } from '@/lib/cloud/storage';
 
@@ -16,11 +18,12 @@ const reflectLinks = [
 ] as const;
 const planLinks = [
   { id: "rhythm", label: "Planning space", icon: LayoutDashboard },
-  { id: "rhythm-tasks", label: "Task lists", icon: ListTodo },
+  { id: "rhythm-tasks", label: "Tasks", icon: ListTodo },
   { id: "rhythm-timeblocks", label: "Timeblocks", icon: CalendarDays },
 ] as const;
 
 export function PlatformShell({ page, reflectionPage, go, name, children }: { page: Page; reflectionPage: Page; go: (page: Page) => void; name?: string; children: ReactNode }) {
+  const tasks = useTaskWorkspace();
   const [pinned, setPinned] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [hover, setHover] = useState(false);
@@ -72,7 +75,7 @@ export function PlatformShell({ page, reflectionPage, go, name, children }: { pa
         <div className="rail-divider" />
         <div className="rail-section-label rail-label">{rhythm ? "YOUR DAY" : "YOUR PERSPECTIVE"}</div>
         <nav aria-label={rhythm ? "Rhythm navigation" : "Translucency navigation"} className="module-navigation">
-          {links.map(({ id, label, icon: Icon }) => <a key={id} href={`#${id}`} title={label} aria-label={label} className={page === id ? "active" : ""} aria-current={page === id ? "page" : undefined} onClick={e => { e.preventDefault(); navigate(id); }}><Icon size={18} /><span className="rail-label">{label}</span></a>)}
+          {links.map(({ id, label, icon: Icon }) => <Fragment key={id}><a href={`#${id}`} title={label} aria-label={label} className={(page === id && (id !== "rhythm-tasks" || !tasks.activeSpaceId)) ? "active" : ""} aria-current={(page === id && (id !== "rhythm-tasks" || !tasks.activeSpaceId)) ? "page" : undefined} onClick={e => { e.preventDefault(); if(id === "rhythm-tasks") tasks.selectSpace(null); navigate(id); }}><Icon size={18} /><span className="rail-label">{label}</span></a>{id === 'rhythm-tasks' && <div className="rail-spaces">{tasks.library.spaces?.map(space=><a key={space.id} href="#rhythm-tasks" title={space.name} aria-label={space.name} className={tasks.activeSpaceId===space.id?'active':''} aria-current={tasks.activeSpaceId===space.id?'page':undefined} onClick={e=>{e.preventDefault();tasks.selectSpace(space.id);navigate('rhythm-tasks');}}><SpaceIcon icon={space.icon} color={space.color}/><span className="rail-label">{space.name}</span></a>)}<button title="Add New Space" aria-label="Add New Space" onClick={()=>{setMobile(false);tasks.openSpace();}}><Plus size={18}/><span className="rail-label">Add New Space</span></button></div>}</Fragment>)}
         </nav>
         <div className="rail-bottom">
           <a href="#settings" title="Settings & privacy" aria-label="Settings & privacy" onClick={e => { e.preventDefault(); navigate("settings"); }}><Settings size={19} /><span className="rail-label">Settings & privacy</span></a>

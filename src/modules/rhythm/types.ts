@@ -8,6 +8,7 @@ export interface Task {
   durationMinutes: number;
   energyRequired: 1 | 2 | 3 | 4 | 5;
   priority: 1 | 2 | 3; // 1 = high, 3 = low
+  completed?: boolean;
   isBreak?: boolean;
   fixedStart?: string; // "HH:MM" in 24h
 }
@@ -38,7 +39,17 @@ export interface SavedTimeblock {
   tasks: Task[];
 }
 
+export interface Space {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  createdAt: string;
+  tasks: Task[];
+}
+
 export interface SavedTaskList {
+  spaceId?: string;
   id: string;
   name: string;
   createdAt: string;

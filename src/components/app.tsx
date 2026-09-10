@@ -33,6 +33,7 @@ import { CheckInScreen, SourceScreen } from "./check-in";
 import { RolesScreen, SessionScreen } from "./roles";
 import { JourneyScreen, InsightsScreen, SettingsScreen } from "./reflect";
 import { PlatformShell } from "./platform-shell";
+import { TaskWorkspaceProvider } from "@/modules/rhythm/task-workspace";
 import Rhythm from "@/modules/rhythm/App";
 import { RhythmDataSettings } from "@/modules/rhythm/data-settings";
 import { AccountControls } from './account';
@@ -177,12 +178,12 @@ export default function App() {
     go("session");
   };
   return (
-    <PlatformShell page={page} reflectionPage={reflectionPage} go={go} name={data.profile.name}>
+    <TaskWorkspaceProvider page={page}><PlatformShell page={page} reflectionPage={reflectionPage} go={go} name={data.profile.name}>
       <main id="main" ref={main} tabIndex={-1} className="platform-main">
         <AccountControls />
         {error && <div role="alert" className="platform-notice">{error}</div>}
         <div hidden={!page.startsWith("rhythm")} className="rhythm-module">
-          <header className="module-heading"><p>PLAN WITH YOUR ENERGY</p><h1>Find your rhythm.</h1><span>A little structure. More room for life.</span></header>
+          {page === "rhythm" && <header className="module-heading"><p>PLAN WITH YOUR ENERGY</p><h1>Find your rhythm.</h1><span>A little structure. More room for life.</span></header>}
           <Rhythm section={page} />
         </div>
         <div className="translucency-module" hidden={page.startsWith("rhythm")}>
@@ -216,7 +217,7 @@ export default function App() {
         </div>
         {notice && <div className="platform-toast" role="status">{notice}</div>}
       </main>
-    </PlatformShell>
+    </PlatformShell></TaskWorkspaceProvider>
   );
 }
 
