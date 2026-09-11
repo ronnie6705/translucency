@@ -37,7 +37,7 @@ try {
  const button=name=>page.getByRole('button',{name,exact:true});
  async function finalStep(){
   await page.locator('.timeblock-rail-card').getByRole('heading',{name:"Today's Plan",exact:true}).click();
-  for(let i=0;i<4;i++) await button('Next').click();
+  for(let i=0;i<3;i++) await button('Next').click();
   await expect(button('Start a Live Timer')).toBeVisible();
  }
  await finalStep();

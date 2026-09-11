@@ -130,12 +130,8 @@ export function planSequentialTasks(
     });
   }
 
-  const flexSorted = [...flexibleTasks].sort((a, b) => {
-    if (a.priority !== b.priority) return a.priority - b.priority;
-    return b.energyRequired - a.energyRequired;
-  });
-
-  for (const task of flexSorted) {
+  // The caller supplies either the generated order or the user's edited order.
+  for (const task of flexibleTasks) {
     if (task.durationMinutes <= 0) continue;
     let remaining = task.durationMinutes;
     let lastSegmentIndex: number | null = null;

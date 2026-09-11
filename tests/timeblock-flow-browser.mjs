@@ -6,14 +6,8 @@ const base = process.env.BASE_URL || 'http://127.0.0.1:3000';
 const browser = await chromium.launch({channel:'msedge',headless:true});
 const context = await browser.newContext({viewport:{width:1728,height:1117},timezoneId:'Australia/Sydney',acceptDownloads:true});
 const user={id:'00000000-0000-4000-8000-000000000091',email:'timer@example.test',aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{}};
-const tasks=[
- ['Start building portfolio','12:00',90,5,false],['Short Break','13:30',10,1,true],
- ['Summarize the main aim of the topic','13:40',15,4,false],['Short Break','13:55',10,1,true],
- ['Briefly describe research methods','14:35',120,4,false],['Break','16:35',60,1,true],
- ['Highlight the significance & potential impact','17:45',120,3,false],['Do the dishes','20:00',30,2,false]
-].map(([name,fixedStart,durationMinutes,energyRequired,isBreak],i)=>({id:`task-${i}`,name,fixedStart,durationMinutes,energyRequired,isBreak,priority:1}));
-const plan={id:'plan',name:"Today's Plan",createdAt:'2026-09-09T00:00:00Z',tasks,dayConfig:{date:'2026-09-09',startTime:'12:00',endTime:'20:30',timezone:'Australia/Sydney',chronotype:'Bear'}};
-const docs=new Map([['rhythm',{payload:{version:1,taskLists:[],timeblocks:[plan]},revision:1}]]);
+const tasks=[{id:'a',name:'Write documentation',durationMinutes:45,energyRequired:2,priority:2},{id:'b',name:'Build feature',durationMinutes:60,energyRequired:5,priority:1}];
+const docs=new Map([['rhythm',{payload:{version:1,spaces:[{id:'home',name:'Home',icon:'home',color:'#ffffff',createdAt:'2026-09-09T00:00:00Z',tasks:[]}],taskLists:[{id:'list',spaceId:'home',name:'Sprint',createdAt:'2026-09-09T00:00:00Z',tasks}],timeblocks:[]},revision:1}]]);
 const errors=[];
 await context.route('https://*.supabase.co/**',async route=>{
  const request=route.request(); const url=new URL(request.url()); const path=url.pathname;
@@ -28,45 +22,96 @@ await context.route('https://*.supabase.co/**',async route=>{
  throw Error('Unexpected Supabase request '+path);
 });
 try {
- const page=await context.newPage(); page.on('pageerror',e=>errors.push(e.message));
- await page.clock.install({time:new Date('2026-09-09T05:05:00Z')});
- await page.goto(base+'/#rhythm-timeblocks');
- await page.getByLabel('Email',{exact:true}).fill(user.email); await page.getByLabel('Password',{exact:true}).fill('synthetic-password');
+ const page=await context.newPage(); page.on('pageerror',e=>errors.push(e.message)); page.on('console', message=>{if(message.type()==='error') errors.push(message.text());});
+ await page.goto(base+'/#rhythm-tasks');
+ await page.getByLabel('Email',{exact:true}).fill(user.email);
+ await page.getByLabel('Password',{exact:true}).fill('synthetic-password');
  await page.getByRole('button',{name:'Sign in',exact:true}).click();
- await expect(page.locator('#rhythm-timeblocks')).toBeVisible();
- const button=name=>page.getByRole('button',{name,exact:true});
+ await page.getByRole('button',{name:'Timeblock',exact:true}).click();
+ const modal=page.getByRole('dialog',{name:'Create a timeblock'});
+ const button=name=>modal.getByRole('button',{name,exact:true});
+ await expect(modal.getByRole('heading',{name:'Plan Your Timeblock'})).toBeVisible();
+ await expect(modal.getByLabel('Duration for Write documentation',{exact:true})).toHaveValue('45');
+ await expect(button('Next')).toBeDisabled();
+ await modal.getByLabel('Duration for Write documentation',{exact:true}).selectOption('90');
+ await modal.getByLabel('Energy for Write documentation',{exact:true}).selectOption('4');
+ await modal.getByLabel('Start time',{exact:true}).selectOption('09:00');
+ await modal.getByLabel('End time',{exact:true}).selectOption('17:30');
+ await modal.getByLabel('Duration for Build feature',{exact:true}).selectOption('0');
+ await expect(button('Next')).toBeDisabled();
+ await modal.getByLabel('Duration for Build feature',{exact:true}).selectOption('60');
+ await button('+ Add Break').click();
+ await expect(button('Next')).toBeDisabled();
+ await modal.getByLabel('Name for break 1',{exact:true}).fill('Lunch');
+ await modal.getByLabel('Duration for Lunch',{exact:true}).selectOption('45');
+ await modal.getByLabel('Fixed time for Lunch',{exact:true}).fill('13:00');
+ await button('+ Add Break').click();
+ await modal.getByLabel('Name for break 2',{exact:true}).fill('Walk');
+ await modal.getByLabel('Fixed time for Walk',{exact:true}).fill('13:15');
+ await expect(button('Next')).toBeDisabled();
+ await modal.getByLabel('Fixed time for Walk',{exact:true}).fill('');
+ await expect(button('Next')).toBeEnabled();
+ await button('Remove Walk').click();
+ await button('+ Add Break').click();
+ await modal.getByLabel('Name for break 2',{exact:true}).fill('Gym');
+ await modal.getByLabel('Duration for Gym',{exact:true}).selectOption('60');
+ await modal.getByLabel('Start time',{exact:true}).selectOption('18:00');
+ await expect(modal.getByLabel('End time',{exact:true})).toHaveValue('');
+ await expect(button('Next')).toBeDisabled();
+ assert.ok((await modal.getByLabel('End time',{exact:true}).locator('option').evaluateAll(options=>options.map(o=>o.value))).every(value=>!value||value>'18:00'));
+ await modal.getByLabel('Start time',{exact:true}).selectOption('09:00');
+ await modal.getByLabel('End time',{exact:true}).selectOption('12:00');
+ await expect(button('Next')).toBeDisabled();
+ await modal.getByLabel('End time',{exact:true}).selectOption('17:30');
  fs.mkdirSync('test-results',{recursive:true});
- async function check(stage,width){
-  const modal=page.locator('.flow-modal');
-  await expect(modal).toBeVisible();
-  const bounds=await modal.evaluate(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:innerWidth,height:innerHeight,scroll:el.scrollWidth,client:el.clientWidth};});
-  assert.ok(bounds.left>=0&&bounds.right<=bounds.width+1&&bounds.top>=0&&bounds.bottom<=bounds.height+1,stage+' modal fits '+width+' '+JSON.stringify(bounds));
-  assert.ok(bounds.scroll<=bounds.client+1,stage+' content fits '+width+' '+JSON.stringify(bounds));
-  await page.waitForTimeout(stage==='chronotype'?1700:100);
-  if(width===390||width===1440) await page.screenshot({path:`test-results/flow-${stage}-${width}.png`});
+ await page.screenshot({path:'test-results/timeblock-plan-desktop.png'});
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({path:'test-results/timeblock-plan-mobile.png'});
+ await modal.getByLabel('End time',{exact:true}).scrollIntoViewIfNeeded();
+ await page.screenshot({path:'test-results/timeblock-range-mobile.png'});
+ assert.ok(await modal.locator('.flow-modal').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+ await page.setViewportSize({width:1440,height:1000});
+ await button('Next').click();
+ await button('Wolf').click();
+ await button('Back').click();
+ await expect(modal.getByLabel('Duration for Write documentation',{exact:true})).toHaveValue('90');
+ await expect(modal.getByLabel('Energy for Write documentation',{exact:true})).toHaveValue('4');
+ await expect(modal.getByLabel('Fixed time for Lunch',{exact:true})).toHaveValue('13:00');
+ await expect(modal.getByLabel('Duration for Gym',{exact:true})).toHaveValue('60');
+ await expect(modal.getByLabel('Start time',{exact:true})).toHaveValue('09:00');
+ await expect(modal.getByLabel('End time',{exact:true})).toHaveValue('17:30');
+ await button('Next').click();
+ await expect(button('Wolf')).toHaveAttribute('aria-pressed','true');
+ await button('Next').click();
+ await expect(modal.getByRole('heading',{name:'Rearrange Your Timeblock'})).toBeVisible();
+ const lunch=modal.locator('.calendar-block').filter({hasText:'Lunch'});
+ await expect(lunch.locator('.block-start')).toHaveText('1:00 PM');
+ const cards=modal.locator('.calendar-block');
+ const before=await cards.locator('.block-title').allTextContents();
+ await page.screenshot({path:'test-results/timeblock-rearrange.png'});
+ await cards.filter({hasText:'Write documentation'}).dragTo(cards.filter({hasText:'Build feature'}));
+ const after=await cards.locator('.block-title').allTextContents();
+ assert.notDeepEqual(after,before,'manual rearrangement changes the visible schedule');
+ await button('Back').click();
+ await expect(button('Wolf')).toHaveAttribute('aria-pressed','true');
+ await button('Back').click();
+ await expect(modal.getByLabel('Duration for Write documentation',{exact:true})).toHaveValue('90');
+ await expect(modal.getByLabel('Fixed time for Lunch',{exact:true})).toHaveValue('13:00');
+ await button('Next').click();
+ await button('Next').click();
+ assert.deepEqual(await cards.locator('.block-title').allTextContents(),after,'back navigation preserves edits');
+ await button('Next').click();
+ for (const name of ['Start a Live Timer','Export to ICS','Both Live Timer & ICS']) {
+  await expect(button(name)).toBeVisible();
+  await button(name).hover();
+  assert.equal(await button(name).locator('span').evaluate(el=>getComputedStyle(el).color),'rgb(255, 255, 255)');
+  await button(name).focus();
+  assert.equal(await button(name).locator('span').evaluate(el=>getComputedStyle(el).color),'rgb(255, 255, 255)');
  }
- for(const width of [320,390,768,1440]){
-  await page.setViewportSize({width,height:width===1440?900:740});
-  await button('Add Timeblock').click();
-  await check('chronotype',width);
-  await button('Wolf').click(); await expect(button('Wolf')).toHaveAttribute('aria-pressed','true');
-  await button('Cancel').click();
-  await page.locator('.timeblock-rail-card').getByRole('heading',{name:"Today's Plan",exact:true}).click();
-  await check('tasks',width); await button('Next').click();
-  await check('estimates',width);
-  await page.getByLabel('Energy for Start building portfolio',{exact:true}).selectOption('2');
-  await expect(page.getByLabel('Energy for Start building portfolio',{exact:true})).toHaveValue('2');
-  await page.getByLabel('Duration for Start building portfolio',{exact:true}).selectOption('60');
-  await button('Next').click(); await check('range',width);
-  await page.locator('.time-column').nth(0).getByRole('button',{name:'12 PM',exact:true}).click();
-  await page.locator('.time-column').nth(1).getByRole('button',{name:'8:30 PM',exact:true}).click();
-  await button('Next').click(); await check('blocks',width);
-  await button('Next').click(); await check('final',width);
-  await button('Both Live Timer & ICS').scrollIntoViewIfNeeded();
-  await button('Close timeblock').click();
- }
- await page.setViewportSize({width:844,height:390}); await button('Add Timeblock').click(); await check('landscape',844);
+ const download=page.waitForEvent('download'); await button('Export to ICS').click(); await download;
+ await button('Back').click();
+ assert.deepEqual(await cards.locator('.block-title').allTextContents(),after);
  assert.deepEqual(errors,[]);
- console.log('PASS: all steps fit 320, 390, 768, 1440px and short landscape; chronotype, duration, energy, range and final controls work.');
-} finally {await browser.close();}
+ console.log('PASS: consolidated task-list flow, validation, fixed/flexible breaks, range constraints, back persistence, manual ordering, mobile layout, white actions, ICS.');
+} finally { await browser.close(); }
 

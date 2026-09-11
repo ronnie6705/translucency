@@ -43,7 +43,7 @@
 .rhythm-module .flow-modal.flow-unified .adjust-pill { min-height: 44px; padding: 8px 10px; gap: 6px; border: 1px solid #ffffff26; border-radius: 12px; background: #ffffff0d; color: #f6f5fb; }
 .rhythm-module .flow-modal.flow-unified .adjust-pill select { color: #f6f5fb; font-size: 14px; padding: 0 4px; min-height: 26px; min-width: 48px; background: transparent; }
 .rhythm-module .flow-modal.flow-unified :is(.adjust-hint,.time-block-tip) { margin: 0; color: var(--flow-muted); font-size: 13px; line-height: 1.5; }
-/* Time selection keeps each list scrollable without forcing the whole dialog taller. */
+/* Legacy range selector; creation uses the compact plan control below. */
 .rhythm-module .flow-modal.flow-unified .time-picker-columns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 0; min-height: 0; }
 .rhythm-module .flow-modal.flow-unified .time-column { min-width: 0; height: auto; gap: 10px; padding: 0; background: none; }
 .rhythm-module .flow-modal.flow-unified .time-column > p { margin: 0; color: #f6f5fb; font-size: 14px; font-weight: 500; }
@@ -88,6 +88,37 @@
 .rhythm-module .flow-modal.flow-unified .graph-energy-label { position: absolute; left: -8px; top: 8px; writing-mode: vertical-rl; transform: rotate(180deg); translate: -100% 0; font-size: 11px; }
 .rhythm-module .flow-modal.flow-unified .graph-hour-label { position: absolute; right: 0; bottom: 8px; font-size: 11px; }
 .rhythm-module .flow-modal.flow-unified .graph-hour-ticks { position: absolute; top: calc(100% + 6px); width: 100%; display: flex; justify-content: space-between; line-height: 1; }
+.rhythm-module .flow-modal.flow-unified :is(.plan-time-section,.plan-add-actions) { display: grid; gap: 12px; }
+.rhythm-module .flow-modal.flow-unified .plan-time-section { border-top: 1px solid #ffffff26; padding-top: 20px; }
+.rhythm-module .flow-modal.flow-unified .plan-time-section h4 { margin: 0; font-size: 16px; font-weight: 500; }
+.rhythm-module .flow-modal.flow-unified .plan-time-range { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 16px; padding: 16px; border: 1px solid #ffffff26; border-radius: 16px; background: #ffffff08; }
+.rhythm-module .flow-modal.flow-unified :is(.plan-time-range label,.plan-fixed-time,.plan-break-name) { display: grid; gap: 8px; min-width: 0; color: var(--flow-muted); font-size: 13px; }
+.rhythm-module .flow-modal.flow-unified :is(.plan-time-range select,.plan-fixed-time input,.plan-break-name input) { min-width: 0; width: 100%; min-height: 44px; padding: 10px; border: 1px solid #ffffff30; border-radius: 10px; color: #f6f5fb; background: #ffffff0d; font: inherit; }
+.rhythm-module .flow-modal.flow-unified .plan-fixed-time { max-width: 180px; }
+.rhythm-module .flow-modal.flow-unified .adjust-task-header { align-items: flex-end; }
+.rhythm-module .flow-modal.flow-unified .adjust-chip-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); align-items: end; width: 240px; max-width: 100%; }
+.rhythm-module .flow-modal.flow-unified .adjust-chip-row:has(.plan-fixed-time) { width: 410px; grid-template-columns: 126px 160px minmax(0,1fr); }
+.rhythm-module .flow-modal.flow-unified .break-card .adjust-chip-row { width: 346px; grid-template-columns: minmax(0,1fr) 160px 44px; }
+.rhythm-module .flow-modal.flow-unified .plan-rating-field { display: grid; gap: 8px; min-width: 0; }
+.rhythm-module .flow-modal.flow-unified :is(.plan-field-label,.plan-fixed-time,.plan-break-name) { font-size: 13px; line-height: 18px; font-weight: 400; color: var(--flow-muted); }
+.rhythm-module .flow-modal.flow-unified .plan-rating-field .adjust-pill { display: flex; width: 100%; height: 44px; min-height: 44px; margin: 0; }
+.rhythm-module .flow-modal.flow-unified .plan-rating-field select { width: 100%; min-width: 0; }
+.rhythm-module .flow-modal.flow-unified :is(.plan-fixed-time input,.plan-break-name input) { height: 44px; }
+.rhythm-module .flow-modal.flow-unified .adjust-chip-row .task-remove-btn { align-self: end; width: 44px; height: 44px; min-width: 44px; min-height: 44px; margin: 0; padding: 12px; border-radius: 10px; display: grid; place-items: center; }
+@media (max-width: 760px) {
+ .rhythm-module .flow-modal.flow-unified .adjust-task-header { display: grid; grid-template-columns: minmax(0,1fr); gap: 14px; }
+ .rhythm-module .flow-modal.flow-unified .adjust-chip-row,
+ .rhythm-module .flow-modal.flow-unified .adjust-chip-row:has(.plan-fixed-time) { width: 100%; grid-template-columns: none; }
+ .rhythm-module .flow-modal.flow-unified .break-card .adjust-chip-row { grid-template-columns: minmax(0,1fr) minmax(0,1.3fr) 44px; }
+ .rhythm-module .flow-modal.flow-unified .plan-fixed-time { max-width: none; }
+}
+.rhythm-module .flow-modal.flow-unified .plan-footer { position: sticky; bottom: -28px; justify-content: flex-end; padding: 16px 0; background: #222224; border-top: 1px solid #ffffff26; z-index: 2; }
+.rhythm-module .flow-modal.flow-unified .plan-add-actions .adjust-hint { text-align: left; }
+.rhythm-module .flow-modal.flow-unified .plan-add-actions button { justify-self: start; min-height: 44px; padding: 10px 16px; border: 1px solid #ffffff30; border-radius: 12px; background: #ffffff12; color: #f6f5fb; }
+.rhythm-module .flow-modal.flow-unified .plan-error { color: #ffb9b9; font-size: 13px; margin: 10px 0 0; }
+.rhythm-module .flow-modal.flow-unified .calendar-handoff-options .calendar-action.secondary { color: #fff; }
+.rhythm-module .flow-modal.flow-unified .calendar-handoff-options .calendar-action.secondary:is(:hover,:focus-visible,:disabled) { color: #fff; }
+.rhythm-module .flow-modal.flow-unified .calendar-handoff-options .calendar-action.secondary span { color: inherit; }
 @media (max-width: 640px) {
  .rhythm-module .flow-modal.flow-unified .graph-stage { width: calc(100% - 18px); margin-left: 18px; }
  .rhythm-module .flow-modal.flow-unified .graph-hour-ticks { font-size: 11px; }

@@ -7,6 +7,7 @@ import { TimerIcon } from './LiveTimer';
 
 interface TimeRangeSelectorProps {
   tasks: Task[];
+  skipRangeSelection?: boolean;
   chronotype: Chronotype;
   date: string;
   onBack?: () => void;
@@ -199,6 +200,7 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
   onExport,
   onStartLiveTimer,
   startingTimer,
+  skipRangeSelection = false,
   timeZone,
   startTime,
   endTime,
@@ -217,7 +219,7 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
   const [startIndex, setStartIndex] = useState<number | null>(initialStartIndex);
   const [endIndex, setEndIndex] = useState<number | null>(initialEndIndex);
   const [mode, setMode] = useState<'start' | 'end' | 'review' | 'blocks' | 'export'>(
-    hasInitialRange ? 'review' : 'start'
+    skipRangeSelection && hasInitialRange ? 'blocks' : hasInitialRange ? 'review' : 'start'
   );
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<DropTargetId>(null);
@@ -253,6 +255,7 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
   const canReview = startIndex !== null && endIndex !== null && endIndex > startIndex;
   const chronotypeSuggestedOrder = useMemo(() => {
     if (
+      skipRangeSelection ||
       startIndex === null ||
       endIndex === null ||
       startIndex >= endIndex ||
@@ -289,19 +292,19 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
       }
     }
     return ordered.length ? ordered : null;
-  }, [startIndex, endIndex, tasks, date, chronotype, timeZone]);
+  }, [startIndex, endIndex, tasks, date, chronotype, timeZone, skipRangeSelection]);
 
   const plannedSegments = useMemo(() => {
     if (startIndex === null || endIndex === null) return [];
     const rangeMinutes = (endIndex - startIndex) * STEP_MINUTES;
-    const planningTasks = chronotypeSuggestedOrder ?? tasks;
+    const planningTasks = mode === 'blocks' || mode === 'export' ? tasks : chronotypeSuggestedOrder ?? tasks;
     const rangeStartMinutes = startIndex * STEP_MINUTES;
     const rangeEndMinutes = endIndex * STEP_MINUTES;
     return planSequentialTasks(planningTasks, rangeMinutes, {
       absoluteRangeStart: rangeStartMinutes,
       absoluteRangeEnd: rangeEndMinutes,
     });
-  }, [tasks, chronotypeSuggestedOrder, startIndex, endIndex]);
+  }, [tasks, chronotypeSuggestedOrder, startIndex, endIndex, mode]);
 
   const timelineBlocks = useMemo(() => {
     if (
@@ -363,11 +366,12 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
       onRangeChange &&
       startIndex !== null &&
       endIndex !== null &&
-      startIndex < endIndex
+      startIndex < endIndex &&
+      (startTime !== indexToTimeString(startIndex) || endTime !== indexToTimeString(endIndex))
     ) {
       onRangeChange(indexToTimeString(startIndex), indexToTimeString(endIndex));
     }
-  }, [startIndex, endIndex, onRangeChange]);
+  }, [startIndex, endIndex, startTime, endTime, onRangeChange]);
 
   const handleReorderBlocks = (sourceId: string, targetId: DropTargetId) => {
     if (!onReorder || !sourceId) return;
@@ -439,7 +443,8 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
       return;
     }
     if (mode === 'blocks') {
-      setMode('review');
+      if (skipRangeSelection) onBack?.();
+      else setMode('review');
       return;
     }
     if (onBack) {
@@ -481,7 +486,7 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
             {mode === 'export'
               ? "Let's get you all set up!"
               : mode === 'blocks'
-              ? 'Edit your Time Block'
+              ? 'Rearrange Your Timeblock'
               : 'Set your Time Range'}
           </h3>
         </div>

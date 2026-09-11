@@ -9,6 +9,8 @@ import { TaskBuilderStep } from './components/TaskBuilderStep';
 import type { Chronotype, DayConfig, SavedTaskList, SavedTimeblock, Task } from './types';
 import { generateICS } from './ics';
 import { DEVICE_TIME_ZONE } from './utils/timezone';
+import { generateSchedule } from './rhythmScheduler';
+import { validateTimeblockPlan } from './timeblock-plan';
 import { buildManualSchedule } from './utils/manualSchedule';
 import { LiveTimerModal, LiveTimerPreview } from './components/LiveTimer';
 import './live-timer.css';
@@ -117,6 +119,7 @@ function App({ section = "rhythm" }: { section?: string }) {
   });
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  const generatedPlanKey = useRef<string | null>(null);
   const [showFlowModal, setShowFlowModal] = useState(false);
   const flowDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -213,6 +216,7 @@ function App({ section = "rhythm" }: { section?: string }) {
   };
 
   const resetFlowVisualState = () => {
+    generatedPlanKey.current = null;
     setTaskFlowStage('tasks');
     setTaskFlowTheme('light');
     setTaskBuilderInitialStep('tasks');
@@ -233,11 +237,28 @@ function App({ section = "rhythm" }: { section?: string }) {
     setDayConfig(prev => ({ ...prev, chronotype: ct }));
   };
 
+  const handleGenerateTimeblock = () => {
+    if (!validateTimeblockPlan(tasks, dayConfig.startTime, dayConfig.endTime).valid) return;
+    // Going back without changing the inputs preserves manual rearrangements.
+    const key = JSON.stringify({ tasks: [...tasks].sort((a, b) => a.id.localeCompare(b.id)), dayConfig });
+    if (generatedPlanKey.current !== key) {
+      // The existing scheduler consumes durations on its working task objects.
+      const schedule = generateSchedule(tasks.map(task => ({ ...task })), dayConfig);
+      const ids = [...new Set(schedule.map(block => block.taskId))];
+      const tasksById = new Map(tasks.map(task => [task.id, task]));
+      const ordered = ids.flatMap(id => tasksById.has(id) ? [tasksById.get(id)!] : []);
+      setTasks([...ordered, ...tasks.filter(task => !ids.includes(task.id))]);
+      generatedPlanKey.current = key;
+    }
+    setTaskBuilderInitialStep('range');
+    setFlowStep('tasks');
+  };
+
   const handleStartNewTimeblock = () => {
     resetFlowVisualState();
     setFlowContext('timeblock');
-    setFlowStep('chronotype');
-    setTaskBuilderInitialStep('tasks');
+    setFlowStep('tasks');
+    setTaskBuilderInitialStep('adjust');
     setActiveTaskListId(null);
     setActiveTimeblockId(null);
     setTasks([]);
@@ -261,7 +282,7 @@ function App({ section = "rhythm" }: { section?: string }) {
       startTime: block.dayConfig.startTime,
       endTime: block.dayConfig.endTime,
     });
-    setTaskBuilderInitialStep('tasks');
+    setTaskBuilderInitialStep('adjust');
     setFlowStep('tasks');
     setShowFlowModal(true);
   };
@@ -303,8 +324,8 @@ function App({ section = "rhythm" }: { section?: string }) {
     if (!list) return;
     resetFlowVisualState();
     setFlowContext('timeblock');
-    setFlowStep('chronotype');
-    setTaskBuilderInitialStep('tasks');
+    setFlowStep('tasks');
+    setTaskBuilderInitialStep('adjust');
     setActiveTaskListId(list.id);
     setActiveTimeblockId(null);
     setTasks(list.tasks.map(task => ({ ...task })));
@@ -352,7 +373,7 @@ function App({ section = "rhythm" }: { section?: string }) {
     setTaskFlowTheme('dark');
     setTaskBuilderInitialStep('adjust');
     setDraftTimeRange(null);
-    setFlowStep('chronotype');
+    setFlowStep('tasks');
   };
 
   const handleSaveCurrentTimeblock = async () => {
@@ -520,7 +541,8 @@ function App({ section = "rhythm" }: { section?: string }) {
                     <button className="task-step-done" onClick={closeFlowModal}>
                       Cancel
                     </button>
-                    <button className="task-step-primary" onClick={() => setFlowStep('tasks')}>
+                    <button className="task-remove-toggle" onClick={() => { setTaskBuilderInitialStep('adjust'); setFlowStep('tasks'); }}>Back</button>
+                    <button className="task-step-primary" onClick={handleGenerateTimeblock}>
                       Next
                     </button>
                   </div>
@@ -570,6 +592,8 @@ function App({ section = "rhythm" }: { section?: string }) {
                   setDayConfig(prev => ({ ...prev, startTime, endTime }));
                 }}
                 onDone={closeFlowModal}
+                onPlanNext={() => setFlowStep('chronotype')}
+                onScheduleBack={() => setFlowStep('chronotype')}
                 onThemeChange={setTaskFlowTheme}
                 onStageChange={setTaskFlowStage}
                 mode={flowContext}
