@@ -278,3 +278,74 @@
     width: min(417.6px, calc(100dvh - 560px));
   }
 }
+.rhythm-module .flow-modal.flow-unified[data-modal-size]:has(.adjust-mode) {
+  .plan-task-catalog { display: grid; gap: 10px; }
+  .plan-catalog-task { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border: 1px solid #ffffff26; border-radius: 16px; background: #ffffff08; color: #fff; text-align: left; cursor: pointer; }
+  .plan-catalog-task > span:first-child { flex: 1; min-width: 0; }
+  .plan-catalog-task small { display: block; color: #ffffff80; font-size: 11px; margin-bottom: 5px; }
+  .plan-catalog-task strong { font-size: 14px; overflow-wrap: anywhere; }
+  .plan-catalog-duration { color: #bcbcc7; font-size: 12px; white-space: nowrap; }
+  .plan-catalog-check { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: #ffffff14; flex-shrink: 0; }
+  .plan-catalog-task[aria-pressed='true'] { background: #8fa2ff18; border-color: #8fa2ff88; }
+  .plan-catalog-task[aria-pressed='true'] .plan-catalog-check { background: #8fa2ff; color: #171717; }
+}
+.rhythm-module .flow-modal.flow-unified[data-modal-size]:has(.adjust-mode) {
+  .plan-catalog-space { display: grid; gap: 10px; }
+  .plan-catalog-space + .plan-catalog-space { margin-top: 12px; }
+  .plan-catalog-space h5 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 15px; color: #fff; }
+  .plan-catalog-space .task-icon-tile { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: #ffffff12; flex-shrink: 0; }
+  .plan-catalog-space .task-icon-tile :is(img,.space-icon) { width: 20px; height: 20px; }
+  .plan-catalog-list { border: 1px solid #ffffff26; border-radius: 18px; padding: 10px; }
+  .plan-catalog-list summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; color: #fff; font-size: 14px; }
+  .plan-catalog-list summary::-webkit-details-marker { display: none; }
+  .plan-catalog-list summary::after { content: '⌄'; margin-left: auto; color: #bcbcc7; transform: rotate(-90deg); }
+  .plan-catalog-list[open] summary::after { transform: none; }
+  .plan-catalog-list summary small { color: #ffffff66; font-size: 11px; }
+  .plan-catalog-list > div { display: grid; gap: 10px; margin-top: 10px; }
+  .plan-catalog-task { background: #ffffff12; padding: 12px; }
+  .plan-catalog-task > .plan-catalog-check:first-child { flex: 0 0 28px; }
+  .plan-catalog-task > strong { flex: 1; min-width: 0; }
+  .plan-catalog-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .plan-catalog-chip { display: flex; align-items: center; gap: 5px; padding: 7px 9px; border-radius: 10px; background: #ffffff14; color: #d6d6df; font-size: 12px; white-space: nowrap; }
+  .plan-catalog-chip img { width: 16px; height: 16px; }
+}
+@media (max-width: 640px) {
+  .rhythm-module .flow-modal.flow-unified[data-modal-size]:has(.adjust-mode) {
+    .plan-catalog-task { flex-wrap: wrap; gap: 8px; }
+    .plan-catalog-meta { margin-left: auto; }
+    .plan-catalog-task > strong { flex-basis: calc(100% - 40px); }
+  }
+}
+.rhythm-module .flow-modal.flow-unified[data-modal-size]:has(.adjust-mode) {
+  .plan-catalog-space {
+    padding: 12px;
+    border: 1px solid color-mix(in srgb, var(--space-color) 20%, transparent);
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--space-color) 9%, #19191c);
+  }
+  .plan-space-disclosure > summary {
+    display: flex; align-items: center; gap: 10px; list-style: none;
+    color: #fff; font-size: 15px; cursor: pointer; border-radius: 10px;
+  }
+  .plan-space-disclosure > summary::-webkit-details-marker { display: none; }
+  .plan-space-disclosure > summary:focus-visible { outline: 2px solid var(--space-color); outline-offset: 4px; }
+  .plan-space-chevron { width: 12px; height: 8px; margin-left: auto; opacity: .7; transform: rotate(-90deg); transition: transform 160ms ease; }
+  .plan-space-disclosure[open] > summary .plan-space-chevron { transform: rotate(0deg); }
+  .plan-space-content { display: grid; gap: 10px; padding-top: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plan-space-chevron { transition: none !important; }
+}
+
+.rhythm-module .flow-modal.flow-unified[data-modal-size] .plan-digital-field button:has(.plan-time-placeholder) {
+  display: grid;
+  place-items: center;
+}
+.rhythm-module .flow-modal.flow-unified[data-modal-size] .plan-time-placeholder {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  color: #8996db;
+  text-align: center;
+}

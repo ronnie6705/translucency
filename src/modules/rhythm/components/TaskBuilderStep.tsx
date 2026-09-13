@@ -3,12 +3,14 @@ import type { Chronotype, Task } from '../types';
 import { validateTimeblockPlan } from '../timeblock-plan';
 import { PlanTimeRange } from './PlanTimeRange';
 import { PlanTaskSettings } from './PlanTaskSettings';
+import { PlanTaskCatalog, type CatalogSpace } from './PlanTaskCatalog';
 import { TaskDetailFields } from './TaskDetailFields';
 import { fixedTimeDuration } from '../task-spaces';
 import { TimeRangeSelector } from './TimeRangeSelector';
 
 interface TaskBuilderStepProps {
   tasks: Task[];
+  availableTasks?: CatalogSpace[];
   chronotype: Chronotype;
   date: string;
   onAdd(task: Task): void;
@@ -229,6 +231,7 @@ const ADJUST_TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => (i + 1) * 15);
 
 export const TaskBuilderStep: React.FC<TaskBuilderStepProps> = ({
   tasks,
+  availableTasks,
   chronotype,
   date,
   onAdd,
@@ -683,7 +686,9 @@ useEffect(() => {
         <div className="plan-columns">
         <div className="plan-tasks-column" role="region" aria-label="Tasks and breaks" tabIndex={0}>
           <div className="plan-tasks-heading"><h4>Tasks</h4><button type="button" className="plan-edit-list" onClick={() => setCurrentStep('tasks')}>Edit task list</button></div>
-          <p className="adjust-hint">Use ↑ ↓ to move, ← → to fine-tune energy on tasks.</p>
+          {availableTasks && <PlanTaskCatalog spaces={availableTasks} selected={tasks} onAdd={onAdd} onRemove={onRemove} />}
+          {availableTasks && taskCount > 0 && <h4 className="adjust-section-label">Selected Tasks</h4>}
+          {(!availableTasks || taskCount > 0) && <p className="adjust-hint">Use ↑ ↓ to move, ← → to fine-tune energy on tasks.</p>}
         {orderedAdjustItems.length ? (
           <>
             <div
@@ -770,7 +775,7 @@ useEffect(() => {
             </div>
           </>
         ) : (
-          <p className="adjust-empty">Add tasks to adjust their estimates.</p>
+          !availableTasks && <p className="adjust-empty">Add tasks to adjust their estimates.</p>
         )}
         <div className="plan-add-actions">
           {!breakCount && <p className="adjust-section-label">Breaks</p>}

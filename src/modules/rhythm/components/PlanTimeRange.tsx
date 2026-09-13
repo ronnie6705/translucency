@@ -79,7 +79,7 @@ export function PlanTimeRange({ startTime, endTime, timeZone, validRange, onRang
           {i === 1 && <img className="range-connector" src="/rhythm/planner/Frame278.svg" alt="" />}
           <div className={`plan-digital-field${activeField === field && !showingRange ? ' active' : ''}`}><span>{field}</span>
             <button ref={element => { fields.current[field] = element; }} type="button" aria-label={`Edit ${field === 'start' ? 'Start' : 'End'} time`} aria-pressed={activeField === field && !showingRange} aria-describedby={!validRange ? 'plan-range-error' : undefined} data-time={field === 'start' ? startTime : endTime} onClick={() => edit(field)}>
-              {(field === 'start' ? start : end) ? <>{(field === 'start' ? start : end)!.hour}:{String((field === 'start' ? start : end)!.minute).padStart(2, '0')} <small>{(field === 'start' ? start : end)!.period}</small></> : <small>Select time</small>}
+              {(field === 'start' ? start : end) ? <>{(field === 'start' ? start : end)!.hour}:{String((field === 'start' ? start : end)!.minute).padStart(2, '0')} <small>{(field === 'start' ? start : end)!.period}</small></> : <span className="plan-time-placeholder">Select time</span>}
             </button>
           </div>
         </div>)}

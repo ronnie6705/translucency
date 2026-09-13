@@ -107,7 +107,7 @@ const chronotypeIconMap: Record<Chronotype, ReactNode> = {
 };
 
 function App({ section = "rhythm" }: { section?: string }) {
-  const { taskLists: savedTaskLists, timeblocks: savedTimeblocks, liveTimer, save, setSavedTaskLists, setSavedTimeblocks, ready, error: storageError, reload } = useTaskWorkspace().library;
+  const { spaces, taskLists: savedTaskLists, timeblocks: savedTimeblocks, liveTimer, save, setSavedTaskLists, setSavedTimeblocks, ready, error: storageError, reload } = useTaskWorkspace().library;
   const [timerOpen, setTimerOpen] = useState(false);
   const [startingTimer, setStartingTimer] = useState(false);
 
@@ -120,6 +120,13 @@ function App({ section = "rhythm" }: { section?: string }) {
   });
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [browseAllTasks, setBrowseAllTasks] = useState(false);
+  const availableTasks = (spaces ?? []).map(space => ({
+    ...space,
+    tasks: space.tasks.filter(task => !task.isBreak),
+    lists: savedTaskLists.filter(list => list.spaceId === space.id || (!list.spaceId && space.id === spaces?.[0]?.id))
+      .map(list => ({ ...list, tasks: list.tasks.filter(task => !task.isBreak) })),
+  }));
   const generatedPlanKey = useRef<string | null>(null);
   const [showFlowModal, setShowFlowModal] = useState(false);
   const flowDialog = useRef<HTMLDialogElement>(null);
@@ -217,6 +224,7 @@ function App({ section = "rhythm" }: { section?: string }) {
   };
 
   const resetFlowVisualState = () => {
+    setBrowseAllTasks(false);
     generatedPlanKey.current = null;
     setTaskFlowStage('tasks');
     setTaskFlowTheme('light');
@@ -257,6 +265,7 @@ function App({ section = "rhythm" }: { section?: string }) {
 
   const handleStartNewTimeblock = () => {
     resetFlowVisualState();
+    setBrowseAllTasks(true);
     setFlowContext('timeblock');
     setFlowStep('tasks');
     setTaskBuilderInitialStep('adjust');
@@ -575,6 +584,7 @@ function App({ section = "rhythm" }: { section?: string }) {
               <TaskBuilderStep
                 key={`${flowContext}:${taskBuilderInitialStep}`}
                 tasks={tasks}
+                availableTasks={browseAllTasks ? availableTasks : undefined}
                 chronotype={dayConfig.chronotype}
                 date={dayConfig.date}
                 onAdd={handleAddTask}
