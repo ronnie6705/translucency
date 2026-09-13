@@ -7,7 +7,7 @@ import type { Task } from '../src/modules/rhythm/types';
 const task: Task = { id: 'task', name: 'Write', durationMinutes: 45, energyRequired: 2, priority: 2 };
 const lunch: Task = { ...task, id: 'lunch', name: 'Lunch', isBreak: true, fixedStart: '13:00' };
 
-test('plan requires task estimates, energy, and a valid quarter-hour range; breaks are optional', () => {
+test('plan requires task estimates, energy, and a valid five-minute range; breaks are optional', () => {
   assert.equal(TIME_OPTIONS.length, 96);
   assert.equal(validateTimeblockPlan([task], '09:00', '17:30').valid, true);
   for (const [start, end] of [['', ''], ['17:30', '09:00'], ['09:00', '09:00'], ['09:01', '17:30']]) {

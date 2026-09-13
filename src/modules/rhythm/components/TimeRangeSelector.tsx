@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { Chronotype, Task } from '../types';
-import { TIME_ZONE_OPTIONS } from '../utils/timezone';
+import { PlanTimeRange } from './PlanTimeRange';
+import { clockTimeToMinutes, parseClockTime } from '../clock-time';
 import { planSequentialTasks } from '../utils/manualSchedule';
 import { generateSchedule } from '../rhythmScheduler';
 import { TimerIcon } from './LiveTimer';
@@ -25,8 +26,7 @@ interface TimeRangeSelectorProps {
   onSaveTimeblock?: () => void;
 }
 
-const STEP_MINUTES = 15;
-const TOTAL_STEPS = (24 * 60) / STEP_MINUTES;
+const STEP_MINUTES = 5;
 const TIMELINE_HEIGHT = 620;
 const MIN_BLOCK_HEIGHT = 44;
 
@@ -175,19 +175,8 @@ const formatDuration = (start: number, end: number) => {
 };
 
 const timeStringToIndex = (value: string): number | null => {
-  const [rawHours, rawMinutes] = value.split(':').map(Number);
-  if (
-    Number.isNaN(rawHours) ||
-    Number.isNaN(rawMinutes) ||
-    rawHours < 0 ||
-    rawHours > 23 ||
-    rawMinutes < 0 ||
-    rawMinutes > 59 ||
-    rawMinutes % STEP_MINUTES !== 0
-  ) {
-    return null;
-  }
-  return (rawHours * 60 + rawMinutes) / STEP_MINUTES;
+  const time = parseClockTime(value);
+  return time ? clockTimeToMinutes(time) / STEP_MINUTES : null;
 };
 
 export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
@@ -209,7 +198,6 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
   onStageChange,
   onSaveTimeblock,
 }) => {
-  const slots = useMemo(() => Array.from({ length: TOTAL_STEPS }, (_, i) => slotLabel(i)), []);
   const initialStartIndex = timeStringToIndex(startTime);
   const initialEndIndex = timeStringToIndex(endTime);
   const hasInitialRange =
@@ -346,20 +334,6 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
       };
     });
   }, [plannedSegments, startIndex, endIndex]);
-
-  const handleSelect = (column: 'start' | 'end', index: number) => {
-    if (column === 'start') {
-      setStartIndex(index);
-      if (endIndex !== null && index >= endIndex) {
-        setEndIndex(null);
-      }
-      setMode('end');
-    } else {
-      if (startIndex === null || index <= startIndex) return;
-      setEndIndex(index);
-      setMode('review');
-    }
-  };
 
   useEffect(() => {
     if (
@@ -525,64 +499,21 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
       </div>
 
       {(mode !== 'blocks' && mode !== 'export') && (
-        <div className="time-picker-columns">
-          <div className="time-column">
-            <p>Start</p>
-            <div className="time-column-inner">
-              {slots.map((slot, index) => (
-                <button
-                  type="button"
-                  key={`start-${slot}-${index}`}
-                  className={
-                    'time-slot' +
-                    (startIndex === index ? ' active' : '') +
-                    (mode === 'start' ? ' highlight' : '')
-                  }
-                  onClick={() => handleSelect('start', index)}
-                >
-                  {slot}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="time-column">
-            <p>End</p>
-            <div className="time-column-inner">
-              {slots.map((slot, index) => (
-                <button
-                  type="button"
-                  key={`end-${slot}-${index}`}
-                  className={
-                    'time-slot' +
-                    (endIndex === index ? ' active' : '') +
-                    (mode === 'end' ? ' highlight' : '')
-                  }
-                  onClick={() => handleSelect('end', index)}
-                  disabled={startIndex === null || index <= startIndex}
-                >
-                  {slot}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {(mode === 'start' || mode === 'end' || mode === 'review') && (
-        <div className="time-zone-selector full">
-          <label>
-            <span>Time Zone</span>
-            <select
-              value={timeZone}
-              onChange={e => onTimeZoneChange?.(e.target.value)}
-            >
-              {TIME_ZONE_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="legacy-radial-range">
+          <PlanTimeRange
+            startTime={startIndex === null ? '' : indexToTimeString(startIndex)}
+            endTime={endIndex === null ? '' : indexToTimeString(endIndex)}
+            timeZone={timeZone}
+            validRange={canReview}
+            onTimeZoneChange={zone => onTimeZoneChange?.(zone)}
+            onRangeChange={(start, end) => {
+              const nextStart = timeStringToIndex(start), nextEnd = timeStringToIndex(end);
+              setStartIndex(nextStart);
+              setEndIndex(nextEnd);
+              setMode(nextStart !== null && nextEnd !== null && nextEnd > nextStart ? 'review' : 'start');
+              onRangeChange?.(start, end);
+            }}
+          />
         </div>
       )}
 

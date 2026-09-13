@@ -18,7 +18,7 @@ const toMinutes = (time: string) => {
 export function validateTimeblockPlan(tasks: Task[], startTime: string, endTime: string) {
   const start = toMinutes(startTime);
   const end = toMinutes(endTime);
-  const validRange = Number.isFinite(start) && Number.isFinite(end) && end > start && start % 15 === 0 && end % 15 === 0;
+  const validRange = Number.isFinite(start) && Number.isFinite(end) && end > start && start % 5 === 0 && end % 5 === 0;
   const errors: Record<string, string> = {};
   for (const task of tasks) {
     if (!task.name.trim()) errors[task.id] = 'Enter a name.';

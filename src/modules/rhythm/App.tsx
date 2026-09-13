@@ -15,6 +15,7 @@ import { buildManualSchedule } from './utils/manualSchedule';
 import { LiveTimerModal, LiveTimerPreview } from './components/LiveTimer';
 import './live-timer.css';
 import './timeblock-flow.css';
+import './plan-timeblock.css';
 
 const today = new Date();
 const todayStr = [

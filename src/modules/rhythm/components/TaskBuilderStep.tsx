@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Chronotype, Task } from '../types';
-import { TIME_OPTIONS, validateTimeblockPlan } from '../timeblock-plan';
-import { TIME_ZONE_OPTIONS } from '../utils/timezone';
+import { validateTimeblockPlan } from '../timeblock-plan';
+import { PlanTimeRange } from './PlanTimeRange';
+import { PlanTaskSettings } from './PlanTaskSettings';
 import { TaskDetailFields } from './TaskDetailFields';
 import { fixedTimeDuration } from '../task-spaces';
 import { TimeRangeSelector } from './TimeRangeSelector';
@@ -673,7 +674,16 @@ useEffect(() => {
             <p className="eyebrow">Create a Timeblock</p>
             <h3>Plan Your Timeblock</h3>
           </div>
+          <div className="time-range-header-actions plan-header-actions">
+            {onSaveTimeblock && <button type="button" className="task-step-save" onClick={onSaveTimeblock} disabled={!formattedTasks.length}>Save</button>}
+            <button type="button" className="time-range-next" onClick={onPlanNext ?? (() => setCurrentStep('range'))} disabled={!planValidation.valid}>Next</button>
+            <button type="button" className="plan-close" onClick={onDone} aria-label="Cancel"><img src="/rhythm/planner/Cross.svg" alt="" /></button>
+          </div>
         </div>
+        <div className="plan-columns">
+        <div className="plan-tasks-column" role="region" aria-label="Tasks and breaks" tabIndex={0}>
+          <div className="plan-tasks-heading"><h4>Tasks</h4><button type="button" className="plan-edit-list" onClick={() => setCurrentStep('tasks')}>Edit task list</button></div>
+          <p className="adjust-hint">Use ↑ ↓ to move, ← → to fine-tune energy on tasks.</p>
         {orderedAdjustItems.length ? (
           <>
             <div
@@ -684,8 +694,7 @@ useEffect(() => {
             >
               {orderedAdjustItems.map((item, index) => {
                 const sectionLabel =
-                  (taskCount && index === 0 ? 'Rate Your Tasks' : null) ||
-                  (breakCount && index === taskCount ? 'Breaks (Optional)' : null);
+                  (breakCount && index === taskCount ? 'Breaks' : null);
                 const isSelected = selectedAdjustIndex === index;
                 const pulseClass =
                   energyPulse && energyPulse.id === item.id
@@ -708,14 +717,13 @@ useEffect(() => {
                       <div className="adjust-task-header">
                         <div>
                           <p>{item.label}</p>
-                          {item.task.isBreak ? <label className="plan-break-name">Break name<input aria-label={`Name for break ${index - taskCount + 1}`} value={item.task.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /></label> : <strong>{item.task.name}</strong>}
+                          {item.task.isBreak ? <label className="plan-break-name"><input aria-label={`Name for break ${index - taskCount + 1}`} value={item.task.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /></label> : <strong>{item.task.name}</strong>}
                         </div>
                         <div className="adjust-chip-row">
                           <div className="plan-rating-field">
-                            <span className="plan-field-label">Duration</span>
                             <label className="adjust-pill">
                             <span className="pill-icon">
-                              <TimeIcon />
+                              <img src="/rhythm/planner/Stopwatch.svg" alt="" />
                             </span>
                             <select
                               aria-label={`Duration for ${item.task.name}`}
@@ -735,13 +743,12 @@ useEffect(() => {
                             </select>
                             </label>
                           </div>
-                          {(item.task.isBreak || item.task.fixedStart) && <label className="plan-fixed-time">Fixed time (optional)<input type="time" aria-label={`Fixed time for ${item.task.name || 'break'}`} value={item.task.fixedStart ?? ''} onChange={event => onUpdate(item.id, { fixedStart: event.target.value || undefined })} /></label>}
+                          {item.task.isBreak && <label className="plan-fixed-time"><img src="/rhythm/planner/ClockCheck.svg" alt="" /><input type="time" aria-label={`Fixed time for ${item.task.name || 'break'}`} value={item.task.fixedStart ?? ''} onChange={event => onUpdate(item.id, { fixedStart: event.target.value || undefined })} /></label>}
                           {!item.task.isBreak ? (
                             <div className="plan-rating-field plan-energy-field">
-                              <span className="plan-field-label">Energy</span>
                               <label className="adjust-pill energy">
                               <span className="pill-icon">
-                                <EnergyIcon />
+                                <img src="/rhythm/planner/Lightning.svg" alt="" />
                               </span>
                               <select aria-label={`Energy for ${item.task.name}`} value={item.task.energyRequired || 0} onChange={event => onUpdate(item.task.id, { energyRequired: Number(event.target.value) as Task['energyRequired'] })}>
                                 <option value={0}>Energy</option>
@@ -750,8 +757,9 @@ useEffect(() => {
                               </label>
                             </div>
                           ) : (
-                            <button type="button" className="task-remove-btn" aria-label={`Remove ${item.task.name || 'break'}`} onClick={() => onRemove(item.id)}><TrashIcon /></button>
+                            <button type="button" className="task-remove-btn" aria-label={`Remove ${item.task.name || 'break'}`} onClick={() => onRemove(item.id)}><img src="/rhythm/planner/Trash2.svg" alt="" /></button>
                           )}
+                          {!item.task.isBreak && <PlanTaskSettings task={item.task} onUpdate={onUpdate} onRemove={onRemove} />}
                         </div>
                       </div>
                       {planValidation.errors[item.id] && <p className="plan-error" id={`plan-error-${item.id}`} role="status">{planValidation.errors[item.id]}</p>}
@@ -760,61 +768,17 @@ useEffect(() => {
                 );
               })}
             </div>
-            <p className="adjust-hint">Use ↑ ↓ to move, ← → to fine-tune energy on tasks.</p>
           </>
         ) : (
           <p className="adjust-empty">Add tasks to adjust their estimates.</p>
         )}
         <div className="plan-add-actions">
-          {!breakCount && <p className="adjust-section-label">Breaks (Optional)</p>}
-          <p className="adjust-hint">Leave fixed time empty and Rhythm will place the break for you.</p>
-          <button type="button" className="task-step-save" onClick={() => onAdd({ id: crypto.randomUUID(), name: '', durationMinutes: 15, energyRequired: 1, priority: 2, isBreak: true })}>+ Add Break</button>
+          {!breakCount && <p className="adjust-section-label">Breaks</p>}
+
+          <button type="button" className="task-step-save" onClick={() => onAdd({ id: crypto.randomUUID(), name: '', durationMinutes: 15, energyRequired: 1, priority: 2, isBreak: true })}><img src="/rhythm/planner/PlusRec.svg" alt="" /> Add Break</button>
         </div>
-        <section className="plan-time-section" aria-labelledby="plan-time-title">
-          <h4 id="plan-time-title">Time Range</h4>
-          <div className="plan-time-range">
-            <label>Start<select aria-label="Start time" value={startTime} onChange={event => onRangeChange(event.target.value, endTime > event.target.value ? endTime : '')}>
-              <option value="">Select start</option>
-              {TIME_OPTIONS.slice(0, -1).map(time => <option key={time.value} value={time.value}>{time.label}</option>)}
-            </select></label>
-            <span aria-hidden="true">→</span>
-            <label>End<select aria-label="End time" value={endTime} disabled={!startTime} onChange={event => onRangeChange(startTime, event.target.value)}>
-              <option value="">Select end</option>
-              {TIME_OPTIONS.filter(time => time.value > startTime).map(time => <option key={time.value} value={time.value}>{time.label}</option>)}
-            </select></label>
-          </div>
-          {!planValidation.validRange && <p className="adjust-hint">Choose a start and a later end time to continue.</p>}
-          <div className="time-zone-selector full"><label><span>Time Zone</span><select aria-label="Time Zone" value={timeZone} onChange={event => onTimeZoneChange(event.target.value)}>{TIME_ZONE_OPTIONS.map(zone => <option key={zone.label} value={zone.value}>{zone.label}</option>)}</select></label></div>
-        </section>
-        <div className="time-range-header-actions plan-footer">
-          <button type="button" className="task-step-done" onClick={onDone}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="task-remove-toggle"
-            onClick={() => setCurrentStep('tasks')}
-          >
-            Edit task list
-          </button>
-          {onSaveTimeblock && (
-            <button
-              type="button"
-              className="task-step-save"
-              onClick={onSaveTimeblock}
-              disabled={!formattedTasks.length}
-            >
-              Save
-            </button>
-          )}
-          <button
-            type="button"
-            className="time-range-next"
-            onClick={onPlanNext ?? (() => setCurrentStep('range'))}
-            disabled={!planValidation.valid}
-          >
-            Next
-          </button>
+        </div>
+        <PlanTimeRange startTime={startTime} endTime={endTime} timeZone={timeZone} validRange={planValidation.validRange} onRangeChange={onRangeChange} onTimeZoneChange={onTimeZoneChange} />
         </div>
       </div>
     );

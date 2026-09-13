@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="11.6928" height="11.6928" viewBox="0 0 11.6928 11.6928" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle id="minute-handle" cx="5.8464" cy="5.8464" r="5.8464" fill="url(#paint0_radial_0_183)"/>
+<defs>
+<radialGradient id="paint0_radial_0_183" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(5.8464 5.8464) rotate(90) scale(5.8464)">
+<stop stop-color="#7F92F2"/>
+<stop offset="1" stop-color="#49548C"/>
+</radialGradient>
+</defs>
+</svg>
