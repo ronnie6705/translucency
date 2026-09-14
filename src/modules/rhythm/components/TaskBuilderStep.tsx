@@ -1,3 +1,4 @@
+import { TaskListBadge } from "./TaskListBadge";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Chronotype, Task } from '../types';
 import { validateTimeblockPlan } from '../timeblock-plan';
@@ -550,7 +551,7 @@ useEffect(() => {
       <li key={task.id} className={isBreakTask ? 'break-list-item' : undefined}>
         <div className="task-item-main">
           <span className="task-id">{item.label}</span>
-          <span className="task-name">{task.name}</span>
+          <span className="task-name">{task.name}<TaskListBadge taskId={task.id} /></span>
           {task.fixedStart && (
             <span className="task-fixed-time">Fixed at {task.fixedStart}</span>
           )}
@@ -722,7 +723,7 @@ useEffect(() => {
                       <div className="adjust-task-header">
                         <div>
                           <p>{item.label}</p>
-                          {item.task.isBreak ? <label className="plan-break-name"><input aria-label={`Name for break ${index - taskCount + 1}`} value={item.task.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /></label> : <strong>{item.task.name}</strong>}
+                          {item.task.isBreak ? <label className="plan-break-name"><input aria-label={`Name for break ${index - taskCount + 1}`} value={item.task.name} onChange={event => onUpdate(item.id, { name: event.target.value })} /></label> : <strong>{item.task.name}<TaskListBadge taskId={item.task.id} /></strong>}
                         </div>
                         <div className="adjust-chip-row">
                           <div className="plan-rating-field">

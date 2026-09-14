@@ -1,3 +1,5 @@
+import { TaskListBadge } from "./TaskListBadge";
+import { useBlockClear } from "./use-block-clear";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { useTaskWorkspace } from "../task-workspace";
 import {
@@ -26,9 +28,16 @@ export function TasksPanel({
   onEditList(id: string): void;
   onDeleteList(id: string): void;
 }) {
-  const { library, activeSpaceId, openTask, openSpace, selectSpace } =
+  const { library, activeSpaceId, showCompleted, openTask, openSpace, selectSpace } =
     useTaskWorkspace();
   const [search, setSearch] = useState("");
+  const [clearing, setClearing] = useState<Set<string>>(() => new Set());
+  const retainTask = (id: string, retain: boolean) => setClearing((current) => {
+    const next = new Set(current);
+    if (retain) next.add(id); else next.delete(id);
+    return next;
+  });
+  const visible = (task: Task) => !!task.completed === showCompleted || (!showCompleted && clearing.has(task.id));
   const [editing, setEditing] = useState<{
     task: Task;
     ref: TaskReference;
@@ -100,6 +109,7 @@ export function TasksPanel({
     <TaskRow
       key={task.id}
       task={task}
+      onRetain={(retain) => retainTask(task.id, retain)}
       dragging={drag?.taskId === task.id}
       dropTarget={drop === task.id}
       onDragStart={(e) => {
@@ -129,12 +139,12 @@ export function TasksPanel({
     />
   );
   return (
-    <div className="tasks-panel" id="rhythm-tasks">
+    <div className="tasks-panel" id="rhythm-tasks" tabIndex={-1} aria-label="Tasks">
       <div className="tasks-page-header">
         <div>
           <p className="section-kicker">Tasks</p>
           <h1>
-            {activeSpaceId
+            {showCompleted ? "Completed" : activeSpaceId
               ? spaces[0]?.name
               : "Your tasks, in their own space."}
           </h1>
@@ -169,11 +179,17 @@ export function TasksPanel({
           <button onClick={() => openSpace()}>+ Add New Space</button>
         </div>
       )}
+      {showCompleted && !spaces.some((space) => space.tasks.some((t) => t.completed) || library.taskLists.some((list) => list.spaceId === space.id && list.tasks.some((t) => t.completed))) && (
+        <div className="tasks-empty"><h2>No completed tasks yet.</h2><p>Tasks you complete in any space will appear here.</p></div>
+      )}
       {spaces.map((space) => {
-        const lists = library.taskLists.filter((l) => l.spaceId === space.id);
+        const lists = library.taskLists.filter((l) => l.spaceId === space.id)
+          .map((list) => ({ ...list, tasks: list.tasks.filter(visible) }))
+          .filter((list) => !showCompleted || list.tasks.length > 0);
         const direct = space.tasks.filter((t) =>
-          t.name.toLowerCase().includes(query),
+          visible(t) && t.name.toLowerCase().includes(query),
         );
+        if (showCompleted && !direct.length && !lists.some((list) => list.name.toLowerCase().includes(query) || list.tasks.some((t) => t.name.toLowerCase().includes(query)))) return null;
         return (
           <section
             className="tasks-space"
@@ -260,7 +276,7 @@ export function TasksPanel({
                     <button onClick={() => onEditList(list.id)}>
                       Edit list
                     </button>
-                    <button onClick={() => onTimeblock(list.id)}>
+                    <button disabled={showCompleted || !list.tasks.some((t) => !t.isBreak)} onClick={() => onTimeblock(list.id)}>
                       Timeblock
                     </button>
                     <button onClick={() => onDeleteList(list.id)}>
@@ -348,6 +364,7 @@ function TaskRow({
   task: savedTask,
   onUpdate,
   onSettings,
+  onRetain,
   dragging,
   dropTarget,
   ...dragEvents
@@ -355,6 +372,7 @@ function TaskRow({
   task: Task;
   onUpdate(updates: Partial<Task>): Promise<boolean>;
   onSettings(): void;
+  onRetain(retain: boolean): void;
   dragging: boolean;
   dropTarget: boolean;
   onDragStart(e: DragEvent): void;
@@ -368,6 +386,7 @@ function TaskRow({
   const [quick, setQuick] = useState<"energy" | "time" | null>(null);
   const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const clear = useBlockClear(ref, onRetain);
   useEffect(() => {
     if (!quick) return;
     const outside = (e: PointerEvent) => {
@@ -389,30 +408,41 @@ function TaskRow({
     }
   };
   return (
+    <div className="task-clear-slot" ref={clear.slot}>
     <div
       ref={ref}
       className={`tasks-row ${quick ? "quick-editor-open" : ""} ${task.completed ? "completed" : ""} ${dragging ? "dragging" : ""} ${dropTarget ? "task-drop-target" : ""}`}
       data-task-id={task.id}
-      draggable={!quick}
+      draggable={!quick && !clear.active}
       {...dragEvents}
     >
       <label className="task-completion">
         <input
           type="checkbox"
-          checked={!!task.completed}
-          disabled={busy}
+          checked={clear.active || !!task.completed}
+          aria-disabled={busy || clear.active}
           aria-label={`Complete ${task.name}`}
-          onChange={(e) => void change({ completed: e.target.checked })}
+          onPointerDown={(e) => { if (e.button === 0 && !task.completed && !busy) clear.press(); }}
+          onPointerCancel={clear.release}
+          onPointerLeave={clear.release}
+          onBlur={clear.release}
+          onKeyDown={(e) => { if (e.key === " " && !task.completed && !busy) clear.press(); }}
+          onKeyUp={(e) => { if (e.key === "Escape") clear.release(); }}
+          onChange={(e) => {
+            if (busy || clear.locked.current) return;
+            if (e.target.checked) { setQuick(null); void clear.complete(() => onUpdate({ completed: true })); }
+            else void change({ completed: false });
+          }}
         />
         <span aria-hidden="true">
-          {task.completed && <TaskAsset name="row-imgCheckRec" />}
+          {(task.completed || clear.active) && <TaskAsset name="row-imgCheckRec" />}
         </span>
       </label>
-      <span className="tasks-row-name">{task.name}</span>
+      <span className="tasks-row-name">{task.name}<TaskListBadge taskId={task.id} /></span>
       <div className="tasks-row-controls">
         <div className="task-quick-anchor">
           <button
-            disabled={busy}
+            disabled={busy || clear.active}
             aria-label={`Edit energy for ${task.name}`}
             aria-expanded={quick === "energy"}
             onClick={() => setQuick(quick === "energy" ? null : "energy")}
@@ -431,7 +461,7 @@ function TaskRow({
         </div>
         <div className="task-quick-anchor">
           <button
-            disabled={busy}
+            disabled={busy || clear.active}
             aria-label={`Edit duration for ${task.name}`}
             aria-expanded={quick === "time"}
             onClick={() => setQuick(quick === "time" ? null : "time")}
@@ -450,6 +480,7 @@ function TaskRow({
         </div>
         <button
           className="task-settings-button"
+          disabled={clear.active}
           aria-label={`Settings for ${task.name}`}
           onClick={onSettings}
         >
@@ -461,6 +492,7 @@ function TaskRow({
           Hold here, then drop to create a Task List
         </span>
       )}
+    </div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { TaskListBadge } from "./TaskListBadge";
 import type { CSSProperties } from 'react';
 import type { Space, SavedTaskList, Task } from '../types';
 import { SpaceIcon, TaskAsset } from './space-icons';
@@ -18,7 +19,7 @@ export function PlanTaskCatalog({ spaces, selected, onAdd, onRemove }: {
       aria-label={`${included ? 'Remove' : 'Add'} ${task.name} ${included ? 'from' : 'to'} timeblock`}
       onClick={() => included ? onRemove(task.id) : onAdd({ ...task })}>
       <span className="plan-catalog-check" aria-hidden="true">{included ? '✓' : '+'}</span>
-      <strong>{task.name}</strong>
+      <strong>{task.name}<TaskListBadge taskId={task.id} /></strong>
       <span className="plan-catalog-meta">
         <span className="plan-catalog-chip" aria-label={`Energy ${task.energyRequired}`}><TaskAsset name="row-imgLightning" />{task.energyRequired}</span>
         <span className="plan-catalog-chip" aria-label={`Estimated time ${formatTaskDuration(task.durationMinutes)}`}><TaskAsset name="row-imgStopwatch" />{formatTaskDuration(task.durationMinutes)}</span>

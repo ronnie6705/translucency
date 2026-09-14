@@ -1,4 +1,5 @@
 // src/components/ScheduleView.tsx
+import { TaskListBadge } from "./TaskListBadge";
 import React from 'react';
 import type { ScheduleBlock } from '../types';
 
@@ -31,7 +32,7 @@ export const ScheduleView: React.FC<Props> = ({ blocks }) => {
               {formatTime(b.start)} – {formatTime(b.end)}
             </div>
             <div className="schedule-task">
-              <strong>{b.taskName}</strong>
+              <strong>{b.taskName}<TaskListBadge taskId={b.taskId} /></strong>
               {!b.isBreak && (
                 <span> · Energy {b.energyRequired}/5</span>
               )}

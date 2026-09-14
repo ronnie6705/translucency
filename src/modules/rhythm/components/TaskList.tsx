@@ -1,4 +1,5 @@
 // src/components/TaskList.tsx
+import { TaskListBadge } from "./TaskListBadge";
 import React from 'react';
 import type { Task } from '../types';
 
@@ -24,7 +25,7 @@ export const TaskList: React.FC<Props> = ({ tasks, onRemove }) => {
         {tasks.map(t => (
           <li key={t.id} className="task-list-item">
             <div>
-              <strong>{t.name}</strong> · {t.durationMinutes} mins · Energy{' '}
+              <strong>{t.name}<TaskListBadge taskId={t.id} /></strong> · {t.durationMinutes} mins · Energy{' '}
               {t.energyRequired}/5
               {t.isBreak && <span> · Break</span>}
               {t.fixedStart && <span> · Fixed at {t.fixedStart}</span>}

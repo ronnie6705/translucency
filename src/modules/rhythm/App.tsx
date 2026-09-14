@@ -8,7 +8,8 @@ import { TasksPanel } from './components/TasksPanel';
 import { TaskBuilderStep } from './components/TaskBuilderStep';
 import type { Chronotype, DayConfig, SavedTaskList, SavedTimeblock, Task } from './types';
 import { generateICS } from './ics';
-import { DEVICE_TIME_ZONE } from './utils/timezone';
+import { createDateInTimeZone, DEVICE_TIME_ZONE } from './utils/timezone';
+import { completeLiveTask } from './complete-live-task';
 import { generateSchedule } from './rhythmScheduler';
 import { validateTimeblockPlan } from './timeblock-plan';
 import { buildManualSchedule } from './utils/manualSchedule';
@@ -123,9 +124,9 @@ function App({ section = "rhythm" }: { section?: string }) {
   const [browseAllTasks, setBrowseAllTasks] = useState(false);
   const availableTasks = (spaces ?? []).map(space => ({
     ...space,
-    tasks: space.tasks.filter(task => !task.isBreak),
+    tasks: space.tasks.filter(task => !task.isBreak && !task.completed),
     lists: savedTaskLists.filter(list => list.spaceId === space.id || (!list.spaceId && space.id === spaces?.[0]?.id))
-      .map(list => ({ ...list, tasks: list.tasks.filter(task => !task.isBreak) })),
+      .map(list => ({ ...list, tasks: list.tasks.filter(task => !task.isBreak && !task.completed) })),
   }));
   const generatedPlanKey = useRef<string | null>(null);
   const [showFlowModal, setShowFlowModal] = useState(false);
@@ -210,6 +211,8 @@ function App({ section = "rhythm" }: { section?: string }) {
       name: savedTimeblocks.find(block => block.id === activeTimeblockId)?.name ?? "Today's Plan",
       timezone: dayConfig.timezone,
       blocks,
+      startedAt: createDateInTimeZone(dayConfig.date, dayConfig.startTime, dayConfig.timezone).toISOString(),
+      endsAt: createDateInTimeZone(dayConfig.date, dayConfig.endTime, dayConfig.timezone).toISOString(),
     };
     const saved = await save(data => ({ ...data, liveTimer: timer }));
     setStartingTimer(false);
@@ -338,7 +341,7 @@ function App({ section = "rhythm" }: { section?: string }) {
     setTaskBuilderInitialStep('adjust');
     setActiveTaskListId(list.id);
     setActiveTimeblockId(null);
-    setTasks(list.tasks.map(task => ({ ...task })));
+    setTasks(list.tasks.filter(task => !task.completed).map(task => ({ ...task })));
     setDraftTimeRange(null);
     setShowFlowModal(true);
   };
@@ -621,7 +624,8 @@ function App({ section = "rhythm" }: { section?: string }) {
           </div>
         </dialog>
       )}
-      {timerOpen && liveTimer && <LiveTimerModal timer={liveTimer} onClose={() => setTimerOpen(false)} />}
+      {timerOpen && liveTimer && <LiveTimerModal timer={liveTimer} onClose={() => setTimerOpen(false)} error={storageError}
+        onComplete={(taskId, now, outcome) => save(data => completeLiveTask(data, liveTimer.id, taskId, now, outcome))} />}
     </div>
   );
 }

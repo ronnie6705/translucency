@@ -7,7 +7,9 @@ const browser = await chromium.launch({channel:process.env.BROWSER_CHANNEL || 'c
 const context = await browser.newContext({viewport:{width:1728,height:1117},timezoneId:'Australia/Sydney',acceptDownloads:true,hasTouch:true});
 const user={id:'00000000-0000-4000-8000-000000000091',email:'timer@example.test',aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{}};
 const tasks=[{id:'a',name:'Write documentation',durationMinutes:45,energyRequired:2,priority:2},{id:'b',name:'Build feature',durationMinutes:60,energyRequired:5,priority:1}];
-const docs=new Map([['rhythm',{payload:{version:1,spaces:[{id:'home',name:'Home',icon:'home',color:'#ffffff',createdAt:'2026-09-09T00:00:00Z',tasks:[]},{id:'personal',name:'Personal',icon:'personal',color:'#81b8ff',createdAt:'2026-09-09T00:00:00Z',tasks:[{id:'personal-task',name:'Read a chapter',durationMinutes:30,energyRequired:2,priority:2}]}],taskLists:[{id:'list',spaceId:'home',name:'Sprint',createdAt:'2026-09-09T00:00:00Z',tasks}],timeblocks:[]},revision:1}]]);
+const completedListTask={...tasks[0],id:'done-list',name:'Finished list task',completed:true};
+const completedDirectTask={...tasks[0],id:'done-direct',name:'Finished direct task',completed:true};
+const docs=new Map([['rhythm',{payload:{version:1,spaces:[{id:'home',name:'Home',icon:'home',color:'#ffffff',createdAt:'2026-09-09T00:00:00Z',tasks:[completedDirectTask]},{id:'personal',name:'Personal',icon:'personal',color:'#81b8ff',createdAt:'2026-09-09T00:00:00Z',tasks:[{id:'personal-task',name:'Read a chapter',durationMinutes:30,energyRequired:2,priority:2}]}],taskLists:[{id:'list',spaceId:'home',name:'Sprint',createdAt:'2026-09-09T00:00:00Z',tasks:[...tasks,completedListTask]}],timeblocks:[]},revision:1}]]);
 const errors=[];
 await context.route('https://*.supabase.co/**',async route=>{
  const request=route.request(); const url=new URL(request.url()); const path=url.pathname;
@@ -27,10 +29,18 @@ try {
  await page.getByLabel('Email',{exact:true}).fill(user.email);
  await page.getByLabel('Password',{exact:true}).fill('synthetic-password');
  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await page.getByRole('link',{name:'Completed',exact:true}).click();
+ await expect(page.locator('.tasks-row')).toHaveCount(2);
+ await expect(page.locator('.tasks-row').filter({hasText:'Finished list task'})).toBeVisible();
+ await expect(page.locator('.tasks-row').filter({hasText:'Finished direct task'})).toBeVisible();
+ await page.getByRole('link',{name:'All tasks',exact:true}).click();
+ await expect(page.locator('.tasks-row').filter({hasText:'Finished'})).toHaveCount(0);
  await page.goto(base+'/#rhythm-timeblocks');
  await page.getByRole('button',{name:'Add Timeblock',exact:true}).click();
  const picker=page.getByRole('dialog',{name:'Create a timeblock'});
  const catalog=picker.getByRole('group',{name:'Tasks from all spaces'});
+ await expect(catalog.getByText('Finished list task',{exact:true})).toHaveCount(0);
+ await expect(catalog.getByText('Finished direct task',{exact:true})).toHaveCount(0);
  await expect(catalog.getByText('Personal',{exact:true})).toBeVisible();
  const personalSpace=catalog.getByRole('region',{name:'Personal',exact:true});
  await personalSpace.locator('.plan-space-disclosure > summary').click();
@@ -40,7 +50,9 @@ try {
 
  await expect(catalog.getByRole('region',{name:'Home',exact:true}).locator('.plan-catalog-list > summary')).toContainText('Sprint');
  await expect(catalog.getByRole('region',{name:'Home',exact:true}).locator('.plan-catalog-list > summary img')).toHaveAttribute('src','/rhythm/tasks/add-imgListUnordered4Rec.svg');
+ await expect(catalog.getByRole('button',{name:'Add Build feature to timeblock',exact:true}).locator('.task-list-badge')).toHaveText('Sprint');
  const chapter=catalog.getByRole('button',{name:'Add Read a chapter to timeblock',exact:true});
+ await expect(chapter.locator('.task-list-badge')).toHaveCount(0);
  await expect(chapter.getByLabel('Energy 2',{exact:true})).toBeVisible();
  await expect(chapter.getByLabel('Estimated time 30m',{exact:true})).toBeVisible();
  await catalog.locator('.plan-catalog-list > summary').click();
@@ -60,6 +72,7 @@ try {
  await page.goto(base+'/#rhythm-tasks');
  await page.getByRole('button',{name:'Timeblock',exact:true}).click();
  const modal=page.getByRole('dialog',{name:'Create a timeblock'});
+ await expect(modal.getByText('Finished list task',{exact:true})).toHaveCount(0);
  const button=name=>modal.getByRole('button',{name,exact:true});
  const timeField=field=>button(`Edit ${field} time`);
  const setTime=async (field,time)=>{

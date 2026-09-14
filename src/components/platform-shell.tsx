@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
-import { AudioLines, Layers2, LayoutDashboard, ListTodo, CalendarDays, Feather, History, Sparkles, Droplets, Leaf, Circle, Settings, PanelLeftClose, PanelLeftOpen, Menu, X, LockKeyhole, Plus } from "lucide-react";
+import { AudioLines, Layers2, LayoutDashboard, ListTodo, CalendarDays, Feather, History, Sparkles, Droplets, Leaf, Circle, Settings, PanelLeftClose, PanelLeftOpen, Menu, X, LockKeyhole, Plus, CircleCheck, ChevronDown } from "lucide-react";
 import { useTaskWorkspace } from "@/modules/rhythm/task-workspace";
 import { SpaceIcon } from "@/modules/rhythm/components/space-icons";
 import type { Page } from "./app";
@@ -25,6 +25,7 @@ const planLinks = [
 export function PlatformShell({ page, reflectionPage, go, name, children }: { page: Page; reflectionPage: Page; go: (page: Page) => void; name?: string; children: ReactNode }) {
   const tasks = useTaskWorkspace();
   const [pinned, setPinned] = useState(false);
+  const [tasksExpanded, setTasksExpanded] = useState(true);
   const [mobile, setMobile] = useState(false);
   const [hover, setHover] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -33,6 +34,7 @@ export function PlatformShell({ page, reflectionPage, go, name, children }: { pa
   const rhythm = page.startsWith("rhythm");
   const links = rhythm ? planLinks : reflectLinks;
   useEffect(() => {
+    try { setTasksExpanded(localStorage.getItem("platform:tasks-expanded") !== "false"); } catch { /* preference only */ }
     try { setPinned(localStorage.getItem("platform:sidebar-pinned") === "true"); } catch { /* preference only */ }
   }, []);
   useEffect(() => {
@@ -54,6 +56,11 @@ export function PlatformShell({ page, reflectionPage, go, name, children }: { pa
     return () => { document.body.style.overflow = before; document.removeEventListener("keydown", key); };
   }, [mobile]);
   const navigate = (target: Page) => { setMobile(false); go(target); };
+  const toggleTasks = () => {
+    const next = !tasksExpanded;
+    setTasksExpanded(next);
+    try { localStorage.setItem("platform:tasks-expanded", String(next)); } catch { /* preference only */ }
+  };
   const expanded = pinned || hover || focused || mobile;
   return (
     <div className={`platform-shell ${pinned ? "rail-pinned" : ""}`}>
@@ -75,7 +82,7 @@ export function PlatformShell({ page, reflectionPage, go, name, children }: { pa
         <div className="rail-divider" />
         <div className="rail-section-label rail-label">{rhythm ? "YOUR DAY" : "YOUR PERSPECTIVE"}</div>
         <nav aria-label={rhythm ? "Rhythm navigation" : "Translucency navigation"} className="module-navigation">
-          {links.map(({ id, label, icon: Icon }) => <Fragment key={id}><a href={`#${id}`} title={label} aria-label={label} className={(page === id && (id !== "rhythm-tasks" || !tasks.activeSpaceId)) ? "active" : ""} aria-current={(page === id && (id !== "rhythm-tasks" || !tasks.activeSpaceId)) ? "page" : undefined} onClick={e => { e.preventDefault(); if(id === "rhythm-tasks") tasks.selectSpace(null); navigate(id); }}><Icon size={18} /><span className="rail-label">{label}</span></a>{id === 'rhythm-tasks' && <div className="rail-spaces">{tasks.library.spaces?.map(space=><a key={space.id} href="#rhythm-tasks" title={space.name} aria-label={space.name} className={tasks.activeSpaceId===space.id?'active':''} aria-current={tasks.activeSpaceId===space.id?'page':undefined} onClick={e=>{e.preventDefault();tasks.selectSpace(space.id);navigate('rhythm-tasks');}}><SpaceIcon icon={space.icon} color={space.color}/><span className="rail-label">{space.name}</span></a>)}<button title="Add New Space" aria-label="Add New Space" onClick={()=>{setMobile(false);tasks.openSpace();}}><Plus size={18}/><span className="rail-label">Add New Space</span></button></div>}</Fragment>)}
+          {links.map(({ id, label, icon: Icon }) => <Fragment key={id}>{id === "rhythm-tasks" ? <button type="button" className={`rail-tasks-toggle ${page === id ? "active" : ""}`} title="Tasks" aria-label="Tasks" aria-expanded={tasksExpanded} aria-controls="rail-task-children" onClick={toggleTasks}><Icon size={18} /><span className="rail-label">{label}</span><ChevronDown className="rail-tasks-chevron rail-label" size={16} aria-hidden="true" /></button> : <a href={`#${id}`} title={label} aria-label={label} className={page === id ? "active" : ""} aria-current={page === id ? "page" : undefined} onClick={e => { e.preventDefault(); navigate(id); }}><Icon size={18} /><span className="rail-label">{label}</span></a>}{id === 'rhythm-tasks' && <div id="rail-task-children" hidden={!tasksExpanded} className="rail-spaces" role="group" aria-label="Task spaces and views"><a href="#rhythm-tasks" aria-label="All tasks" title="All tasks" className={page === "rhythm-tasks" && !tasks.activeSpaceId && !tasks.showCompleted ? "active" : ""} aria-current={page === "rhythm-tasks" && !tasks.activeSpaceId && !tasks.showCompleted ? "page" : undefined} onClick={e => { e.preventDefault(); tasks.selectSpace(null); navigate("rhythm-tasks"); }}><ListTodo size={18}/><span className="rail-label">All tasks</span></a>{tasks.library.spaces?.map(space=><a key={space.id} href="#rhythm-tasks" title={space.name} aria-label={space.name} className={tasks.activeSpaceId===space.id?'active':''} aria-current={tasks.activeSpaceId===space.id?'page':undefined} onClick={e=>{e.preventDefault();tasks.selectSpace(space.id);navigate('rhythm-tasks');}}><SpaceIcon icon={space.icon} color={space.color}/><span className="rail-label">{space.name}</span></a>)}<a href="#rhythm-tasks" title="Completed" aria-label="Completed" className={page === "rhythm-tasks" && tasks.showCompleted ? "active" : ""} aria-current={page === "rhythm-tasks" && tasks.showCompleted ? "page" : undefined} onClick={e => { e.preventDefault(); tasks.selectCompleted(); navigate("rhythm-tasks"); }}><CircleCheck size={18}/><span className="rail-label">Completed</span></a><button title="Add New Space" aria-label="Add New Space" onClick={()=>{setMobile(false);tasks.openSpace();}}><Plus size={18}/><span className="rail-label">Add New Space</span></button></div>}</Fragment>)}
         </nav>
         <div className="rail-bottom">
           <a href="#settings" title="Settings & privacy" aria-label="Settings & privacy" onClick={e => { e.preventDefault(); navigate("settings"); }}><Settings size={19} /><span className="rail-label">Settings & privacy</span></a>

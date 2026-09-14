@@ -1,3 +1,4 @@
+import { TaskListBadge } from "./TaskListBadge";
 import { useRef, useState } from "react";
 import type { Space, Task } from "../types";
 import type { useRhythmLibrary } from "../use-library";
@@ -652,6 +653,7 @@ export function TaskSettingsModal({
             onChange={(e) => set({ name: e.target.value })}
           />
         </label>
+        <TaskListBadge taskId={draft.id} />
         <TaskDetailFields
           open
           hasName={!!draft.name.trim()}

@@ -169,6 +169,17 @@ try {
   await button("Sign in").click();
   await expect(page.locator("#rhythm-tasks")).toBeVisible();
   await expect(page.locator(".tasks-row")).toHaveCount(3);
+  await page.getByRole("button", { name: "Tasks", exact: true }).hover();
+  await button("Tasks").click();
+  await expect(page.locator("#rail-task-children")).toBeHidden();
+  await page.reload();
+  await page.getByRole("button", { name: "Tasks", exact: true }).hover();
+  await expect(button("Tasks")).toHaveAttribute("aria-expanded", "false");
+  await button("Tasks").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#rail-task-children")).toBeVisible();
+  await page.getByRole("searchbox").click();
+
   await page.screenshot({
     path: "test-results/tasks/page-desktop.png",
     fullPage: true,
@@ -222,6 +233,9 @@ try {
   await expect
     .poll(async () => (await cached()).spaces[0].tasks[0].completed)
     .toBe(true);
+  await expect(page.locator('[data-task-id="a"]')).toHaveCount(0);
+  await page.getByRole("link", { name: "Completed", exact: true }).click();
+  await expect(page.locator(".tasks-row")).toHaveCount(1);
   await button("Edit energy for Task Name").click();
   // Some browsers do not retain focus when a popover button is clicked.
   // Its stacking order must follow the open state, rather than :focus-within.
@@ -264,10 +278,14 @@ try {
     .getByRole("button", { name: "Save changes" })
     .click();
   await page.reload();
+  await page.getByRole("link", { name: "Completed", exact: true }).click();
   await expect(
     page.getByRole("checkbox", { name: "Complete Task Name" }),
   ).toBeChecked();
   assert.equal((await cached()).spaces[0].tasks[0].fixedStart, "14:00");
+  await page.getByRole("searchbox").click();
+  await page.getByRole("checkbox", { name: "Complete Task Name", exact: true }).uncheck();
+  await expect(page.locator('[data-task-id="a"]')).toHaveCount(0);
   await page.getByRole("link", { name: "Home", exact: true }).click();
   await add("Scoped task");
   await expect(
@@ -290,7 +308,7 @@ try {
           ?.name,
     )
     .toBe("Scoped task");
-  await page.getByRole("link", { name: "Tasks", exact: true }).click();
+  await page.getByRole("link", { name: "All tasks", exact: true }).click();
   await page.keyboard.press("Control+Space");
   await expect(dialog("Add Task")).toBeVisible();
   await dialog("Add Task")
@@ -381,13 +399,14 @@ try {
   await dialog("Rename Task List")
     .getByRole("button", { name: "Save Task List" })
     .click();
-  await expect(page.getByText("Chores", { exact: true })).toBeVisible();
+  await expect(page.locator("summary").getByText("Chores", { exact: true })).toBeVisible();
+  await expect(page.locator(".task-list-badge").filter({ hasText: "Chores" })).toHaveCount(3);
   await page.getByRole("link", { name: "Timeblocks", exact: true }).click();
   await page.keyboard.press("Meta+Space");
   await expect(dialog("Add Task")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog("Add Task")).toHaveCount(0);
-  await page.getByRole("link", { name: "Tasks", exact: true }).click();
+  await page.getByRole("link", { name: "All tasks", exact: true }).click();
   // Sidebar creation uses the same picker; nested modal cleanup releases scroll locking.
   await button('Add New Space').click();
   await dialog('Add New Space').getByLabel('Space name').fill('Travel');
@@ -422,7 +441,7 @@ try {
   await expect(page.getByText('Rhythm backup imported. Your existing records were preserved.')).toBeVisible();
   assert.equal((await cached()).taskLists.find(l=>l.name==='Chores').tasks.length,3);
   await page.getByRole('link',{name:'Rhythm',exact:true}).click();
-  await page.getByRole('link',{name:'Tasks',exact:true}).click();
+  await page.getByRole('link',{name:'All tasks',exact:true}).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await button("Add Task").click();
   await dialog("Add Task")

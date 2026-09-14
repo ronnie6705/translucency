@@ -20,13 +20,49 @@
 .rhythm-module .live-timer-block.active { border-color: #bfc1f1; background-color: rgba(109,114,245,.22); box-shadow: 0 0 32px rgba(109,114,245,.18); }
 .rhythm-module .live-timer-block.active::before { opacity: .78; }
 .rhythm-module .live-timer-block.is-break { padding-block: 10px; }
+.rhythm-module .live-timer-slot { flex: none; }
+.rhythm-module .live-timer-block { align-content: flex-start; transition: min-height 260ms cubic-bezier(.2,.85,.3,1.04), transform 160ms ease, border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease; }
+.rhythm-module .live-timer-block:has(.live-timer-action):is(:hover, :focus-within):not([data-clear-phase="pressed"], [data-clear-phase="confirmed"], [data-clear-phase="clearing"], [data-clear-phase="popping"]) {
+  transform: translateY(-2px) scale(1.008);
+  border-color: #bfc1f1;
+  background-color: rgba(109,114,245,.16);
+  box-shadow: 0 8px 24px #0004;
+}
+.rhythm-module .live-timer-task-heading { display: flex; align-items: flex-start; gap: 8px; }
+.rhythm-module .live-timer-task-heading h3 { flex: 1; min-width: 0; }
+.rhythm-module .live-timer-task-actions { display: flex; gap: 4px; flex: none; margin-top: -7px; }
+.rhythm-module .live-timer-action {
+  display: grid; place-items: center; width: 36px; height: 36px; margin: 0; padding: 6px;
+  border: 1px solid transparent; border-radius: 10px; background: transparent; box-shadow: none;
+  cursor: pointer; transition: background 140ms ease, transform 140ms ease;
+}
+.rhythm-module .live-timer-action .timer-icon,
+.rhythm-module .live-timer-block[data-outcome] .live-timer-task-icon .timer-icon { filter: brightness(0) invert(1); }
+.rhythm-module .live-timer-action:hover { background: #ffffff1a; transform: scale(1.06); }
+.rhythm-module .live-timer-complete:hover { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+.rhythm-module .live-timer-skip:hover { background: #ffc4c426; }
+.rhythm-module .live-timer-action:focus-visible { outline: 2px solid #b4a4ff; outline-offset: 2px; }
+.rhythm-module .live-timer-action[aria-disabled="true"] { cursor: default; }
+.rhythm-module .live-timer-task-icon { position: relative; }
+.rhythm-module .live-timer-block[data-clear-phase="confirmed"] .live-timer-task-icon,
+.rhythm-module .live-timer-block[data-clear-phase="clearing"] .live-timer-task-icon { background: var(--accent); }
+.rhythm-module .live-timer-block[data-outcome="skipped"] .live-timer-task-icon { background: #ffffff26; }
+.rhythm-module .live-timer-block:is([data-clear-phase="confirmed"], [data-clear-phase="clearing"], [data-clear-phase="popping"]) { overflow: hidden; transition: none; will-change: transform, opacity; }
+.rhythm-module .live-timer-block:is([data-clear-phase="confirmed"], [data-clear-phase="clearing"], [data-clear-phase="popping"]) .live-timer-complete { cursor: default; }
+.rhythm-module .live-timer-error { color: #ffc4c4; font-size: 13px; margin: 0 0 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .rhythm-module .live-timer-block { transition: none; }
+  .rhythm-module .live-timer-block:has(.live-timer-action):is(:hover, :focus-within),
+  .rhythm-module .live-timer-action:hover { transform: none; }
+  .rhythm-module .live-timer-action { transition: none; }
+}
 .rhythm-module .live-timer-task-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 12px; background: var(--glass); transition: box-shadow 1s ease; }
 .rhythm-module .live-timer-task-icon .timer-icon { width: 20px; height: 20px; }
 .rhythm-module .active .live-timer-task-icon { box-shadow: 0 0 20px rgba(191,193,241,.35); }
 .rhythm-module .live-timer-copy { min-width: 0; flex: 1; }
 .rhythm-module .live-timer-copy time { display: block; font-size: 10px; line-height: 1.25; letter-spacing: .5px; font-weight: 300; color: var(--white-muted); }
 .rhythm-module .live-timer-copy h3 { margin: 2px 0 0; font-size: 14px; line-height: 1.25; font-weight: 600; overflow-wrap: anywhere; }
-.rhythm-module .live-timer-badges { display: flex; gap: 8px; flex-shrink: 0; }
+.rhythm-module .live-timer-badges { display: flex; gap: 8px; flex-shrink: 0; margin-top: 8px; }
 .rhythm-module .live-timer-badges > span { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 12px; background: var(--glass); font-size: 10px; line-height: 12px; white-space: nowrap; }
 .rhythm-module .live-timer-badges .timer-icon { width: 12px; height: 12px; }
 .rhythm-module .live-timer-now { position: absolute; left: -20px; right: -20px; height: 0; z-index: 2; pointer-events: none; transition: top 1s linear; }
@@ -48,9 +84,9 @@
   .rhythm-module .live-timer-modal { padding: 24px 12px; }
   .rhythm-module .live-timer-stage { padding-left: 0; width: 501px; }
   .rhythm-module .live-timer-card { padding: 14px; }
-  .rhythm-module .live-timer-block { flex-wrap: wrap; gap: 8px; }
-  .rhythm-module .live-timer-badges { margin-left: 48px; }
-  .rhythm-module .live-timer-copy { flex-basis: calc(100% - 56px); }
+  .rhythm-module .live-timer-block { gap: 8px; }
+  .rhythm-module .live-timer-action { width: 44px; height: 44px; padding: 10px; }
+  .rhythm-module .live-timer-task-actions { margin-top: -11px; gap: 0; }
   .rhythm-module .live-timer-now { left: -14px; right: -14px; }
   .rhythm-module .live-timer-now > span { right: 10px; top: 4px; padding: 2px 6px; border-radius: 6px; background: #22213e; font-size: 12px; }
 }

@@ -1,3 +1,4 @@
+import { TaskListBadge } from "./TaskListBadge";
 import React, { useEffect, useMemo, useState } from 'react';
 import type { Chronotype, Task } from '../types';
 import { PlanTimeRange } from './PlanTimeRange';
@@ -644,7 +645,7 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
                     <div className="block-content">
                       <div className="block-info">
                         <span className="block-start">{startLabel}</span>
-                        <p className="block-title">{title}</p>
+                        <p className="block-title">{title}<TaskListBadge taskId={task.id} /></p>
                         {clipped && (
                           <span className="block-reduced">
                             Reduced to {formatDurationTask(scheduledMinutes)} to fit the

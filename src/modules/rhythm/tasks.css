@@ -42,6 +42,11 @@
   gap: 3px;
   padding-left: 0;
 }
+.product-rail.expanded .rail-spaces {
+  margin-left: 18px;
+  padding-left: 8px;
+  border-left: 1px solid #ffffff18;
+}
 .module-navigation .rail-spaces a,
 .module-navigation .rail-spaces button {
   min-height: 36px;
@@ -152,6 +157,88 @@
 .rhythm-module .tasks-row-stack {
   display: grid;
   gap: 12px;
+}
+.rhythm-module .task-clear-slot {
+  position: relative;
+  min-width: 0;
+}
+.rhythm-module .task-clear-slot:has([data-clear-phase="confirmed"]),
+.rhythm-module .task-clear-slot:has([data-clear-phase="clearing"]),
+.rhythm-module .task-clear-slot:has([data-clear-phase="popping"]) {
+  overflow-x: clip;
+  overflow-y: visible;
+}
+.rhythm-module .tasks-row[data-clear-phase="confirmed"],
+.rhythm-module .tasks-row[data-clear-phase="clearing"],
+.rhythm-module .tasks-row[data-clear-phase="popping"] {
+  overflow: hidden;
+  cursor: default;
+  transition: none;
+  will-change: transform, opacity;
+}
+.rhythm-module .tasks-row[data-clear-phase] .task-completion input:checked + span {
+  background: var(--accent);
+  border-radius: 9px;
+}
+.rhythm-module .tasks-row.completed[data-clear-phase="confirmed"] .tasks-row-name,
+.rhythm-module .tasks-row.completed[data-clear-phase="clearing"] .tasks-row-name {
+  text-decoration: none;
+  color: inherit;
+}
+.rhythm-module .block-impact-ring,
+.rhythm-module .block-clear-wave,
+.rhythm-module .block-pop-effects,
+.rhythm-module .block-shockwave,
+.rhythm-module .block-fragment {
+  position: absolute;
+  pointer-events: none;
+}
+.rhythm-module .block-impact-ring {
+  inset: 0;
+  border: 2px solid var(--accent);
+  border-radius: 11px;
+}
+.rhythm-module .block-clear-wave {
+  inset: 0 auto 0 0;
+  width: 18%;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 32%, transparent), #ffffff88, transparent);
+  border-radius: inherit;
+}
+.rhythm-module .block-pop-effects {
+  top: 0;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  z-index: 4;
+}
+.rhythm-module .block-shockwave {
+  inset: 2px;
+  border: 2px solid var(--accent);
+  border-radius: 24px;
+}
+.rhythm-module .block-fragment {
+  width: 12px;
+  height: 10px;
+  border-radius: 4px;
+  background: var(--accent);
+}
+.rhythm-module .block-fragment-1 {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffffffb3;
+}
+.rhythm-module .block-fragment-2 {
+  width: 16px;
+  height: 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 55%, white);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rhythm-module .block-pop-effects,
+  .rhythm-module .block-clear-wave,
+  .rhythm-module .block-impact-ring { display: none; }
 }
 .rhythm-module .tasks-row {
   position: relative;
@@ -909,3 +996,41 @@
 .rhythm-module .task-destination-drawer.task-step-details-wrapper.hidden{padding:0 16px 16px}
 .rhythm-module .task-destinations.task-step-details{margin-top:119px}
 @media(max-width:640px){.rhythm-module .task-destinations.task-step-details{margin-top:151px}}
+
+.rail-spaces[hidden] { display: none; }
+.module-navigation .rail-tasks-toggle {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 18px;
+  min-height: 43px;
+  width: 100%;
+  font-size: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #b7b0c9;
+  text-align: left;
+  cursor: pointer;
+}
+.module-navigation .rail-tasks-toggle:is(.active, :hover) { background: #ffffff14; color: white; }
+.rail-tasks-toggle:focus-visible { outline: 2px solid #b4a4ff; outline-offset: 2px; }
+.rail-tasks-chevron { margin-left: auto; }
+.rail-tasks-toggle[aria-expanded="false"] .rail-tasks-chevron { transform: rotate(-90deg); }
+
+.task-list-badge {
+  display: inline-block;
+  max-width: 100%;
+  margin-left: 8px;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--task-list-color, #ffffff) 30%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--task-list-color, #ffffff) 12%, transparent);
+  color: var(--task-list-color, #ffffff);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}

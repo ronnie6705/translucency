@@ -15,6 +15,8 @@ type Library = ReturnType<typeof useRhythmLibrary>;
 interface Workspace {
   library: Library;
   activeSpaceId: string | null;
+  showCompleted: boolean;
+  selectCompleted(): void;
   selectSpace(id: string | null): void;
   openTask(): void;
   openSpace(space?: Space): void;
@@ -34,6 +36,7 @@ export function TaskWorkspaceProvider({
 }) {
   const library = useRhythmLibrary();
   const [selected, setSelected] = useState<string | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editingSpace, setEditingSpace] = useState<Space | "new" | null>(null);
   const activeSpaceId =
@@ -46,6 +49,7 @@ export function TaskWorkspaceProvider({
     } catch {}
   }, []);
   const selectSpace = (id: string | null) => {
+    setShowCompleted(false);
     setSelected(id);
     try {
       if (id) sessionStorage.setItem("rhythm:space", id);
@@ -74,6 +78,8 @@ export function TaskWorkspaceProvider({
       value={{
         library,
         activeSpaceId,
+        showCompleted,
+        selectCompleted: () => { selectSpace(null); setShowCompleted(true); },
         selectSpace,
         openTask: () => setAdding(true),
         openSpace: (space) => setEditingSpace(space ?? "new"),
