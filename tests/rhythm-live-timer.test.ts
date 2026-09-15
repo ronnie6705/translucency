@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { completeTimerTask, timerPosition, validLiveTimer, type LiveTimer } from '../src/modules/rhythm/live-timer';
+import { completeTimerTask, formatDurationHM, insertItemIntoTimer, timerPosition, validLiveTimer, type LiveTimer } from '../src/modules/rhythm/live-timer';
 import { completeLiveTask } from '../src/modules/rhythm/complete-live-task';
+import { insertLiveTimerItem } from '../src/modules/rhythm/insert-live-task';
 import { buildManualSchedule } from '../src/modules/rhythm/utils/manualSchedule';
 import { emptyLibrary, mergeLibraries, validateLibrary } from '../src/modules/rhythm/library';
 
@@ -155,3 +156,199 @@ test('all skipped and mixed outcomes survive reload and cannot claim the same ta
   assert.equal(validLiveTimer({ ...done, completedTaskIds: ['a'] }), false);
   assert.equal(validLiveTimer({ ...done, skippedTaskIds: ['a', 'a'] }), false);
 });
+
+test('inserting a task after current task shifts future blocks and preserves elapsed time', () => {
+  const plan: LiveTimer = {
+    id: 'timer-insert',
+    name: 'Plan',
+    timezone: 'Australia/Sydney',
+    startedAt: instant(0),
+    endsAt: instant(60),
+    blocks: [segment('a', 0, 30), segment('b', 30, 60)]
+  };
+  // Running halfway through task a at minute 15
+  const now = Date.parse(instant(15));
+  const next = insertItemIntoTimer(plan, {
+    title: 'New Task',
+    durationMinutes: 20,
+    isBreak: false,
+    anchorId: 'a',
+    position: 'after'
+  }, now);
+
+  assert.equal(next.blocks.length, 3);
+  assert.equal(next.blocks[0].taskId, 'a');
+  assert.equal(next.blocks[0].start, instant(0));
+  assert.equal(next.blocks[0].end, instant(30));
+
+  assert.equal(next.blocks[1].taskName, 'New Task');
+  assert.equal(next.blocks[1].isBreak, false);
+  assert.equal(next.blocks[1].start, instant(30));
+  assert.equal(next.blocks[1].end, instant(50));
+
+  assert.equal(next.blocks[2].taskId, 'b');
+  assert.equal(next.blocks[2].start, instant(50));
+  assert.equal(next.blocks[2].end, instant(80));
+
+  assert.equal(next.endsAt, instant(80));
+  assert.equal(validLiveTimer(next), true);
+});
+
+test('inserting a break after current task provides immediate upcoming break', () => {
+  const plan: LiveTimer = {
+    id: 'timer-break',
+    name: 'Plan',
+    timezone: 'Australia/Sydney',
+    startedAt: instant(0),
+    endsAt: instant(60),
+    blocks: [segment('a', 0, 30), segment('b', 30, 60)]
+  };
+  const now = Date.parse(instant(10));
+  const next = insertItemIntoTimer(plan, {
+    title: 'Coffee Break',
+    durationMinutes: 10,
+    isBreak: true,
+    anchorId: 'a',
+    position: 'after'
+  }, now);
+
+  assert.equal(next.blocks.length, 3);
+  assert.equal(next.blocks[1].isBreak, true);
+  assert.equal(next.blocks[1].taskName, 'Coffee Break');
+  assert.equal(next.blocks[1].start, instant(30));
+  assert.equal(next.blocks[1].end, instant(40));
+  assert.equal(next.blocks[2].start, instant(40));
+  assert.equal(next.blocks[2].end, instant(70));
+  assert.equal(validLiveTimer(next), true);
+});
+
+test('inserting before an upcoming task places item before anchor and shifts schedule', () => {
+  const plan: LiveTimer = {
+    id: 'timer-before',
+    name: 'Plan',
+    timezone: 'Australia/Sydney',
+    startedAt: instant(0),
+    endsAt: instant(60),
+    blocks: [segment('a', 0, 30), segment('b', 30, 60)]
+  };
+  const now = Date.parse(instant(10));
+  const next = insertItemIntoTimer(plan, {
+    title: 'Prep work',
+    durationMinutes: 15,
+    isBreak: false,
+    anchorId: 'b',
+    position: 'before'
+  }, now);
+
+  assert.equal(next.blocks.length, 3);
+  assert.equal(next.blocks[1].taskName, 'Prep work');
+  assert.equal(next.blocks[1].start, instant(30));
+  assert.equal(next.blocks[1].end, instant(45));
+  assert.equal(next.blocks[2].taskId, 'b');
+  assert.equal(next.blocks[2].start, instant(45));
+  assert.equal(next.blocks[2].end, instant(75));
+  assert.equal(validLiveTimer(next), true);
+});
+
+test('cannot insert into elapsed history before active running task', () => {
+  const plan: LiveTimer = {
+    id: 'timer-guard',
+    name: 'Plan',
+    timezone: 'Australia/Sydney',
+    startedAt: instant(0),
+    endsAt: instant(60),
+    blocks: [segment('a', 0, 30), segment('b', 30, 60)]
+  };
+  const now = Date.parse(instant(15));
+  // Attempting to insert 'before' task a while task a is already running
+  const next = insertItemIntoTimer(plan, {
+    title: 'Attempted Past Task',
+    durationMinutes: 10,
+    isBreak: false,
+    anchorId: 'a',
+    position: 'before'
+  }, now);
+
+  // Should be constrained to after active task a, never rewriting history before minute 15
+  assert.equal(next.blocks[0].taskId, 'a');
+  assert.equal(next.blocks[0].start, instant(0));
+  assert.equal(next.blocks[1].taskName, 'Attempted Past Task');
+  assert.equal(next.blocks[1].start, instant(30));
+  assert.equal(validLiveTimer(next), true);
+});
+
+test('formatDurationHM formats elapsed and remaining times accurately', () => {
+  assert.equal(formatDurationHM(0), '0m');
+  assert.equal(formatDurationHM(-1000), '0m');
+  assert.equal(formatDurationHM(15 * 60000), '15m');
+  assert.equal(formatDurationHM(60 * 60000), '1h');
+  assert.equal(formatDurationHM(135 * 60000), '2h 15m');
+  assert.equal(formatDurationHM(285 * 60000), '4h 45m');
+});
+
+test('insertLiveTimerItem persists new task into RhythmLibrary spaces and liveTimer', () => {
+  const plan: LiveTimer = {
+    id: 'timer-lib',
+    name: 'Plan',
+    timezone: 'Australia/Sydney',
+    startedAt: instant(0),
+    endsAt: instant(60),
+    blocks: [segment('a', 0, 30), segment('b', 30, 60)]
+  };
+  const data = {
+    ...emptyLibrary(),
+    liveTimer: plan,
+    spaces: [{ id: 'space', name: 'Home', icon: 'home', color: '#ffffff', createdAt: instant(0), tasks: [] }],
+    taskLists: [],
+    timeblocks: [{ id: 'plan', name: 'Plan', createdAt: instant(0), dayConfig: { date: '2026-09-14', startTime: '12:00', endTime: '13:00', timezone: 'Australia/Sydney', chronotype: 'Bear' as const }, tasks: [] }]
+  };
+  const now = Date.parse(instant(10));
+  const next = insertLiveTimerItem(data, 'timer-lib', {
+    title: 'Inserted Workspace Task',
+    durationMinutes: 25,
+    isBreak: false,
+    anchorId: 'a',
+    position: 'after',
+    energyRequired: 4
+  }, now);
+
+  assert.equal(next.liveTimer!.blocks.length, 3);
+  assert.equal(next.liveTimer!.endsAt, instant(85));
+  assert.equal(next.spaces![0].tasks.length, 1);
+  assert.equal(next.spaces![0].tasks[0].name, 'Inserted Workspace Task');
+  assert.equal(next.spaces![0].tasks[0].durationMinutes, 25);
+  assert.equal(next.spaces![0].tasks[0].energyRequired, 4);
+});
+
+test('proportional relative durations maintain exact ratios when blocks are added', () => {
+  // Requirement 9: Task A = 2h, Task B = 1h, Break = 30m
+  // Task A is visually 2x Task B and 4x Break
+  const plan: LiveTimer = {
+    id: 'timer-ratios',
+    name: 'Plan',
+    timezone: 'Australia/Sydney',
+    startedAt: instant(0),
+    endsAt: instant(210),
+    blocks: [segment('a', 0, 120), segment('b', 120, 180)]
+  };
+  const now = Date.parse(instant(0));
+  const next = insertItemIntoTimer(plan, {
+    title: 'Short Break',
+    durationMinutes: 30,
+    isBreak: true,
+    anchorId: 'b',
+    position: 'after'
+  }, now);
+
+  const durA = Date.parse(next.blocks[0].end) - Date.parse(next.blocks[0].start);
+  const durB = Date.parse(next.blocks[1].end) - Date.parse(next.blocks[1].start);
+  const durBreak = Date.parse(next.blocks[2].end) - Date.parse(next.blocks[2].start);
+
+  assert.equal(durA, 120 * 60000);
+  assert.equal(durB, 60 * 60000);
+  assert.equal(durBreak, 30 * 60000);
+  assert.equal(durA / durB, 2);
+  assert.equal(durA / durBreak, 4);
+});
+
+

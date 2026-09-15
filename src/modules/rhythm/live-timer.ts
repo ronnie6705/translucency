@@ -102,3 +102,15 @@ export function validLiveTimer(value: unknown): value is LiveTimer {
   try { new Intl.DateTimeFormat('en', { timeZone: timer.timezone }).format(); } catch { return false; }
   return timer.blocks.every((b, i) => b && typeof b.id === 'string' && typeof b.taskId === 'string' && typeof b.taskName === 'string' && typeof b.isBreak === 'boolean' && Number.isFinite(b.energyRequired) && Number.isFinite(Date.parse(b.start)) && Date.parse(b.end) > Date.parse(b.start) && (i === 0 || Date.parse(b.start) >= Date.parse(timer.blocks[i - 1].end)));
 }
+
+export function formatDurationHM(ms: number): string {
+  if (ms <= 0) return '0m';
+  const mins = Math.round(ms / 60000);
+  const hours = Math.floor(mins / 60);
+  const remainder = mins % 60;
+  if (hours > 0 && remainder > 0) return `${hours}h ${remainder}m`;
+  if (hours > 0) return `${hours}h`;
+  return `${remainder}m`;
+}
+
+export { insertItemIntoTimer, type InsertItemParams } from './insert-live-task';

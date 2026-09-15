@@ -1,7 +1,9 @@
 .rhythm-module .timer-icon { width: 24px; height: 24px; flex: 0 0 auto; object-fit: contain; }
-.rhythm-module .live-timer-modal { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; padding: 80px 24px 54px; overflow: auto; color: #fff; background: transparent; box-sizing: border-box; }
+.rhythm-module .live-timer-modal { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; padding: 48px 24px 54px; overflow: auto; color: #fff; background: transparent; box-sizing: border-box; }
 .rhythm-module .live-timer-modal::backdrop { background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.9)); backdrop-filter: blur(10px); }
-.rhythm-module .live-timer-stage { width: 580px; max-width: 100%; padding-left: 79px; margin: 0 auto; box-sizing: border-box; }
+.rhythm-module .live-timer-stage { width: 1040px; max-width: 100%; margin: 0 auto; box-sizing: border-box; }
+.rhythm-module .live-timer-two-column { display: grid; grid-template-columns: minmax(320px, 380px) minmax(460px, 580px); gap: 36px; align-items: start; justify-content: center; }
+.rhythm-module .live-timer-main { min-width: 0; width: 100%; }
 .rhythm-module .live-timer-card { position: relative; padding: 20px; border: 1px solid var(--glass-border); border-radius: 24px; background: var(--glass); box-shadow: 0 4px 63px rgba(0,0,0,.55); backdrop-filter: blur(10px); color: #fff; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif; text-align: left; }
 .rhythm-module .live-timer-card { line-height: normal; }
 .rhythm-module .live-timer-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
@@ -50,11 +52,52 @@
 .rhythm-module .live-timer-block:is([data-clear-phase="confirmed"], [data-clear-phase="clearing"], [data-clear-phase="popping"]) { overflow: hidden; transition: none; will-change: transform, opacity; }
 .rhythm-module .live-timer-block:is([data-clear-phase="confirmed"], [data-clear-phase="clearing"], [data-clear-phase="popping"]) .live-timer-complete { cursor: default; }
 .rhythm-module .live-timer-error { color: #ffc4c4; font-size: 13px; margin: 0 0 16px; }
+
+/* Left Panel styles */
+.rhythm-module .live-timer-panel { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.rhythm-module .live-timer-panel-card { position: relative; padding: 18px 20px; border: 1px solid var(--glass-border); border-radius: 20px; background: var(--glass); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.35); backdrop-filter: blur(10px); color: #fff; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif; box-sizing: border-box; text-align: left; }
+.rhythm-module .live-timer-panel-section { display: flex; flex-direction: column; gap: 4px; }
+.rhythm-module .live-timer-panel-kicker { display: block; font-size: 11px; font-weight: 500; letter-spacing: 1.8px; text-transform: uppercase; color: var(--white-muted, rgba(255, 255, 255, 0.65)); margin-bottom: 4px; }
+.rhythm-module .live-timer-status-title { font-size: 17px; font-weight: 600; color: #fff; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rhythm-module .live-timer-status-sub { font-size: 15px; font-weight: 400; color: #bfc1f1; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rhythm-module .live-timer-panel-divider { height: 1px; background: rgba(255, 255, 255, 0.08); margin: 12px 0; }
+.rhythm-module .live-timer-metrics-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.rhythm-module .live-timer-metric { flex: 1; min-width: 0; }
+.rhythm-module .live-timer-metric-val { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: #fff; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.rhythm-module .live-timer-form { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.rhythm-module .live-timer-field { width: 100%; box-sizing: border-box; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 10px 14px; color: #fff; font-size: 14px; outline: none; transition: border-color 0.15s ease, background-color 0.15s ease; font-family: inherit; }
+.rhythm-module .live-timer-field:focus { border-color: #bfc1f1; background: rgba(255, 255, 255, 0.1); }
+.rhythm-module .live-timer-form-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rhythm-module .live-timer-select-wrap { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.rhythm-module .live-timer-sublabel { font-size: 13px; color: var(--white-muted, rgba(255, 255, 255, 0.7)); white-space: nowrap; }
+.rhythm-module .live-timer-select { border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(30, 30, 42, 0.85); border-radius: 10px; padding: 8px 10px; color: #fff; font-size: 13px; outline: none; cursor: pointer; font-family: inherit; }
+.rhythm-module .live-timer-select:focus { border-color: #bfc1f1; }
+.rhythm-module .live-timer-anchor-select { flex: 1; min-width: 120px; text-overflow: ellipsis; }
+.rhythm-module .live-timer-duration-wrap { display: flex; align-items: center; gap: 6px; }
+.rhythm-module .live-timer-form-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; }
+.rhythm-module .live-timer-btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 18px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease; font-family: inherit; }
+.rhythm-module .live-timer-btn:active { transform: scale(0.98); }
+.rhythm-module .live-timer-btn[disabled] { opacity: 0.45; cursor: not-allowed; transform: none; }
+.rhythm-module .live-timer-btn-primary { background: rgba(109, 114, 245, 0.85); color: #fff; box-shadow: 0 4px 14px rgba(109, 114, 245, 0.35); }
+.rhythm-module .live-timer-btn-primary:not([disabled]):hover { background: rgba(109, 114, 245, 1); transform: translateY(-1px); }
+.rhythm-module .live-timer-btn-accent { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.25); color: #fff; }
+.rhythm-module .live-timer-btn-accent:not([disabled]):hover { background: rgba(255, 255, 255, 0.25); transform: translateY(-1px); }
+
+/* Newly added item animation */
+@keyframes liveTimerItemInsert {
+  0% { opacity: 0; transform: scale(0.95) translateY(-6px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.rhythm-module .live-timer-block.is-newly-added {
+  animation: liveTimerItemInsert 320ms cubic-bezier(0.2, 0.85, 0.3, 1.04) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rhythm-module .live-timer-block { transition: none; }
   .rhythm-module .live-timer-block:has(.live-timer-action):is(:hover, :focus-within),
   .rhythm-module .live-timer-action:hover { transform: none; }
   .rhythm-module .live-timer-action { transition: none; }
+  .rhythm-module .live-timer-block.is-newly-added { animation: none; }
 }
 .rhythm-module .live-timer-task-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 12px; background: var(--glass); transition: box-shadow 1s ease; }
 .rhythm-module .live-timer-task-icon .timer-icon { width: 20px; height: 20px; }
@@ -80,18 +123,29 @@
 .rhythm-module .live-timer-open-hint { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 16px; background: var(--glass); font-size: 14px; }
 .rhythm-module .live-timer-preview:hover .live-timer-open-hint { background: rgba(191,193,241,.2); }
 .rhythm-module .live-timer-preview:focus-visible, .rhythm-module .live-timer-close:focus-visible { outline: 2px solid #bfc1f1; outline-offset: 4px; }
+
+@media (max-width: 960px) {
+  .rhythm-module .live-timer-two-column {
+    grid-template-columns: 1fr;
+    max-width: 580px;
+    margin: 0 auto;
+    gap: 24px;
+  }
+  .rhythm-module .live-timer-stage {
+    width: 100%;
+  }
+}
+
 @media (max-width: 640px) {
   .rhythm-module .live-timer-modal { padding: 24px 12px; }
-  .rhythm-module .live-timer-stage { padding-left: 0; width: 501px; }
+  .rhythm-module .live-timer-stage { padding-left: 0; width: 100%; }
   .rhythm-module .live-timer-card { padding: 14px; }
+  .rhythm-module .live-timer-panel-card { padding: 14px; }
   .rhythm-module .live-timer-block { gap: 8px; }
   .rhythm-module .live-timer-action { width: 44px; height: 44px; padding: 10px; }
   .rhythm-module .live-timer-task-actions { margin-top: -11px; gap: 0; }
   .rhythm-module .live-timer-now { left: -14px; right: -14px; }
   .rhythm-module .live-timer-now > span { right: 10px; top: 4px; padding: 2px 6px; border-radius: 6px; background: #22213e; font-size: 12px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .rhythm-module .live-timer-block, .rhythm-module .live-timer-block::before, .rhythm-module .live-timer-task-icon, .rhythm-module .live-timer-now { transition: none; }
 }
 
 /* Final handoff: the neutral glass finish from the Figma reference. */

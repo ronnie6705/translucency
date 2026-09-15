@@ -10,6 +10,7 @@ import type { Chronotype, DayConfig, SavedTaskList, SavedTimeblock, Task } from 
 import { generateICS } from './ics';
 import { createDateInTimeZone, DEVICE_TIME_ZONE } from './utils/timezone';
 import { completeLiveTask } from './complete-live-task';
+import { insertLiveTimerItem } from './insert-live-task';
 import { generateSchedule } from './rhythmScheduler';
 import { validateTimeblockPlan } from './timeblock-plan';
 import { buildManualSchedule } from './utils/manualSchedule';
@@ -625,7 +626,8 @@ function App({ section = "rhythm" }: { section?: string }) {
         </dialog>
       )}
       {timerOpen && liveTimer && <LiveTimerModal timer={liveTimer} onClose={() => setTimerOpen(false)} error={storageError}
-        onComplete={(taskId, now, outcome) => save(data => completeLiveTask(data, liveTimer.id, taskId, now, outcome))} />}
+        onComplete={(taskId, now, outcome) => save(data => completeLiveTask(data, liveTimer.id, taskId, now, outcome))}
+        onInsertItem={(params, now) => save(data => insertLiveTimerItem(data, liveTimer.id, params, now))} />}
     </div>
   );
 }
