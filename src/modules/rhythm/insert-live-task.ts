@@ -140,3 +140,72 @@ export function insertLiveTimerItem(
     timeblocks: timeblocks ?? data.timeblocks,
   };
 }
+
+/**
+ * Reorder blocks within a running timer by moving a block from one index to another.
+ * Recalculates all start/end times while preserving durations.
+ * Does not allow reordering completed blocks (those before the current active block).
+ */
+export function reorderTimerBlocks(
+  timer: LiveTimer,
+  fromIndex: number,
+  toIndex: number,
+  now: number
+): LiveTimer {
+  const blocks = [...timer.blocks];
+  if (!blocks.length || fromIndex === toIndex) return timer;
+  if (fromIndex < 0 || fromIndex >= blocks.length || toIndex < 0 || toIndex >= blocks.length) return timer;
+
+  const { activeIndex, nextIndex, phase } = timerPosition(blocks, now);
+  if (phase === 'complete') return timer;
+
+  const minMovableIndex = activeIndex >= 0 ? activeIndex + 1 : (nextIndex >= 0 ? nextIndex : 0);
+  if (fromIndex < minMovableIndex || toIndex < minMovableIndex) {
+    return timer;
+  }
+
+  const [movedBlock] = blocks.splice(fromIndex, 1);
+  blocks.splice(toIndex, 0, movedBlock);
+
+  const startIndex = Math.min(fromIndex, toIndex);
+  for (let i = startIndex; i < blocks.length; i++) {
+    const b = blocks[i];
+    const duration = Date.parse(b.end) - Date.parse(b.start);
+    const startMs = i === 0
+      ? Date.parse(timer.startedAt ?? blocks[0].start)
+      : Date.parse(blocks[i - 1].end);
+    
+    blocks[i] = {
+      ...b,
+      start: new Date(startMs).toISOString(),
+      end: new Date(startMs + duration).toISOString(),
+    };
+  }
+
+  const endsAt = blocks[blocks.length - 1]?.end ?? timer.endsAt;
+
+  return {
+    ...timer,
+    blocks,
+    endsAt,
+  };
+}
+
+/**
+ * Persists live timer block reordering into the Rhythm library.
+ */
+export function reorderLiveTimer(
+  data: RhythmLibrary,
+  timerId: string,
+  fromIndex: number,
+  toIndex: number,
+  now: number
+): RhythmLibrary {
+  if (!data.liveTimer || data.liveTimer.id !== timerId) {
+    throw new Error('This live timer has changed. Reopen it and try again.');
+  }
+
+  const liveTimer = reorderTimerBlocks(data.liveTimer, fromIndex, toIndex, now);
+  return { ...data, liveTimer };
+}
+

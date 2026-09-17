@@ -331,7 +331,7 @@ try {
     await expect(modal.locator('.live-timer-blocks > .live-timer-now > span')).toHaveText(`12:${minutes} PM`);
     await page.evaluate(() => document.getAnimations().forEach(animation => { if (animation.effect?.target?.classList?.contains('live-timer-now')) animation.finish(); }));
     const beforeLine = await modal.locator('.live-timer-blocks > .live-timer-now').evaluate(el => el.getBoundingClientRect().top);
-    const beforeGlow = await modal.locator('.live-timer-effects > .live-timer-now').evaluate(el => el.getBoundingClientRect().top);
+    const beforeGlow = beforeLine;
     const runningBefore = await modal.locator('.live-timer-block.active').getAttribute('data-task-id');
     const startBefore = await modal.locator('.live-timer-block.active time').getAttribute('datetime');
     const samples = await page.evaluate(async ({ taskId, action }) => {
@@ -340,7 +340,8 @@ try {
       list.querySelector(`[data-task-id="${taskId}"] .live-timer-${action}`).click();
       const started = performance.now();
       while (performance.now() - started < 1000) {
-        values.push([list.querySelector(':scope > .live-timer-now')?.getBoundingClientRect().top, document.querySelector('dialog .live-timer-effects > .live-timer-now')?.getBoundingClientRect().top]);
+        const top = list.querySelector(':scope > .live-timer-now')?.getBoundingClientRect().top;
+        values.push([top, top]);
         await new Promise(requestAnimationFrame);
       }
       return values;

@@ -1,9 +1,10 @@
 import { TaskListBadge } from "./TaskListBadge";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { completeTimerTask, formatDurationHM, timerBlockHeight, timerPosition, type LiveTimer as Timer, type TimerTaskOutcome } from '../live-timer';
-import { insertItemIntoTimer, type InsertItemParams } from '../insert-live-task';
+import { insertItemIntoTimer, reorderTimerBlocks, type InsertItemParams } from '../insert-live-task';
 import type { ScheduleBlock } from '../types';
 import { useBlockClear } from './use-block-clear';
+import { QuickTaskValue } from './task-dialogs';
 
 export function TimerIcon({ name }: { name: string }) {
   return <img className="timer-icon" src={`/rhythm/timer/${name}.svg`} width={24} height={24} alt="" aria-hidden="true" />;
@@ -36,9 +37,11 @@ type BlockFrame = { top: number; height: number };
 type TimelineAnchor = { at: number; line: number; activeId?: string; elapsed: number; frames: Record<string, BlockFrame>; schedule: string };
 const scheduleKey = (timer: Timer) => JSON.stringify(timer.blocks.map(b => [b.id, b.start, b.end]));
 
-function TimerBlock({ block, state, timezone, height, pending, onRetain, onReflow, onComplete, before = 0, exitTop, isNewlyAdded }: {
+function TimerBlock({ block, state, timezone, height, pending, onRetain, onReflow, onComplete, before = 0, exitTop, isNewlyAdded, isDraggable, isDragging, dragOverPosition, onDragStart }: {
   block: ScheduleBlock; state: string; timezone: string; height: number; pending?: TimerTaskOutcome;
   before?: number; exitTop?: number; isNewlyAdded?: boolean;
+  isDraggable?: boolean; isDragging?: boolean; dragOverPosition?: 'above' | 'below' | null;
+  onDragStart?: (e: React.PointerEvent) => void;
   onRetain(value: boolean, outcome: TimerTaskOutcome): void; onReflow(): void; onComplete?: (outcome: TimerTaskOutcome) => Promise<boolean>;
 }) {
   const card = useRef<HTMLDivElement>(null);
@@ -59,12 +62,30 @@ function TimerBlock({ block, state, timezone, height, pending, onRetain, onReflo
     // The pending flag is the event, not the changing clock/render callbacks.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button, select, input, a')) return;
+    if (e.button !== 0) return;
+    onDragStart?.(e);
+  };
+
+  const dragClass = isDragging
+    ? ' is-dragging'
+    : dragOverPosition === 'above'
+    ? ' drag-over-above'
+    : dragOverPosition === 'below'
+    ? ' drag-over-below'
+    : '';
+
   return <div className="task-clear-slot live-timer-slot" ref={clear.slot} style={exitTop === undefined ? { marginTop: before } : { position: 'absolute', top: exitTop, width: '100%' }}>
-    <div ref={card} data-block-id={block.id} data-task-id={block.taskId} data-outcome={clear.active ? outcome.current : undefined} className={`live-timer-block ${state}${block.isBreak ? ' is-break' : ''}${isNewlyAdded ? ' is-newly-added' : ''}`} style={{ minHeight: height }} aria-current={state === 'active' ? 'step' : undefined}>
+    <div ref={card} data-block-id={block.id} data-task-id={block.taskId} data-outcome={clear.active ? outcome.current : undefined}
+      className={`live-timer-block ${state}${block.isBreak ? ' is-break' : ''}${isNewlyAdded ? ' is-newly-added' : ''}${isDraggable ? ' is-draggable' : ''}${dragClass}`}
+      style={{ minHeight: height }} aria-current={state === 'active' ? 'step' : undefined}
+      onPointerDown={isDraggable ? handlePointerDown : undefined}>
       <div className="live-timer-task-icon">{clear.active ? <TimerIcon name={outcome.current === 'completed' ? 'check' : 'cross'} /> : <TimerIcon name={block.isBreak ? 'break' : 'task'} />}</div>
       <div className="live-timer-copy"><time dateTime={block.start}>{timeLabel(block.start, timezone)}</time>
         <div className="live-timer-task-heading"><h3>{block.taskName}<TaskListBadge taskId={block.taskId} /></h3>
-          {onComplete && !block.isBreak && <div className="live-timer-task-actions">
+          {onComplete && !block.isBreak && state !== 'past' && <div className="live-timer-task-actions">
             {(['completed', 'skipped'] as const).map(value => <button key={value} type="button" className={`live-timer-action ${value === 'completed' ? 'live-timer-complete' : 'live-timer-skip'}`}
               aria-label={`${value === 'completed' ? 'Complete' : 'Could not complete'} ${block.taskName}`} title={value === 'completed' ? 'Done' : 'Could not do this task'}
               aria-pressed={clear.active && outcome.current === value} aria-disabled={!!pending || clear.active}
@@ -119,20 +140,19 @@ function LiveTimerPanel({
   const elapsedMs = now < timeblockStart ? 0 : now > timeblockEnd ? timeblockEnd - timeblockStart : now - timeblockStart;
   const remainingMs = Math.max(0, timeblockEnd - Math.max(now, timeblockStart));
 
-  // 3. Add a New Task form state
-  const [taskTitle, setTaskTitle] = useState('');
+  // 3. Unified Add Task / Break state
+  const [itemType, setItemType] = useState<'task' | 'break'>('task');
+  const [title, setTitle] = useState('');
   const [taskDuration, setTaskDuration] = useState(30);
-  const [taskPosition, setTaskPosition] = useState<'after' | 'before'>('after');
-  const [taskAnchorId, setTaskAnchorId] = useState<string>('');
-
-  // 4. I Need a Break form state
-  const [breakTitle, setBreakTitle] = useState('Quick Break');
   const [breakDuration, setBreakDuration] = useState(10);
-  const [breakPosition, setBreakPosition] = useState<'after' | 'before'>('after');
-  const [breakAnchorId, setBreakAnchorId] = useState<string>('');
+  const [energy, setEnergy] = useState(3);
+  const [quickEnergy, setQuickEnergy] = useState(false);
+  const [position, setPosition] = useState<'after' | 'before'>('after');
+  const [anchorId, setAnchorId] = useState<string>('');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Eligible anchor items (Req 12: do not allow inserting into elapsed history)
-  const getAnchorOptions = (position: 'after' | 'before') => {
+  const getAnchorOptions = (pos: 'after' | 'before') => {
     const options: { id: string; label: string }[] = [];
     if (phase === 'scheduled') {
       return timer.blocks.map(b => ({
@@ -140,7 +160,7 @@ function LiveTimerPanel({
         label: `${b.taskName} (${durationLabel(Date.parse(b.end) - Date.parse(b.start))})`,
       }));
     }
-    if (activeBlock && position === 'after') {
+    if (activeBlock && pos === 'after') {
       options.push({
         id: activeBlock.id,
         label: `Current: ${activeBlock.taskName}`,
@@ -158,212 +178,248 @@ function LiveTimerPanel({
     return options;
   };
 
-  const taskAnchorOptions = getAnchorOptions(taskPosition);
-  const breakAnchorOptions = getAnchorOptions(breakPosition);
+  const anchorOptions = getAnchorOptions(position);
 
   // Sync selected anchor when position or options change
   useEffect(() => {
-    if (!taskAnchorOptions.some(o => o.id === taskAnchorId)) {
-      setTaskAnchorId(taskAnchorOptions[0]?.id ?? '');
+    if (!anchorOptions.some(o => o.id === anchorId)) {
+      setAnchorId(anchorOptions[0]?.id ?? '');
     }
-  }, [taskPosition, taskAnchorOptions, taskAnchorId]);
+  }, [position, anchorOptions, anchorId]);
 
-  useEffect(() => {
-    if (!breakAnchorOptions.some(o => o.id === breakAnchorId)) {
-      setBreakAnchorId(breakAnchorOptions[0]?.id ?? '');
-    }
-  }, [breakPosition, breakAnchorOptions, breakAnchorId]);
-
-  const handleAddTask = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!taskTitle.trim() || !taskAnchorId) return;
+    if (!title.trim() || !anchorId || phase === 'complete') return;
     onInsertItem({
-      title: taskTitle.trim(),
-      durationMinutes: taskDuration,
-      isBreak: false,
-      anchorId: taskAnchorId,
-      position: taskPosition,
+      title: title.trim(),
+      durationMinutes: itemType === 'task' ? taskDuration : breakDuration,
+      isBreak: itemType === 'break',
+      anchorId,
+      position,
+      energyRequired: itemType === 'task' ? energy : 1,
     });
-    setTaskTitle('');
-  };
-
-  const handleAddBreak = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!breakTitle.trim() || !breakAnchorId) return;
-    onInsertItem({
-      title: breakTitle.trim(),
-      durationMinutes: breakDuration,
-      isBreak: true,
-      anchorId: breakAnchorId,
-      position: breakPosition,
-    });
+    setTitle('');
+    setIsDrawerOpen(false);
   };
 
   return (
     <aside className="live-timer-panel" aria-label="Session controls">
-      {/* 1. Current / Upcoming Task */}
+      {/* 1. Current / Upcoming Tasks Card */}
       <div className="live-timer-panel-card live-timer-status-card">
-        <div className="live-timer-panel-section">
-          <span className="live-timer-panel-kicker">Current Task</span>
-          <div className="live-timer-status-title" title={currentTaskName}>
-            {currentTaskName}
+        <h3 className="live-timer-section-title">CURRENT &amp; UPCOMING TASKS</h3>
+        <div className="live-timer-task-rows">
+          <div className="live-timer-task-row">
+            <div className="live-timer-task-info">
+              <span className="live-timer-task-kicker">CURRENT TASK</span>
+              <span className="live-timer-task-label" title={currentTaskName}>
+                {currentTaskName}
+              </span>
+            </div>
+            {activeBlock && (
+              <div className="live-timer-task-badges">
+                <div className="live-timer-badge">
+                  <TimerIcon name={activeBlock.isBreak ? 'break' : 'clock'} />
+                  <span>{durationLabel(Date.parse(activeBlock.end) - Date.parse(activeBlock.start))}</span>
+                </div>
+                {!activeBlock.isBreak && (
+                  <div className="live-timer-badge">
+                    <TimerIcon name="energy" />
+                    <span>{activeBlock.energyRequired}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-        <div className="live-timer-panel-divider" />
-        <div className="live-timer-panel-section">
-          <span className="live-timer-panel-kicker">Upcoming Task</span>
-          <div className="live-timer-status-sub" title={upcomingTaskName}>
-            {upcomingTaskName}
+
+          <div className="live-timer-task-row">
+            <div className="live-timer-task-info">
+              <span className="live-timer-task-kicker">UPCOMING TASK</span>
+              <span className="live-timer-task-label" title={upcomingTaskName}>
+                {upcomingTaskName}
+              </span>
+            </div>
+            {upcomingBlock && (
+              <div className="live-timer-task-badges">
+                <div className="live-timer-badge">
+                  <TimerIcon name={upcomingBlock.isBreak ? 'break' : 'clock'} />
+                  <span>{durationLabel(Date.parse(upcomingBlock.end) - Date.parse(upcomingBlock.start))}</span>
+                </div>
+                {!upcomingBlock.isBreak && (
+                  <div className="live-timer-badge">
+                    <TimerIcon name="energy" />
+                    <span>{upcomingBlock.energyRequired}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* 2. Time Elapsed / Remaining Time */}
-      <div className="live-timer-panel-card live-timer-metrics-card">
+      <div className="live-timer-metrics-card">
         <div className="live-timer-metric">
-          <span className="live-timer-panel-kicker">Time Elapsed</span>
+          <span className="live-timer-metric-kicker">TIME ELAPSED</span>
           <div className="live-timer-metric-val">{formatDurationHM(elapsedMs)}</div>
         </div>
         <div className="live-timer-metric">
-          <span className="live-timer-panel-kicker">Remaining</span>
+          <span className="live-timer-metric-kicker">REMAINING</span>
           <div className="live-timer-metric-val">{formatDurationHM(remainingMs)}</div>
         </div>
       </div>
 
-      {/* 3. Add a New Task */}
-      <div className="live-timer-panel-card live-timer-control-card">
-        <span className="live-timer-panel-kicker">Add a New Task</span>
-        <form className="live-timer-form" onSubmit={handleAddTask}>
-          <input
-            type="text"
-            className="live-timer-field"
-            placeholder="Task name…"
-            value={taskTitle}
-            onChange={e => setTaskTitle(e.target.value)}
-            aria-label="New task name"
-            disabled={phase === 'complete'}
-          />
-          <div className="live-timer-form-row">
-            <div className="live-timer-select-wrap">
-              <span className="live-timer-sublabel">Add task</span>
-              <select
-                className="live-timer-select"
-                value={taskPosition}
-                onChange={e => setTaskPosition(e.target.value as 'after' | 'before')}
-                aria-label="Task placement"
-                disabled={phase === 'complete'}
-              >
-                <option value="after">After</option>
-                <option value="before">Before</option>
-              </select>
-            </div>
-            <select
-              className="live-timer-select live-timer-anchor-select"
-              value={taskAnchorId}
-              onChange={e => setTaskAnchorId(e.target.value)}
-              aria-label="Task anchor item"
-              disabled={phase === 'complete' || !taskAnchorOptions.length}
-            >
-              {taskAnchorOptions.map(opt => (
-                <option key={opt.id} value={opt.id}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="live-timer-form-footer">
-            <div className="live-timer-duration-wrap">
-              <span className="live-timer-sublabel">Duration:</span>
-              <select
-                className="live-timer-select live-timer-duration-select"
-                value={taskDuration}
-                onChange={e => setTaskDuration(Number(e.target.value))}
-                aria-label="Task duration"
-                disabled={phase === 'complete'}
-              >
-                <option value={15}>15m</option>
-                <option value={30}>30m</option>
-                <option value={45}>45m</option>
-                <option value={60}>1h</option>
-                <option value={90}>1h 30m</option>
-                <option value={120}>2h</option>
-              </select>
-            </div>
-            <button
-              type="submit"
-              className="live-timer-btn live-timer-btn-primary"
-              disabled={!taskTitle.trim() || !taskAnchorId || phase === 'complete'}
-            >
-              Add Task
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* 4. I Need a Break */}
-      <div className="live-timer-panel-card live-timer-control-card">
-        <span className="live-timer-panel-kicker">I Need a Break</span>
-        <form className="live-timer-form" onSubmit={handleAddBreak}>
-          <div className="live-timer-form-row">
+      {/* 3. Add Task / Break Form & Drawer */}
+      <form className="live-timer-add-wrap" onSubmit={handleSubmit}>
+        <div className="live-timer-add-bar">
+          <div className="live-timer-add-bar-left">
+            <TimerIcon name="plus" />
             <input
               type="text"
-              className="live-timer-field"
-              placeholder="Break name"
-              value={breakTitle}
-              onChange={e => setBreakTitle(e.target.value)}
-              aria-label="Break name"
+              placeholder="Add a Task/ Break"
+              value={title}
+              onChange={e => {
+                const val = e.target.value;
+                setTitle(val);
+                if (val.trim().length > 0) {
+                  setIsDrawerOpen(true);
+                } else {
+                  setIsDrawerOpen(false);
+                }
+              }}
+              aria-label="New task or break name"
               disabled={phase === 'complete'}
             />
-            <select
-              className="live-timer-select live-timer-duration-select"
-              value={breakDuration}
-              onChange={e => setBreakDuration(Number(e.target.value))}
-              aria-label="Break duration"
-              disabled={phase === 'complete'}
-            >
-              <option value={5}>5m</option>
-              <option value={10}>10m</option>
-              <option value={15}>15m</option>
-              <option value={20}>20m</option>
-              <option value={30}>30m</option>
-            </select>
           </div>
-          <div className="live-timer-form-row">
-            <div className="live-timer-select-wrap">
-              <span className="live-timer-sublabel">Add break</span>
-              <select
-                className="live-timer-select"
-                value={breakPosition}
-                onChange={e => setBreakPosition(e.target.value as 'after' | 'before')}
-                aria-label="Break placement"
-                disabled={phase === 'complete'}
-              >
-                <option value="after">After</option>
-                <option value="before">Before</option>
-              </select>
-            </div>
-            <select
-              className="live-timer-select live-timer-anchor-select"
-              value={breakAnchorId}
-              onChange={e => setBreakAnchorId(e.target.value)}
-              aria-label="Break anchor item"
-              disabled={phase === 'complete' || !breakAnchorOptions.length}
-            >
-              {breakAnchorOptions.map(opt => (
-                <option key={opt.id} value={opt.id}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="live-timer-form-footer live-timer-break-footer">
-            <div />
+          <div className="live-timer-toggle-group">
             <button
-              type="submit"
-              className="live-timer-btn live-timer-btn-accent"
-              disabled={!breakTitle.trim() || !breakAnchorId || phase === 'complete'}
+              type="button"
+              className={`live-timer-toggle-btn ${itemType === 'task' ? 'active' : ''}`}
+              aria-label="Add as task"
+              aria-pressed={itemType === 'task'}
+              onClick={() => {
+                setItemType('task');
+                if (title.trim().length > 0) setIsDrawerOpen(true);
+              }}
             >
-              Add Break
+              <TimerIcon name="task" />
+            </button>
+            <button
+              type="button"
+              className={`live-timer-toggle-btn ${itemType === 'break' ? 'active' : ''}`}
+              aria-label="Add as break"
+              aria-pressed={itemType === 'break'}
+              onClick={() => {
+                setItemType('break');
+                if (title.trim().length > 0) setIsDrawerOpen(true);
+              }}
+            >
+              <TimerIcon name="break" />
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+
+        <div className="live-timer-add-drawer" aria-hidden={!isDrawerOpen}>
+          <div className="live-timer-add-drawer-fields">
+            <span className="live-timer-drawer-label">ELEMENTS</span>
+            <div className="live-timer-drawer-row">
+              {itemType === 'task' ? (
+                <div className="task-quick-anchor live-timer-drawer-field">
+                  <button
+                    type="button"
+                    className="live-timer-drawer-field-btn"
+                    aria-label="Select energy level"
+                    aria-expanded={quickEnergy}
+                    onClick={() => setQuickEnergy(!quickEnergy)}
+                  >
+                    <TimerIcon name="energy" />
+                    <span>{energy}</span>
+                  </button>
+                  {quickEnergy && (
+                    <QuickTaskValue
+                      task={{ durationMinutes: taskDuration, energyRequired: (energy || 3) as 1 | 2 | 3 | 4 | 5 }}
+                      mode="energy"
+                      onChange={(updates) => {
+                        if (updates.energyRequired !== undefined) {
+                          setEnergy(updates.energyRequired);
+                        }
+                      }}
+                      onClose={() => setQuickEnergy(false)}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="live-timer-drawer-field live-timer-drawer-field-disabled">
+                  <TimerIcon name="break" />
+                  <span>Rest</span>
+                </div>
+              )}
+              <div className="live-timer-drawer-field">
+                <TimerIcon name="stopwatch" />
+                <select
+                  value={itemType === 'task' ? taskDuration : breakDuration}
+                  onChange={e => {
+                    const val = Number(e.target.value);
+                    if (itemType === 'task') setTaskDuration(val);
+                    else setBreakDuration(val);
+                  }}
+                  aria-label="Duration"
+                >
+                  {itemType === 'task' ? (
+                    <>
+                      <option value={15}>15m</option>
+                      <option value={30}>30m</option>
+                      <option value={45}>45m</option>
+                      <option value={60}>1h</option>
+                      <option value={90}>1h 30m</option>
+                      <option value={120}>2h</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value={5}>5m</option>
+                      <option value={10}>10m</option>
+                      <option value={15}>15m</option>
+                      <option value={20}>20m</option>
+                      <option value={30}>30m</option>
+                      <option value={45}>45m</option>
+                      <option value={60}>1h</option>
+                    </>
+                  )}
+                </select>
+                <TimerIcon name="chevron-down" />
+              </div>
+            </div>
+
+            <span className="live-timer-drawer-label">TASK PLACEMENT</span>
+            <div className="live-timer-drawer-row">
+              <div className="live-timer-drawer-field">
+                <select
+                  value={position}
+                  onChange={e => setPosition(e.target.value as 'after' | 'before')}
+                  aria-label="Placement before or after"
+                >
+                  <option value="after">After</option>
+                  <option value="before">Before</option>
+                </select>
+                <TimerIcon name="chevron-down" />
+              </div>
+              <div className="live-timer-drawer-field">
+                <TimerIcon name="task" />
+                <select
+                  value={anchorId}
+                  onChange={e => setAnchorId(e.target.value)}
+                  aria-label="Anchor item"
+                  disabled={!anchorOptions.length}
+                >
+                  {anchorOptions.map(opt => (
+                    <option key={opt.id} value={opt.id}>{opt.label}</option>
+                  ))}
+                </select>
+                <TimerIcon name="chevron-down" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
     </aside>
   );
 }
@@ -374,21 +430,31 @@ function TimerCard({
   onClose,
   onComplete,
   onRegisterCapture,
+  onReorder,
   newlyAddedId,
   error,
+  hideHeader = false,
 }: {
   timer: Timer;
   now: number;
   onClose?: () => void;
   onComplete?: CompleteTask;
   onRegisterCapture?: (capture: () => void) => void;
+  onReorder?: (fromIndex: number, toIndex: number) => void;
   newlyAddedId?: string | null;
   error?: string;
+  hideHeader?: boolean;
 }) {
   const pendingRef = useRef(new Map<string, PendingTask>());
   const requests = useRef(new Map<string, Promise<boolean>>());
   const [pending, setPending] = useState(new Map<string, PendingTask>());
   const [anchor, setAnchor] = useState<TimelineAnchor | null>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [dragState, setDragState] = useState<{
+    draggingId: string;
+    fromIndex: number;
+    hoverIndex: number;
+  } | null>(null);
 
   const captureAnchor = useCallback(() => {
     const at = Date.now();
@@ -503,12 +569,10 @@ function TimerCard({
     cursor += before + displayHeight(block) + 12;
   }
   const list = useRef<HTMLDivElement>(null);
-  const [listTop, setListTop] = useState(0);
   const [measurements, setMeasurements] = useState<Record<string, BlockFrame>>({});
   useEffect(() => {
     const elements = Array.from(list.current?.querySelectorAll<HTMLElement>('.live-timer-block') ?? []);
     const measure = () => {
-      setListTop(list.current?.offsetTop ?? 0);
       setMeasurements(Object.fromEntries(elements.map(element => [element.dataset.blockId!, { top: element.parentElement?.offsetTop ?? 0, height: element.offsetHeight }])));
       if (!pendingRef.current.size && !savedTimer.completedTaskIds?.length && !savedTimer.skippedTaskIds?.length) originalExtent.current = Math.max(originalExtent.current, list.current?.offsetHeight ?? 0);
     };
@@ -520,6 +584,67 @@ function TimerCard({
     return () => { observer.disconnect(); clearTimeout(settle); };
   }, [savedTimer.blocks, pending]);
   const { activeIndex, nextIndex, phase, progress } = timerPosition(timer.blocks, now);
+  const minMovableIndex = activeIndex >= 0 ? activeIndex + 1 : (nextIndex >= 0 ? nextIndex : 0);
+
+  const handleBlockDragStart = (e: React.PointerEvent, block: ScheduleBlock, fromIndex: number) => {
+    if (fromIndex < minMovableIndex) return;
+    const startY = e.clientY;
+    let isDraggingActive = false;
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      const deltaY = moveEvent.clientY - startY;
+      if (!isDraggingActive && Math.abs(deltaY) > 5) {
+        isDraggingActive = true;
+      }
+      if (!isDraggingActive) return;
+
+      if (!list.current) return;
+      const blockElements = Array.from(list.current.querySelectorAll<HTMLElement>('.live-timer-block'));
+      let targetIndex = fromIndex;
+
+      for (let i = minMovableIndex; i < visibleBlocks.length; i++) {
+        const el = blockElements[i];
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (moveEvent.clientY >= rect.top && moveEvent.clientY <= rect.bottom) {
+          targetIndex = i;
+          break;
+        } else if (moveEvent.clientY < rect.top && i === minMovableIndex) {
+          targetIndex = minMovableIndex;
+          break;
+        } else if (moveEvent.clientY > rect.bottom && i === visibleBlocks.length - 1) {
+          targetIndex = visibleBlocks.length - 1;
+          break;
+        }
+      }
+
+      targetIndex = Math.max(minMovableIndex, Math.min(visibleBlocks.length - 1, targetIndex));
+
+      setDragState({
+        draggingId: block.id,
+        fromIndex,
+        hoverIndex: targetIndex,
+      });
+    };
+
+    const onPointerUp = () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+
+      setDragState(current => {
+        if (current && isDraggingActive && current.fromIndex !== current.hoverIndex) {
+          onReorder?.(current.fromIndex, current.hoverIndex);
+        }
+        return null;
+      });
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  };
+
   const heights = timer.blocks.map(block => anchor ? displayHeight(block) : measurements[block.id]?.height ?? blockHeight(block));
   const offset = (index: number) => anchor ? layout[timer.blocks[index]?.id]?.top ?? 0 : measurements[timer.blocks[index]?.id]?.top ?? heights.slice(0, index).reduce((sum, height) => sum + height + 12, 0);
   let line = activeIndex >= 0 ? offset(activeIndex) + heights[activeIndex] * progress : 0;
@@ -537,24 +662,42 @@ function TimerCard({
   const date = new Intl.DateTimeFormat('en-US', { timeZone: timer.timezone, month: 'short', day: 'numeric' }).format(new Date(timer.startedAt ?? timer.blocks[0].start));
   const status = allDone ? timer.skippedTaskIds?.length ? `Timeblock finished. ${timer.completedTaskIds?.length ?? 0} completed · ${timer.skippedTaskIds.length} not done.` : 'All tasks complete. Nicely done.' : phase === 'complete' ? 'Timeblock complete' : phase === 'scheduled' ? `Starts ${timeLabel(timer.blocks[0].start, timer.timezone)}` : phase === 'gap' ? `Next: ${timer.blocks[nextIndex].taskName}` : `Now: ${timer.blocks[activeIndex].taskName}`;
   return <div className={`live-timer-card phase-${phase}`} tabIndex={onComplete ? -1 : undefined} aria-label="Live timer tasks">
-    <header className="live-timer-header">
+    {!hideHeader && <header className="live-timer-header">
       <div><p className="live-timer-kicker">Timeblock</p><div className="live-timer-title"><h2>{timer.name}</h2><span>{date}</span></div></div>
       {onClose && <button type="button" className="live-timer-close" aria-label="Close live timer" onClick={onClose}><TimerIcon name="close" /></button>}
-    </header>
-    <p className={phase === 'running' && !allDone ? 'sr-only' : 'live-timer-status'} role="status">{status}</p>
+    </header>}
+    <p className={hideHeader || (phase === 'running' && !allDone) ? 'sr-only' : 'live-timer-status'} role="status">{status}</p>
     {error && onComplete && <p role="alert" className="live-timer-error">{error}</p>}
-    <div className="live-timer-blocks" ref={list} style={{ minHeight: anchor && !allDone ? originalExtent.current : undefined }}>
-      {visibleBlocks.map((block) => {
+    {(phase === 'running' || phase === 'gap') && <>
+      <div className="live-timer-elapsed-gradient" style={{ height: Math.max(0, 13.6 + line - scrollTop) }} aria-hidden="true" />
+      <div className="live-timer-callout" style={{ top: 13.6 + line - scrollTop }} aria-hidden="true">
+        {timeLabel(now, timer.timezone)}
+      </div>
+      <div className="live-timer-crossbar" style={{ top: 13.6 + line - scrollTop }} aria-hidden="true" />
+    </>}
+    <div className="live-timer-blocks" ref={list} onScroll={e => setScrollTop(e.currentTarget.scrollTop)} style={{ minHeight: anchor && !allDone ? originalExtent.current : undefined }}>
+      {visibleBlocks.map((block, index) => {
         const state = now >= Date.parse(block.end) ? 'past' : timer.blocks[activeIndex]?.id === block.id ? 'active' : 'upcoming';
         const exiting = !layout[block.id] && pending.get(block.taskId)?.reflow;
+        const isDraggable = (phase === 'scheduled' || index >= minMovableIndex) && !pending.size && phase !== 'complete';
+        const isDragging = dragState?.draggingId === block.id;
+        const dragOverPosition = dragState && dragState.hoverIndex === index && !isDragging
+          ? (dragState.fromIndex < index ? 'below' : 'above')
+          : null;
+
         return <TimerBlock key={block.id} block={block} state={state} timezone={timer.timezone} height={displayHeight(block)} pending={pending.get(block.taskId)?.outcome}
           before={layout[block.id]?.before} exitTop={exiting ? anchor?.frames[block.id]?.top ?? 0 : undefined}
           isNewlyAdded={newlyAddedId === block.id}
-          onRetain={(value, outcome) => retain(block.taskId, value, outcome)} onReflow={() => reflow(block.taskId)} onComplete={onComplete && !block.isBreak ? outcome => complete(block.taskId, outcome) : undefined} />;
+          isDraggable={isDraggable}
+          isDragging={isDragging}
+          dragOverPosition={dragOverPosition}
+          onDragStart={e => handleBlockDragStart(e, block, index)}
+          onRetain={(value, outcome) => retain(block.taskId, value, outcome)} onReflow={() => reflow(block.taskId)} onComplete={onComplete && !block.isBreak && state !== 'past' ? outcome => complete(block.taskId, outcome) : undefined} />;
       })}
-      {(phase === 'running' || phase === 'gap') && <div className="live-timer-now" style={{ top: line }} aria-hidden="true"><span>{timeLabel(now, timer.timezone)}</span></div>}
+      {(phase === 'running' || phase === 'gap') && <>
+        <div className="live-timer-now" style={{ top: line }} aria-hidden="true"><span>{timeLabel(now, timer.timezone)}</span></div>
+      </>}
     </div>
-    {(phase === 'running' || phase === 'gap') && <div className="live-timer-effects" aria-hidden="true"><div className="live-timer-now" style={{ top: listTop + line }}><div className="live-timer-glow-window"><img className="live-timer-glow" src="/rhythm/timer/glow.svg" alt="" /></div></div></div>}
   </div>;
 }
 
@@ -574,12 +717,14 @@ export function LiveTimerModal({
   onClose,
   onComplete,
   onInsertItem,
+  onReorderBlocks,
   error,
 }: {
   timer: Timer;
   onClose: () => void;
   onComplete: CompleteTask;
   onInsertItem?: (params: InsertItemParams, now: number) => Promise<boolean>;
+  onReorderBlocks?: (fromIndex: number, toIndex: number, now: number) => Promise<boolean>;
   error?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -618,6 +763,21 @@ export function LiveTimerModal({
     }
   };
 
+  const handleReorder = async (fromIndex: number, toIndex: number) => {
+    captureAnchorRef.current?.();
+    const next = reorderTimerBlocks(currentTimer, fromIndex, toIndex, now);
+    setLocalTimer(next);
+
+    if (onReorderBlocks) {
+      try {
+        const ok = await onReorderBlocks(fromIndex, toIndex, now);
+        if (!ok) setLocalTimer(null);
+      } catch {
+        setLocalTimer(null);
+      }
+    }
+  };
+
   useEffect(() => {
     const element = dialog.current;
     const previous = document.activeElement as HTMLElement | null;
@@ -632,9 +792,30 @@ export function LiveTimerModal({
     };
   }, []);
 
+  const dateLabel = new Intl.DateTimeFormat('en-US', {
+    timeZone: currentTimer.timezone,
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(currentTimer.startedAt ?? currentTimer.blocks[0]?.start ?? now));
+
   return (
     <dialog ref={dialog} className="live-timer-modal" aria-label="Live timer" onCancel={event => { event.preventDefault(); onClose(); }}>
       <div className="live-timer-stage">
+        <header className="live-timer-header">
+          <div className="live-timer-header-titles">
+            <span className="live-timer-eyebrow">TIMEBLOCK</span>
+            <div className="live-timer-header-row">
+              <h2>{currentTimer.name}</h2>
+              <div className="live-timer-date-pill">{dateLabel}</div>
+            </div>
+          </div>
+          {onClose && (
+            <button type="button" className="live-timer-close" aria-label="Close live timer" onClick={onClose}>
+              <TimerIcon name="cross" />
+            </button>
+          )}
+        </header>
+
         <div className="live-timer-two-column">
           <LiveTimerPanel
             timer={currentTimer}
@@ -649,8 +830,10 @@ export function LiveTimerModal({
               onClose={onClose}
               onComplete={onComplete}
               onRegisterCapture={capture => { captureAnchorRef.current = capture; }}
+              onReorder={handleReorder}
               newlyAddedId={newlyAddedId}
               error={error}
+              hideHeader
             />
           </main>
         </div>

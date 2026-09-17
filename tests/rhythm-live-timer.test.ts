@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { completeTimerTask, formatDurationHM, insertItemIntoTimer, timerPosition, validLiveTimer, type LiveTimer } from '../src/modules/rhythm/live-timer';
+import { completeTimerTask, formatDurationHM, insertItemIntoTimer, reorderTimerBlocks, timerPosition, validLiveTimer, type LiveTimer } from '../src/modules/rhythm/live-timer';
 import { completeLiveTask } from '../src/modules/rhythm/complete-live-task';
-import { insertLiveTimerItem } from '../src/modules/rhythm/insert-live-task';
+import { insertLiveTimerItem, reorderLiveTimer } from '../src/modules/rhythm/insert-live-task';
 import { buildManualSchedule } from '../src/modules/rhythm/utils/manualSchedule';
 import { emptyLibrary, mergeLibraries, validateLibrary } from '../src/modules/rhythm/library';
 
@@ -350,5 +350,108 @@ test('proportional relative durations maintain exact ratios when blocks are adde
   assert.equal(durA / durB, 2);
   assert.equal(durA / durBreak, 4);
 });
+
+test('reorderTimerBlocks shifts future blocks start and end times while preserving durations', () => {
+  const plan: LiveTimer = {
+    id: 'timer-reorder',
+    name: 'Plan',
+    timezone: 'Australia/Sydney',
+    startedAt: instant(0),
+    endsAt: instant(120),
+    blocks: [segment('active', 0, 30), segment('task-1', 30, 60), segment('task-2', 60, 90), segment('task-3', 90, 120)],
+  };
+  const now = Date.parse(instant(15)); // 'active' is currently running (activeIndex = 0)
+
+  // Move task-3 (index 3) to index 1 (before task-1)
+  const reordered = reorderTimerBlocks(plan, 3, 1, now);
+
+  assert.equal(reordered.blocks.length, 4);
+  assert.equal(reordered.blocks[0].id, 'active');
+  assert.equal(reordered.blocks[1].id, 'task-3');
+  assert.equal(reordered.blocks[2].id, 'task-1');
+  assert.equal(reordered.blocks[3].id, 'task-2');
+
+  // Verify times are continuous and durations are preserved:
+  assert.equal(reordered.blocks[0].start, instant(0));
+  assert.equal(reordered.blocks[0].end, instant(30));
+  assert.equal(reordered.blocks[1].start, instant(30));
+  assert.equal(reordered.blocks[1].end, instant(60));
+  assert.equal(reordered.blocks[2].start, instant(60));
+  assert.equal(reordered.blocks[2].end, instant(90));
+  assert.equal(reordered.blocks[3].start, instant(90));
+  assert.equal(reordered.blocks[3].end, instant(120));
+
+  assert.equal(reordered.endsAt, instant(120));
+});
+
+test('reorderTimerBlocks disallows dragging or dropping into active or completed history', () => {
+  const plan: LiveTimer = {
+    id: 'timer-reorder-guard',
+    name: 'Plan',
+    timezone: 'Australia/Sydney',
+    startedAt: instant(0),
+    endsAt: instant(90),
+    blocks: [segment('past', 0, 30), segment('active', 30, 60), segment('future', 60, 90)],
+  };
+  const now = Date.parse(instant(45)); // 'active' is currently running (activeIndex = 1)
+
+  // Attempting to move past block (fromIndex 0 < minMovableIndex 2)
+  const movePast = reorderTimerBlocks(plan, 0, 2, now);
+  assert.deepEqual(movePast, plan);
+
+  // Attempting to move active block (fromIndex 1 < minMovableIndex 2)
+  const moveActive = reorderTimerBlocks(plan, 1, 2, now);
+  assert.deepEqual(moveActive, plan);
+
+  // Attempting to drop future block before active block (toIndex 0 or 1 < minMovableIndex 2)
+  const dropIntoPast = reorderTimerBlocks(plan, 2, 0, now);
+  assert.deepEqual(dropIntoPast, plan);
+
+  const dropIntoActive = reorderTimerBlocks(plan, 2, 1, now);
+  assert.deepEqual(dropIntoActive, plan);
+});
+
+test('reorderTimerBlocks allows reordering any blocks when phase is scheduled', () => {
+  const plan: LiveTimer = {
+    id: 'timer-scheduled',
+    name: 'Plan',
+    timezone: 'Australia/Sydney',
+    startedAt: instant(60),
+    endsAt: instant(150),
+    blocks: [segment('a', 60, 90), segment('b', 90, 120), segment('c', 120, 150)],
+  };
+  const now = Date.parse(instant(0)); // Before timer starts (phase = scheduled)
+
+  // Move c (index 2) to first position (index 0)
+  const reordered = reorderTimerBlocks(plan, 2, 0, now);
+  assert.equal(reordered.blocks[0].id, 'c');
+  assert.equal(reordered.blocks[1].id, 'a');
+  assert.equal(reordered.blocks[2].id, 'b');
+
+  assert.equal(reordered.blocks[0].start, instant(60));
+  assert.equal(reordered.blocks[0].end, instant(90));
+  assert.equal(reordered.blocks[1].start, instant(90));
+  assert.equal(reordered.blocks[1].end, instant(120));
+  assert.equal(reordered.blocks[2].start, instant(120));
+  assert.equal(reordered.blocks[2].end, instant(150));
+});
+
+test('reorderLiveTimer persists reordered timer in RhythmLibrary', () => {
+  const plan: LiveTimer = {
+    id: 'timer-lib-reorder',
+    name: 'Plan',
+    timezone: 'Australia/Sydney',
+    startedAt: instant(0),
+    endsAt: instant(90),
+    blocks: [segment('active', 0, 30), segment('t1', 30, 60), segment('t2', 60, 90)],
+  };
+  const data = { ...emptyLibrary(), liveTimer: plan };
+  const now = Date.parse(instant(10));
+
+  const next = reorderLiveTimer(data, 'timer-lib-reorder', 2, 1, now);
+  assert.equal(next.liveTimer?.blocks[1].id, 't2');
+  assert.equal(next.liveTimer?.blocks[2].id, 't1');
+});
+
 
 

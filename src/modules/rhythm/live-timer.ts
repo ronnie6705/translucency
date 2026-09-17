@@ -86,9 +86,12 @@ export function timerPosition(blocks: ScheduleBlock[], now: number) {
   return { activeIndex, nextIndex, phase, progress };
 }
 
+export const MIN_BLOCK_HEIGHT = 60;
+
 export function timerBlockHeight(block: ScheduleBlock) {
   const minutes = (Date.parse(block.end) - Date.parse(block.start)) / 60000;
-  return block.isBreak ? 64 : Math.max(82, Math.min(240, 66 + minutes * 0.75));
+  const calculatedHeight = Math.max(82, Math.min(240, 66 + minutes * 0.75));
+  return block.isBreak ? 64 : Math.max(MIN_BLOCK_HEIGHT, calculatedHeight);
 }
 
 export function validLiveTimer(value: unknown): value is LiveTimer {
@@ -113,4 +116,4 @@ export function formatDurationHM(ms: number): string {
   return `${remainder}m`;
 }
 
-export { insertItemIntoTimer, type InsertItemParams } from './insert-live-task';
+export { insertItemIntoTimer, reorderTimerBlocks, reorderLiveTimer, type InsertItemParams } from './insert-live-task';
