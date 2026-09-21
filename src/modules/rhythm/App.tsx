@@ -317,8 +317,42 @@ function App({ section = "rhythm" }: { section?: string }) {
     setShowFlowModal(true);
   };
 
-  const handleLoadSavedTimeblock = (timeblockId: string) => {
-    const block = savedTimeblocks.find(tb => tb.id === timeblockId);
+  const handleLoadSavedTimeblock = (target: string | SavedTimeblock) => {
+    let block: SavedTimeblock | undefined;
+    if (typeof target !== 'string') {
+      block = target;
+    } else {
+      block = savedTimeblocks.find(tb => tb.id === target || tb.name === target);
+      if (!block && liveTimer && (liveTimer.id === target || liveTimer.name === target)) {
+        const now = new Date();
+        const todayString = [
+          now.getFullYear(),
+          String(now.getMonth() + 1).padStart(2, '0'),
+          String(now.getDate()).padStart(2, '0'),
+        ].join('-');
+        block = {
+          id: liveTimer.id,
+          name: liveTimer.name,
+          createdAt: liveTimer.startedAt ?? new Date().toISOString(),
+          dayConfig: {
+            date: todayString,
+            startTime: '09:00',
+            endTime: '17:00',
+            timezone: liveTimer.timezone,
+            chronotype: 'Lion',
+          },
+          tasks: liveTimer.blocks
+            .filter((b) => !b.isBreak)
+            .map((b) => ({
+              id: b.taskId,
+              name: b.taskName,
+              durationMinutes: (Date.parse(b.end) - Date.parse(b.start)) / 60000,
+              energyRequired: (Math.max(1, Math.min(5, Math.round(b.energyRequired || 3))) as 1 | 2 | 3 | 4 | 5),
+              priority: 1,
+            })),
+        };
+      }
+    }
     if (!block) return;
     setFlowContext('timeblock');
     resetFlowVisualState();
@@ -338,12 +372,23 @@ function App({ section = "rhythm" }: { section?: string }) {
     setShowFlowModal(true);
   };
 
-  const handleDeleteTimeblock = (timeblockId: string) => {
-    const block = savedTimeblocks.find(item => item.id === timeblockId);
-    if (!block || typeof window === 'undefined') return;
+  const handleDeleteTimeblock = async (timeblockId: string) => {
+    if (typeof window === 'undefined') return;
+    const isLive = liveTimer != null && (liveTimer.id === timeblockId || liveTimer.name === timeblockId);
+    const block = savedTimeblocks.find(item => item.id === timeblockId) || (isLive ? { id: liveTimer!.id, name: liveTimer!.name } : null);
+    if (!block) return;
     const shouldDelete = window.confirm(`Delete "${block.name}"?`);
     if (!shouldDelete) return;
-    setSavedTimeblocks(prev => prev.filter(item => item.id !== timeblockId));
+
+    if (isLive) {
+      await save(d => ({
+        ...d,
+        liveTimer: undefined,
+        timeblocks: d.timeblocks.filter(item => item.id !== timeblockId),
+      }));
+    } else {
+      await setSavedTimeblocks(prev => prev.filter(item => item.id !== timeblockId));
+    }
     setActiveTimeblockId(current => (current === timeblockId ? null : current));
   };
 
@@ -492,7 +537,7 @@ function App({ section = "rhythm" }: { section?: string }) {
             onAddTimeblock={handleStartNewTimeblock}
             onOpenTimer={handleOpenTimeblockTimer}
             onRenameTimeblock={(tb) => setRenamingTimeblock(tb)}
-            onEditTimeblock={(tb) => handleLoadSavedTimeblock(tb.id)}
+            onEditTimeblock={(tb) => handleLoadSavedTimeblock(tb)}
             onDeleteTimeblock={handleDeleteTimeblock}
             onUpdateTask={async (timeblockId, taskId, updates) => {
               return await save((data) =>

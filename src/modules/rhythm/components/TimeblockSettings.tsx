@@ -40,10 +40,11 @@ export function TimeblockSettings({
     return () => document.removeEventListener('pointerdown', dismiss);
   }, [open]);
 
-  const handleAction = (action: () => void) => {
+  const handleAction = (event: React.MouseEvent, action: () => void) => {
+    event.stopPropagation();
+    event.preventDefault();
     setOpen(false);
     action();
-    trigger.current?.focus();
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
@@ -72,6 +73,7 @@ export function TimeblockSettings({
     <div
       ref={root}
       className={`timeblock-settings ${open ? 'open' : ''} ${className}`}
+      onClick={event => event.stopPropagation()}
       onPointerEnter={event => {
         clearTimeout(closeTimer.current);
         if (event.pointerType === 'mouse') setOpen(true);
@@ -102,7 +104,10 @@ export function TimeblockSettings({
           aria-label={`Settings for ${timeblockName}`}
           aria-expanded={open}
           aria-controls={actionsId}
-          onClick={() => setOpen(value => !value)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(value => !value);
+          }}
           onKeyDown={event => {
             if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
               event.preventDefault();
@@ -118,13 +123,13 @@ export function TimeblockSettings({
       )}
 
       {open && (
-        <div id={actionsId} className="timeblock-settings-actions">
+        <div id={actionsId} className="timeblock-settings-actions" onClick={e => e.stopPropagation()}>
           <button
             type="button"
             className="timeblock-settings-btn rename-btn"
             title="Rename Timeblock"
             aria-label={`Rename ${timeblockName}`}
-            onClick={() => handleAction(onRename)}
+            onClick={(e) => handleAction(e, onRename)}
           >
             <RenameListIcon />
           </button>
@@ -133,7 +138,7 @@ export function TimeblockSettings({
             className="timeblock-settings-btn edit-btn"
             title="Edit Timeblock"
             aria-label={`Edit ${timeblockName}`}
-            onClick={() => handleAction(onEdit)}
+            onClick={(e) => handleAction(e, onEdit)}
           >
             <EditListIcon />
           </button>
@@ -142,7 +147,7 @@ export function TimeblockSettings({
             className="timeblock-settings-btn delete-btn"
             title="Delete Timeblock"
             aria-label={`Delete ${timeblockName}`}
-            onClick={() => handleAction(onDelete)}
+            onClick={(e) => handleAction(e, onDelete)}
           >
             <TrashIcon />
           </button>
