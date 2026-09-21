@@ -14,10 +14,14 @@ import { insertLiveTimerItem, reorderLiveTimer } from './insert-live-task';
 import { generateSchedule } from './rhythmScheduler';
 import { validateTimeblockPlan } from './timeblock-plan';
 import { buildManualSchedule } from './utils/manualSchedule';
-import { LiveTimerModal, LiveTimerPreview } from './components/LiveTimer';
+import { LiveTimerModal, LiveTimerPreview, type Timer } from './components/LiveTimer';
+import { TimeblockWorkspace } from './components/TimeblockWorkspace';
+import { NameListModal } from './components/task-dialogs';
+import { updateTimeblockTask } from './task-spaces';
 import './live-timer.css';
 import './timeblock-flow.css';
 import './plan-timeblock.css';
+import './timeblock-workspace.css';
 
 const today = new Date();
 const todayStr = [
@@ -112,6 +116,39 @@ function App({ section = "rhythm" }: { section?: string }) {
   const { spaces, taskLists: savedTaskLists, timeblocks: savedTimeblocks, liveTimer, save, setSavedTaskLists, setSavedTimeblocks, ready, error: storageError, reload } = useTaskWorkspace().library;
   const [timerOpen, setTimerOpen] = useState(false);
   const [startingTimer, setStartingTimer] = useState(false);
+  const [modalTimer, setModalTimer] = useState<Timer | null>(null);
+  const [renamingTimeblock, setRenamingTimeblock] = useState<SavedTimeblock | null>(null);
+
+  const handleOpenTimeblockTimer = (timeblock: SavedTimeblock) => {
+    const isRunning = liveTimer != null && (liveTimer.id === timeblock.id || liveTimer.name === timeblock.name);
+    if (isRunning) {
+      setModalTimer(liveTimer);
+    } else {
+      const rawBlocks = buildManualSchedule(timeblock.tasks, timeblock.dayConfig);
+      const now = Date.now();
+      let blocks = rawBlocks;
+      if (rawBlocks.length > 0) {
+        const firstStart = Date.parse(rawBlocks[0].start);
+        if (firstStart <= now) {
+          const delta = now + 5 * 60 * 1000 - firstStart;
+          blocks = rawBlocks.map(b => ({
+            ...b,
+            start: new Date(Date.parse(b.start) + delta).toISOString(),
+            end: new Date(Date.parse(b.end) + delta).toISOString(),
+          }));
+        }
+      }
+      const scheduledTimer: Timer = {
+        id: timeblock.id,
+        name: timeblock.name,
+        timezone: timeblock.dayConfig.timezone,
+        blocks,
+        startedAt: blocks[0]?.start ?? createDateInTimeZone(timeblock.dayConfig.date, timeblock.dayConfig.startTime || '09:00', timeblock.dayConfig.timezone).toISOString(),
+        endsAt: blocks[blocks.length - 1]?.end ?? createDateInTimeZone(timeblock.dayConfig.date, timeblock.dayConfig.endTime || '17:00', timeblock.dayConfig.timezone).toISOString(),
+      };
+      setModalTimer(scheduledTimer);
+    }
+  };
 
   const [dayConfig, setDayConfig] = useState<DayConfig>({
     date: todayStr,
@@ -448,95 +485,152 @@ function App({ section = "rhythm" }: { section?: string }) {
     <div className="app">
       {storageError && <div className="platform-notice" role="alert">{storageError}</div>}
       <div className="app-main">
-        {section === 'rhythm-timeblocks' && liveTimer && <LiveTimerPreview timer={liveTimer} onOpen={() => setTimerOpen(true)} />}
-        <section className={`dashboard-shell${section === "rhythm-tasks" || section === "rhythm-timeblocks" ? " single-panel" : ""}`} aria-label="Rhythm dashboard">
-          {section !== "rhythm-timeblocks" && <TasksPanel onTimeblock={handleTimeblockSavedTaskList} onEditList={handleLoadSavedTaskList} onDeleteList={handleDeleteTaskList} />}
+        {section === "rhythm-timeblocks" ? (
+          <TimeblockWorkspace
+            timeblocks={savedTimeblocks}
+            liveTimer={liveTimer}
+            onAddTimeblock={handleStartNewTimeblock}
+            onOpenTimer={handleOpenTimeblockTimer}
+            onRenameTimeblock={(tb) => setRenamingTimeblock(tb)}
+            onEditTimeblock={(tb) => handleLoadSavedTimeblock(tb.id)}
+            onDeleteTimeblock={handleDeleteTimeblock}
+            onUpdateTask={async (timeblockId, taskId, updates) => {
+              return await save((data) =>
+                updateTimeblockTask(data, timeblockId, taskId, updates)
+              );
+            }}
+            onDeleteTask={async (timeblockId, taskId) => {
+              return await save((data) => ({
+                ...data,
+                timeblocks: data.timeblocks.map((b) =>
+                  b.id === timeblockId
+                    ? { ...b, tasks: b.tasks.filter((t) => t.id !== taskId) }
+                    : b
+                ),
+              }));
+            }}
+          />
+        ) : (
+          <section
+            className={`dashboard-shell${
+              section === "rhythm-tasks" ? " single-panel" : ""
+            }`}
+            aria-label="Rhythm dashboard"
+          >
+            {section !== "rhythm-timeblocks" && (
+              <TasksPanel
+                onTimeblock={handleTimeblockSavedTaskList}
+                onEditList={handleLoadSavedTaskList}
+                onDeleteList={handleDeleteTaskList}
+              />
+            )}
 
-          {section !== "rhythm-tasks" && <aside className="timeblocks-panel" id="rhythm-timeblocks">
-            <div className="dashboard-header">
-              <div className="timeblocks-title-row">
-                <div>
-                  <p className="section-kicker">Timeblocks</p>
-                  <h1>Saved and in-progress timeblocking plans appear here</h1>
+            {section !== "rhythm-tasks" && (
+              <aside className="timeblocks-panel" id="rhythm-timeblocks">
+                <div className="dashboard-header">
+                  <div className="timeblocks-title-row">
+                    <div>
+                      <p className="section-kicker">Timeblocks</p>
+                      <h1>Saved and in-progress timeblocking plans appear here</h1>
+                    </div>
+                    <button
+                      type="button"
+                      className={`timeblock-edit-toggle${
+                        isTimeblockEditMode ? " active" : ""
+                      }`}
+                      aria-pressed={isTimeblockEditMode}
+                      onClick={() => setIsTimeblockEditMode((current) => !current)}
+                    >
+                      <span>{isTimeblockEditMode ? "Done" : "Edit"}</span>
+                      <EditIcon />
+                    </button>
+                  </div>
+                  <label className="dashboard-search compact">
+                    <span className="sr-only">Search timeblocks</span>
+                    <input
+                      type="search"
+                      placeholder="Search Timeblocks"
+                      value={timeblockSearch}
+                      onChange={(e) => setTimeblockSearch(e.target.value)}
+                    />
+                  </label>
                 </div>
+
                 <button
                   type="button"
-                  className={`timeblock-edit-toggle${isTimeblockEditMode ? ' active' : ''}`}
-                  aria-pressed={isTimeblockEditMode}
-                  onClick={() => setIsTimeblockEditMode(current => !current)}
+                  className="add-timeblock-card"
+                  onClick={handleStartNewTimeblock}
                 >
-                  <span>{isTimeblockEditMode ? 'Done' : 'Edit'}</span>
-                  <EditIcon />
+                  <GridIcon />
+                  <span>Add Timeblock</span>
                 </button>
-              </div>
-              <label className="dashboard-search compact">
-                <span className="sr-only">Search timeblocks</span>
-                <input
-                  type="search"
-                  placeholder="Search Timeblocks"
-                  value={timeblockSearch}
-                  onChange={e => setTimeblockSearch(e.target.value)}
-                />
-              </label>
-            </div>
 
-            <button type="button" className="add-timeblock-card" onClick={handleStartNewTimeblock}>
-              <GridIcon />
-              <span>Add Timeblock</span>
-            </button>
-
-            <div className="timeblock-stack">
-              {filteredTimeblocks.map(block => {
-                return (
-                  <article
-                    key={block.id}
-                    className={`timeblock-rail-card${isTimeblockEditMode ? ' editing' : ''}`}
-                    onClick={() => {
-                      handleLoadSavedTimeblock(block.id);
-                    }}
-                  >
-                    <span className="chronotype-mark" aria-hidden="true">
-                      {chronotypeIconMap[block.dayConfig.chronotype]}
-                    </span>
-                    <div className="timeblock-copy">
-                      <p className="card-eyebrow">{block.dayConfig.chronotype}</p>
-                      <h2>{block.name}</h2>
-                      <p>{formatTimeWindow(block.dayConfig.startTime, block.dayConfig.endTime)}</p>
-                    </div>
-                    <div className="timeblock-control-group">
-                      <div className="timeblock-metrics">
-                        <MetaChip icon={<FileIcon />} label={`${block.tasks.length} tasks`} />
-                        <MetaChip
-                          icon={<ClockIcon />}
-                          label={formatMinutesFromTasks(block.tasks)}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        className="timeblock-delete-button"
-                        aria-label={`Delete ${block.name}`}
-                        tabIndex={isTimeblockEditMode ? 0 : -1}
-                        onClick={event => {
-                          event.stopPropagation();
-                          handleDeleteTimeblock(block.id);
+                <div className="timeblock-stack">
+                  {filteredTimeblocks.map((block) => {
+                    return (
+                      <article
+                        key={block.id}
+                        className={`timeblock-rail-card${
+                          isTimeblockEditMode ? " editing" : ""
+                        }`}
+                        onClick={() => {
+                          handleLoadSavedTimeblock(block.id);
                         }}
                       >
-                        <TrashIcon />
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-              {!filteredTimeblocks.length && (
-                <p className="dashboard-empty">
-                  {timeblockSearch.trim()
-                    ? 'No matching timeblocks.'
-                    : 'No saved timeblocks yet.'}
-                </p>
-              )}
-            </div>
-          </aside>}
-        </section>
+                        <span className="chronotype-mark" aria-hidden="true">
+                          {chronotypeIconMap[block.dayConfig.chronotype]}
+                        </span>
+                        <div className="timeblock-copy">
+                          <p className="card-eyebrow">
+                            {block.dayConfig.chronotype}
+                          </p>
+                          <h2>{block.name}</h2>
+                          <p>
+                            {formatTimeWindow(
+                              block.dayConfig.startTime,
+                              block.dayConfig.endTime
+                            )}
+                          </p>
+                        </div>
+                        <div className="timeblock-control-group">
+                          <div className="timeblock-metrics">
+                            <MetaChip
+                              icon={<FileIcon />}
+                              label={`${block.tasks.length} tasks`}
+                            />
+                            <MetaChip
+                              icon={<ClockIcon />}
+                              label={formatMinutesFromTasks(block.tasks)}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="timeblock-delete-button"
+                            aria-label={`Delete ${block.name}`}
+                            tabIndex={isTimeblockEditMode ? 0 : -1}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDeleteTimeblock(block.id);
+                            }}
+                          >
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                  {!filteredTimeblocks.length && (
+                    <p className="dashboard-empty">
+                      {timeblockSearch.trim()
+                        ? "No matching timeblocks."
+                        : "No saved timeblocks yet."}
+                    </p>
+                  )}
+                </div>
+              </aside>
+            )}
+          </section>
+        )}
       </div>
       {showFlowModal && (
         <dialog ref={flowDialog} className="flow-modal-backdrop" aria-label={flowContext === 'task-list' ? 'Build a task list' : 'Create a timeblock'} onCancel={e => { e.preventDefault(); closeFlowModal(); }}>
@@ -625,10 +719,66 @@ function App({ section = "rhythm" }: { section?: string }) {
           </div>
         </dialog>
       )}
-      {timerOpen && liveTimer && <LiveTimerModal timer={liveTimer} onClose={() => setTimerOpen(false)} error={storageError}
-        onComplete={(taskId, now, outcome) => save(data => completeLiveTask(data, liveTimer.id, taskId, now, outcome))}
-        onInsertItem={(params, now) => save(data => insertLiveTimerItem(data, liveTimer.id, params, now))}
-        onReorderBlocks={(fromIndex, toIndex, now) => save(data => reorderLiveTimer(data, liveTimer.id, fromIndex, toIndex, now))} />}
+      {modalTimer && (
+        <LiveTimerModal
+          timer={liveTimer && (liveTimer.id === modalTimer.id || liveTimer.name === modalTimer.name) ? liveTimer : modalTimer}
+          onClose={() => {
+            setTimerOpen(false);
+            setModalTimer(null);
+          }}
+          error={storageError}
+          onComplete={(taskId, now, outcome) => {
+            const currentId = modalTimer.id;
+            if (liveTimer && (liveTimer.id === currentId || liveTimer.name === modalTimer.name)) {
+              return save(data => completeLiveTask(data, liveTimer.id, taskId, now, outcome));
+            }
+            return Promise.resolve(false);
+          }}
+          onInsertItem={
+            liveTimer && (liveTimer.id === modalTimer.id || liveTimer.name === modalTimer.name)
+              ? (params, now) => save(data => insertLiveTimerItem(data, liveTimer.id, params, now))
+              : undefined
+          }
+          onReorderBlocks={
+            liveTimer && (liveTimer.id === modalTimer.id || liveTimer.name === modalTimer.name)
+              ? (fromIndex, toIndex, now) => save(data => reorderLiveTimer(data, liveTimer.id, fromIndex, toIndex, now))
+              : undefined
+          }
+        />
+      )}
+      {!modalTimer && timerOpen && liveTimer && (
+        <LiveTimerModal
+          timer={liveTimer}
+          onClose={() => setTimerOpen(false)}
+          error={storageError}
+          onComplete={(taskId, now, outcome) => save(data => completeLiveTask(data, liveTimer.id, taskId, now, outcome))}
+          onInsertItem={(params, now) => save(data => insertLiveTimerItem(data, liveTimer.id, params, now))}
+          onReorderBlocks={(fromIndex, toIndex, now) => save(data => reorderLiveTimer(data, liveTimer.id, fromIndex, toIndex, now))}
+        />
+      )}
+      {renamingTimeblock && (
+        <NameListModal
+          name={renamingTimeblock.name}
+          error={storageError}
+          onClose={() => setRenamingTimeblock(null)}
+          onSave={async (newName) => {
+            const ok = await save((data) => ({
+              ...data,
+              timeblocks: data.timeblocks.map((b) =>
+                b.id === renamingTimeblock.id ? { ...b, name: newName } : b
+              ),
+              liveTimer:
+                data.liveTimer &&
+                (data.liveTimer.id === renamingTimeblock.id ||
+                  data.liveTimer.name === renamingTimeblock.name)
+                  ? { ...data.liveTimer, name: newName }
+                  : data.liveTimer,
+            }));
+            if (ok) setRenamingTimeblock(null);
+            return ok;
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,813 @@
+/* ==========================================================================
+   Rhythm Timeblock Workspace (Figma node 1846:2457 & 1880:1724)
+   ========================================================================== */
+
+.rhythm-module .timeblock-workspace {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1186px;
+  margin: 0 auto;
+  padding: 0 16px 64px;
+  color: #fff;
+  box-sizing: border-box;
+}
+
+/* 1. Header */
+.rhythm-module .timeblock-workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 46.4px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.rhythm-module .timeblock-header-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rhythm-module .timeblock-header-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.rhythm-module .timeblock-workspace-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 33px;
+  color: #ffffff;
+  margin: 0;
+}
+
+.rhythm-module .timeblock-search-container {
+  display: flex;
+  align-items: center;
+}
+
+.rhythm-module .timeblock-search-input {
+  width: 200px;
+  height: 46.4px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 160ms ease, background 160ms ease;
+  box-sizing: border-box;
+}
+
+.rhythm-module .timeblock-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.rhythm-module .timeblock-search-input:focus {
+  border-color: #bcbfff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 2. Add Timeblock Card */
+.rhythm-module .timeblock-add-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 62px;
+  min-height: 62px;
+  padding: 0 24px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 160ms ease;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.rhythm-module .timeblock-add-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.45);
+  transform: translateY(-1px);
+}
+
+.rhythm-module .timeblock-add-card:focus-visible {
+  outline: 2px solid #bcbfff;
+  outline-offset: 3px;
+}
+
+.rhythm-module .timeblock-add-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rhythm-module .timeblock-add-icon-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.rhythm-module .timeblock-add-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  color: #ffffff;
+}
+
+.rhythm-module .timeblock-add-shortcut {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.3px;
+}
+
+/* 3. Cards Stack */
+.rhythm-module .timeblock-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+/* 4. Workspace Card */
+.rhythm-module .timeblock-workspace-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 24px;
+  border-radius: 40px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background 220ms ease,
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(10px);
+}
+
+/* Collapsed card is a unified clickable block with gentle hover animation */
+.rhythm-module .timeblock-workspace-card.is-collapsed {
+  cursor: pointer;
+}
+
+.rhythm-module .timeblock-workspace-card.is-collapsed:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+}
+
+.rhythm-module .timeblock-workspace-card.is-collapsed:hover .timeblock-collapse-btn {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* LIVE active card border and glow */
+.rhythm-module .timeblock-workspace-card.is-live {
+  border: 1px solid #bcbfff;
+  box-shadow: 0 0 24px rgba(188, 191, 255, 0.18), inset 0 0 12px rgba(188, 191, 255, 0.05);
+}
+
+.rhythm-module .timeblock-workspace-card.is-live.is-collapsed:hover {
+  border-color: #d2d4ff;
+  box-shadow: 0 0 32px rgba(188, 191, 255, 0.28), inset 0 0 12px rgba(188, 191, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Card Header */
+.rhythm-module .timeblock-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 58.62px;
+  gap: 16px;
+  flex-wrap: wrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rhythm-module .timeblock-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rhythm-module .timeblock-chronotype-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 78.1px;
+  height: 58.62px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(163, 166, 221, 0.1);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.rhythm-module .timeblock-chronotype-pill .timeblock-slider-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #a3a6dd;
+  display: block;
+}
+
+.rhythm-module .timeblock-chronotype-pill .timeblock-chronotype-animal {
+  width: 34.1px;
+  height: 24.36px;
+  flex-shrink: 0;
+  color: #a3a6dd;
+  display: block;
+}
+
+.rhythm-module .timeblock-card-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+
+.rhythm-module .timeblock-card-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  color: #ffffff;
+  margin: 0;
+}
+
+.rhythm-module .timeblock-card-meta-chips {
+  display: flex;
+  align-items: center;
+  gap: 6.17px;
+  flex-wrap: wrap;
+}
+
+.rhythm-module .timeblock-meta-chip {
+  display: flex;
+  align-items: center;
+  gap: 3.72px;
+  height: 30.62px;
+  padding: 0 9.19px;
+  border-radius: 9.19px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 0.465px solid rgba(255, 255, 255, 0);
+  font-family: 'Roboto', sans-serif;
+  font-size: 12.25px;
+  font-weight: 500;
+  color: #ffffff;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.rhythm-module .timeblock-card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* LIVE badge (matching Figma node 1874:4038) */
+.rhythm-module .timeblock-live-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 25px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(188, 191, 255, 0.1);
+  color: #bcbfff;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+/* Collapse button */
+.rhythm-module .timeblock-collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 160ms ease;
+  padding: 0;
+}
+
+.rhythm-module .timeblock-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.rhythm-module .timeblock-chevron {
+  width: 20px;
+  height: 12px;
+  transition: transform 220ms ease;
+}
+
+.rhythm-module .timeblock-chevron.rotate-180 {
+  transform: rotate(180deg);
+}
+
+/* 5. Timeblock Settings Hover-Reveal (Figma node 1880:1724) */
+.rhythm-module .timeblock-settings {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 13px;
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rhythm-module .timeblock-settings:not(.open) {
+  width: 40px;
+  height: 40px;
+}
+
+.rhythm-module .timeblock-settings.open {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px;
+  height: 41px;
+}
+
+.rhythm-module .timeblock-settings-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  cursor: pointer;
+  color: #ffffff;
+  padding: 0;
+  transition: background 160ms ease;
+}
+
+.rhythm-module .timeblock-settings-trigger:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.rhythm-module .timeblock-settings-trigger svg {
+  width: 22px;
+  height: 20px;
+  display: block;
+  color: #ffffff;
+}
+
+.rhythm-module .timeblock-settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rhythm-module .timeblock-settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 37px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  cursor: pointer;
+  color: #ffffff;
+  padding: 0;
+  transition: background 160ms ease, transform 120ms ease;
+}
+
+.rhythm-module .timeblock-settings-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.rhythm-module .timeblock-settings-btn.rename-btn svg {
+  width: 26px;
+  height: 20px;
+  display: block;
+  color: #ffffff;
+}
+
+.rhythm-module .timeblock-settings-btn.delete-btn {
+  background: rgba(255, 81, 81, 0.44);
+}
+
+.rhythm-module .timeblock-settings-btn.delete-btn:hover {
+  background: rgba(255, 81, 81, 0.65);
+}
+
+.rhythm-module .timeblock-settings-btn.delete-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  color: #ffffff;
+}
+
+/* Edit Button Composite Icon (Figma node 1880:1750) */
+.rhythm-module .timeblock-edit-composite-icon {
+  position: relative;
+  width: 28px;
+  height: 26px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.rhythm-module .timeblock-edit-composite-icon .edit-list-base {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  display: block;
+  color: #ffffff;
+}
+
+.rhythm-module .timeblock-edit-composite-icon .edit-pencil-badge {
+  position: absolute;
+  left: 13px;
+  top: 11px;
+  width: 15px;
+  height: 15px;
+  display: block;
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+
+/* 6. Card Body (Two-Column Layout) */
+.rhythm-module .timeblock-card-body {
+  /* position: relative so the absolutely-positioned schedule column
+     anchors to this container */
+  position: relative;
+  display: block;           /* block so height = task column natural height */
+  width: 100%;
+  margin-top: 24px;
+  /* Reserve right space for the absolutely-positioned schedule column
+     (339px wide + 48px gap) */
+  padding-right: calc(339px + 48px);
+  box-sizing: border-box;
+}
+
+/* Left Column: Tasks — its natural height defines the card body height */
+.rhythm-module .timeblock-tasks-column {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  /* Scroll lives here — keeps tasks-list free of overflow stacking context
+     so backdrop-filter on the card composites correctly (no dark fill) */
+  min-height: 338px;
+  max-height: 560px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.rhythm-module .timeblock-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  overflow: visible;
+  padding: 0 4px 0 0;
+  box-sizing: border-box;
+}
+
+/* Remove the heavy 63px black drop-shadow that causes the dark fill behind the task list */
+.rhythm-module .timeblock-workspace .tasks-row {
+  box-shadow: none;
+}
+
+/* Ensure task-clear-slot (TaskRow wrapper) is always full-width inside timeblock list */
+.rhythm-module .timeblock-tasks-list > .task-clear-slot {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rhythm-module .timeblock-tasks-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  text-align: center;
+}
+
+
+/* Right Column: Embedded Compact Schedule — absolutely positioned so it
+   cannot influence the card body height. top:0/bottom:0 makes it fill
+   exactly the task column's natural height. */
+.rhythm-module .timeblock-schedule-column {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 339px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.rhythm-module .timeblock-schedule-wrapper {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+
+
+/* Embedded Schedule Card */
+.rhythm-module .live-timer-card.live-timer-embedded {
+  position: relative;
+  width: 100%;
+  /* Fill the schedule column exactly — height driven by left task list via flex stretch */
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  padding: 8.32px;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.387px solid rgba(191, 193, 241, 0.2);
+  overflow: hidden;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  user-select: none;
+}
+
+.rhythm-module .timeblock-workspace-card.is-live .live-timer-card.live-timer-embedded {
+  border: 2px solid #bcbfff;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded:focus-visible {
+  outline: 2px solid #bcbfff;
+  outline-offset: 4px;
+}
+
+/* Inner Blocks Container */
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-blocks {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  gap: 8.32px;
+  padding: 0 4px 0 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-blocks::-webkit-scrollbar {
+  width: 4px;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-blocks::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-blocks::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+
+/* Compact Block Items inside Embedded Schedule */
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-block {
+  min-height: auto;
+  padding: 8.32px;
+  border-radius: 13.87px;
+  gap: 8.32px;
+  border-width: 1.387px;
+  border-style: solid;
+  border-color: rgba(191, 193, 241, 0.2);
+  box-shadow: none;
+  background: rgba(191, 193, 241, 0.04);
+  align-items: flex-start;
+  box-sizing: border-box;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-block.active {
+  border-color: #bfc1f1;
+  background: linear-gradient(180deg, rgba(191, 193, 241, 0.04) 0%, rgba(191, 193, 241, 0.2) 50%, rgba(191, 193, 241, 0.6) 75%, rgba(141, 146, 249, 0.8) 100%);
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-block.upcoming {
+  background: linear-gradient(180deg, rgba(191, 193, 241, 0.2) 0%, rgba(191, 193, 241, 0.4) 50%, rgba(191, 193, 241, 0.6) 75%, rgba(141, 146, 249, 0.8) 100%);
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-task-icon {
+  width: 27.74px;
+  height: 27.74px;
+  min-width: 27.74px;
+  border-radius: 8.32px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-task-icon svg {
+  width: 13.87px;
+  height: 13.87px;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1.39px;
+  min-width: 0;
+  flex: 1;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-copy time {
+  font-family: 'Inter', sans-serif;
+  font-size: 6.93px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.35px;
+  line-height: 1;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-copy .live-timer-task-heading h3 {
+  font-family: 'Roboto', sans-serif;
+  font-size: 9.71px;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.15;
+  margin: 0;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-badges {
+  display: flex;
+  gap: 5.55px;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-badges span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.77px;
+  padding: 2.77px 5.55px;
+  border-radius: 8.32px;
+  background: rgba(255, 255, 255, 0.1);
+  font-family: 'Roboto', sans-serif;
+  font-size: 6.93px;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-badges span svg {
+  width: 8.32px;
+  height: 8.32px;
+}
+
+/* Gradient and Live Line Marker in Embedded Widget */
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-elapsed-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(180deg, rgba(154, 158, 255, 0) 0%, rgba(64, 71, 255, 0.44) 100%);
+  pointer-events: none;
+  border-radius: 20px 20px 0 0;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-callout {
+  position: absolute;
+  left: 14.55px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11.09px;
+  font-weight: 700;
+  color: #bfc1f1;
+  text-shadow: 0px 2.77px 12.27px rgba(109, 114, 245, 0.8);
+  letter-spacing: 0.35px;
+  transform: translateY(-100%);
+  pointer-events: none;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-crossbar {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 1.39px;
+  background: rgba(188, 191, 255, 0.9);
+  box-shadow: 0px 0px 8px rgba(141, 146, 249, 0.9);
+  pointer-events: none;
+}
+
+/* Empty Schedule State */
+.rhythm-module .timeblock-schedule-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 338px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  text-align: center;
+  gap: 8px;
+  transition: background 160ms ease;
+}
+
+.rhythm-module .timeblock-schedule-empty:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.rhythm-module .timeblock-schedule-empty p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.rhythm-module .timeblock-schedule-empty span {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Empty State when zero timeblocks exist */
+.rhythm-module .timeblock-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 32px;
+}
+
+.rhythm-module .timeblock-empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 8px;
+}
+
+.rhythm-module .timeblock-empty-desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  max-width: 440px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .rhythm-module .timeblock-card-body {
+    flex-direction: column;
+    gap: 24px;
+  }
+  .rhythm-module .timeblock-schedule-column {
+    width: 100%;
+    min-width: 0;
+  }
+}

@@ -933,13 +933,13 @@
   }
 }
 /* Neutralize legacy global button margins and accent shadows on task surfaces. */
-.rhythm-module :is(.tasks-panel, .task-composer, .task-small-form) button {
+.rhythm-module :is(.tasks-panel, .task-composer, .task-small-form, .timeblock-workspace) button {
   margin-top: 0;
   box-shadow: none;
   letter-spacing: 0;
 }
 .rhythm-module
-  :is(.tasks-panel, .task-composer, .task-small-form)
+  :is(.tasks-panel, .task-composer, .task-small-form, .timeblock-workspace)
   button:not(:disabled):hover {
   transform: none;
   opacity: 1;

@@ -51,11 +51,135 @@ export function updateTask(
 ): RhythmLibrary {
   if (!tasksAt(data, ref).some((t) => t.id === ref.taskId))
     throw new Error("This task no longer exists.");
-  return changeTasks(data, ref, (tasks) =>
+  const withUpdatedLocation = changeTasks(data, ref, (tasks) =>
     tasks.map((t) =>
       t.id === ref.taskId ? { ...t, ...updates, id: t.id } : t,
     ),
   );
+  const timeblocks = withUpdatedLocation.timeblocks.map((b) => ({
+    ...b,
+    tasks: b.tasks.map((t) =>
+      t.id === ref.taskId ? { ...t, ...updates, id: t.id } : t,
+    ),
+  }));
+  let liveTimer = withUpdatedLocation.liveTimer;
+  if (liveTimer && liveTimer.blocks.some((b) => b.taskId === ref.taskId)) {
+    liveTimer = {
+      ...liveTimer,
+      blocks: liveTimer.blocks.map((b) =>
+        b.taskId === ref.taskId
+          ? {
+              ...b,
+              taskName: updates.name !== undefined ? updates.name : b.taskName,
+              energyRequired:
+                updates.energyRequired !== undefined
+                  ? updates.energyRequired
+                  : b.energyRequired,
+            }
+          : b,
+      ),
+    };
+  }
+  if (liveTimer !== withUpdatedLocation.liveTimer) {
+    return {
+      ...withUpdatedLocation,
+      timeblocks,
+      liveTimer,
+    };
+  }
+  return {
+    ...withUpdatedLocation,
+    timeblocks,
+  };
+}
+
+export function findTaskReference(
+  data: RhythmLibrary,
+  taskId: string,
+): TaskReference | null {
+  if (data.spaces) {
+    for (const space of data.spaces) {
+      if (space.tasks.some((t) => t.id === taskId)) {
+        return { spaceId: space.id, taskId };
+      }
+    }
+  }
+  for (const list of data.taskLists) {
+    if (list.tasks.some((t) => t.id === taskId)) {
+      return { spaceId: list.spaceId ?? "", listId: list.id, taskId };
+    }
+  }
+  return null;
+}
+
+export function updateTimeblockTask(
+  data: RhythmLibrary,
+  timeblockId: string,
+  taskId: string,
+  updates: Partial<Task>,
+): RhythmLibrary {
+  const tb = data.timeblocks.find((t) => t.id === timeblockId);
+  if (!tb) throw new Error("This timeblock no longer exists.");
+  if (!tb.tasks.some((t) => t.id === taskId))
+    throw new Error("This task is not part of the timeblock.");
+
+  const updatedTimeblocks = data.timeblocks.map((b) =>
+    b.id === timeblockId
+      ? {
+          ...b,
+          tasks: b.tasks.map((t) =>
+            t.id === taskId ? { ...t, ...updates, id: t.id } : t,
+          ),
+        }
+      : b,
+  );
+
+  const updatedSpaces = data.spaces?.map((space) => ({
+    ...space,
+    tasks: space.tasks.map((t) =>
+      t.id === taskId ? { ...t, ...updates, id: t.id } : t,
+    ),
+  }));
+
+  const updatedTaskLists = data.taskLists.map((list) => ({
+    ...list,
+    tasks: list.tasks.map((t) =>
+      t.id === taskId ? { ...t, ...updates, id: t.id } : t,
+    ),
+  }));
+
+  let updatedLiveTimer = data.liveTimer;
+  if (
+    updatedLiveTimer &&
+    (updatedLiveTimer.id === timeblockId || updatedLiveTimer.name === tb.name)
+  ) {
+    updatedLiveTimer = {
+      ...updatedLiveTimer,
+      blocks: updatedLiveTimer.blocks.map((b) =>
+        b.taskId === taskId
+          ? {
+              ...b,
+              taskName: updates.name !== undefined ? updates.name : b.taskName,
+              energyRequired:
+                updates.energyRequired !== undefined
+                  ? updates.energyRequired
+                  : b.energyRequired,
+            }
+          : b,
+      ),
+    };
+  }
+
+  const result: RhythmLibrary = {
+    ...data,
+    timeblocks: updatedTimeblocks,
+    spaces: updatedSpaces,
+    taskLists: updatedTaskLists,
+  };
+  if (updatedLiveTimer !== undefined) {
+    result.liveTimer = updatedLiveTimer;
+  }
+  return result;
 }
 export function moveTask(
   data: RhythmLibrary,

@@ -1,6 +1,7 @@
 import { TaskListBadge } from "./TaskListBadge";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { completeTimerTask, formatDurationHM, timerBlockHeight, timerPosition, type LiveTimer as Timer, type TimerTaskOutcome } from '../live-timer';
+export type { LiveTimer as Timer } from '../live-timer';
 import { insertItemIntoTimer, reorderTimerBlocks, type InsertItemParams } from '../insert-live-task';
 import type { ScheduleBlock } from '../types';
 import { useBlockClear } from './use-block-clear';
@@ -424,7 +425,7 @@ function LiveTimerPanel({
   );
 }
 
-function TimerCard({
+export function TimerCard({
   timer: savedTimer,
   now,
   onClose,
@@ -434,6 +435,8 @@ function TimerCard({
   newlyAddedId,
   error,
   hideHeader = false,
+  variant = 'default',
+  onClick,
 }: {
   timer: Timer;
   now: number;
@@ -444,6 +447,8 @@ function TimerCard({
   newlyAddedId?: string | null;
   error?: string;
   hideHeader?: boolean;
+  variant?: 'default' | 'embedded';
+  onClick?: () => void;
 }) {
   const pendingRef = useRef(new Map<string, PendingTask>());
   const requests = useRef(new Map<string, Promise<boolean>>());
@@ -661,7 +666,19 @@ function TimerCard({
   const allDone = !timer.blocks.some(b => !b.isBreak) && !!(timer.completedTaskIds?.length || timer.skippedTaskIds?.length);
   const date = new Intl.DateTimeFormat('en-US', { timeZone: timer.timezone, month: 'short', day: 'numeric' }).format(new Date(timer.startedAt ?? timer.blocks[0].start));
   const status = allDone ? timer.skippedTaskIds?.length ? `Timeblock finished. ${timer.completedTaskIds?.length ?? 0} completed · ${timer.skippedTaskIds.length} not done.` : 'All tasks complete. Nicely done.' : phase === 'complete' ? 'Timeblock complete' : phase === 'scheduled' ? `Starts ${timeLabel(timer.blocks[0].start, timer.timezone)}` : phase === 'gap' ? `Next: ${timer.blocks[nextIndex].taskName}` : `Now: ${timer.blocks[activeIndex].taskName}`;
-  return <div className={`live-timer-card phase-${phase}`} tabIndex={onComplete ? -1 : undefined} aria-label="Live timer tasks">
+  return <div
+    className={`live-timer-card phase-${phase}${variant === 'embedded' ? ' live-timer-embedded' : ''}`}
+    tabIndex={variant === 'embedded' ? 0 : onComplete ? -1 : undefined}
+    role={variant === 'embedded' ? 'button' : undefined}
+    aria-label={variant === 'embedded' ? `Open live timer: ${timer.name}` : "Live timer tasks"}
+    onClick={variant === 'embedded' ? onClick : undefined}
+    onKeyDown={variant === 'embedded' ? (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClick?.();
+      }
+    } : undefined}
+  >
     {!hideHeader && <header className="live-timer-header">
       <div><p className="live-timer-kicker">Timeblock</p><div className="live-timer-title"><h2>{timer.name}</h2><span>{date}</span></div></div>
       {onClose && <button type="button" className="live-timer-close" aria-label="Close live timer" onClick={onClose}><TimerIcon name="close" /></button>}
@@ -699,6 +716,29 @@ function TimerCard({
       </>}
     </div>
   </div>;
+}
+
+export function TimeblockSchedule({
+  timer,
+  onClick,
+  className = '',
+}: {
+  timer: Timer;
+  onClick?: () => void;
+  className?: string;
+}) {
+  const now = useClock();
+  return (
+    <div className={`timeblock-schedule-wrapper ${className}`}>
+      <TimerCard
+        timer={timer}
+        now={now}
+        hideHeader={true}
+        variant="embedded"
+        onClick={onClick}
+      />
+    </div>
+  );
 }
 
 export function LiveTimerPreview({ timer, onOpen }: { timer: Timer; onOpen: () => void }) {

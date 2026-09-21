@@ -360,26 +360,26 @@ export function TasksPanel({
     </div>
   );
 }
-function TaskRow({
+export function TaskRow({
   task: savedTask,
   onUpdate,
   onSettings,
-  onRetain,
-  dragging,
-  dropTarget,
+  onRetain = () => {},
+  dragging = false,
+  dropTarget = false,
   ...dragEvents
 }: {
   task: Task;
   onUpdate(updates: Partial<Task>): Promise<boolean>;
   onSettings(): void;
-  onRetain(retain: boolean): void;
-  dragging: boolean;
-  dropTarget: boolean;
-  onDragStart(e: DragEvent): void;
-  onDragEnd(): void;
-  onDragOver(e: DragEvent): void;
-  onDragLeave(): void;
-  onDrop(e: DragEvent): void;
+  onRetain?: (retain: boolean) => void;
+  dragging?: boolean;
+  dropTarget?: boolean;
+  onDragStart?: (e: DragEvent) => void;
+  onDragEnd?: () => void;
+  onDragOver?: (e: DragEvent) => void;
+  onDragLeave?: () => void;
+  onDrop?: (e: DragEvent) => void;
 }) {
   const [optimistic, setOptimistic] = useState<Partial<Task> | null>(null);
   const task = { ...savedTask, ...optimistic };
