@@ -1012,6 +1012,7 @@
   color: #b7b0c9;
   text-align: left;
   cursor: pointer;
+  text-decoration: none;
 }
 .module-navigation .rail-tasks-toggle:is(.active, :hover) { background: #ffffff14; color: white; }
 .rail-tasks-toggle:focus-visible { outline: 2px solid #b4a4ff; outline-offset: 2px; }

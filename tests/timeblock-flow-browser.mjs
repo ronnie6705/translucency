@@ -33,7 +33,7 @@ try {
  await expect(page.locator('.tasks-row')).toHaveCount(2);
  await expect(page.locator('.tasks-row').filter({hasText:'Finished list task'})).toBeVisible();
  await expect(page.locator('.tasks-row').filter({hasText:'Finished direct task'})).toBeVisible();
- await page.getByRole('link',{name:'All tasks',exact:true}).click();
+ await page.getByRole('link',{name:'Tasks',exact:true}).click();
  await expect(page.locator('.tasks-row').filter({hasText:'Finished'})).toHaveCount(0);
  await page.goto(base+'/#rhythm-timeblocks');
  await page.getByRole('button',{name:'Add Timeblock',exact:true}).click();

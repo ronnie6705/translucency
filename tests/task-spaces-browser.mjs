@@ -114,6 +114,7 @@ await context.route(/https?:\/\/[^/]+\/(auth|rest)\/v1\//, async (route) => {
 });
 const page = await context.newPage();
 page.on("pageerror", (e) => errors.push(e.message));
+page.on("console", (msg) => console.log("[BROWSER]", msg.text()));
 fs.mkdirSync("test-results/tasks", { recursive: true });
 const button = (name) => page.getByRole("button", { name, exact: true });
 const dialog = (name) => page.getByRole("dialog", { name, exact: true });
@@ -169,13 +170,13 @@ try {
   await button("Sign in").click();
   await expect(page.locator("#rhythm-tasks")).toBeVisible();
   await expect(page.locator(".tasks-row")).toHaveCount(3);
-  await page.getByRole("button", { name: "Tasks", exact: true }).hover();
-  await button("Tasks").click();
+  await page.getByRole("link", { name: "Tasks", exact: true }).hover();
+  await page.getByRole("link", { name: "Tasks", exact: true }).click();
   await expect(page.locator("#rail-task-children")).toBeHidden();
   await page.reload();
-  await page.getByRole("button", { name: "Tasks", exact: true }).hover();
-  await expect(button("Tasks")).toHaveAttribute("aria-expanded", "false");
-  await button("Tasks").focus();
+  await page.getByRole("link", { name: "Tasks", exact: true }).hover();
+  await expect(page.getByRole("link", { name: "Tasks", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("link", { name: "Tasks", exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect(page.locator("#rail-task-children")).toBeVisible();
   await page.getByRole("searchbox").click();
@@ -277,6 +278,7 @@ try {
   await dialog("Task Details")
     .getByRole("button", { name: "Save changes" })
     .click();
+  await expect(dialog("Task Details")).not.toBeVisible();
   await page.reload();
   await page.getByRole("link", { name: "Completed", exact: true }).click();
   await expect(
@@ -308,7 +310,7 @@ try {
           ?.name,
     )
     .toBe("Scoped task");
-  await page.getByRole("link", { name: "All tasks", exact: true }).click();
+  await page.getByRole("link", { name: "Tasks", exact: true }).click();
   await page.keyboard.press("Control+Space");
   await expect(dialog("Add Task")).toBeVisible();
   await dialog("Add Task")
@@ -406,7 +408,7 @@ try {
   await expect(dialog("Add Task")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog("Add Task")).toHaveCount(0);
-  await page.getByRole("link", { name: "All tasks", exact: true }).click();
+  await page.getByRole("link", { name: "Tasks", exact: true }).click();
   // Sidebar creation uses the same picker; nested modal cleanup releases scroll locking.
   await button('Add New Space').click();
   await dialog('Add New Space').getByLabel('Space name').fill('Travel');
@@ -431,6 +433,7 @@ try {
   await expect(page.getByRole('dialog',{name:'Create a timeblock'})).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('link',{name:'Settings & privacy',exact:true}).click();
+  await expect(button('Export Rhythm data')).toBeEnabled();
   const downloading=page.waitForEvent('download');
   await button('Export Rhythm data').click();
   const download=await downloading;await download.saveAs('test-results/tasks/backup.json');
@@ -441,7 +444,7 @@ try {
   await expect(page.getByText('Rhythm backup imported. Your existing records were preserved.')).toBeVisible();
   assert.equal((await cached()).taskLists.find(l=>l.name==='Chores').tasks.length,3);
   await page.getByRole('link',{name:'Rhythm',exact:true}).click();
-  await page.getByRole('link',{name:'All tasks',exact:true}).click();
+  await page.getByRole('link',{name:'Tasks',exact:true}).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await button("Add Task").click();
   await dialog("Add Task")

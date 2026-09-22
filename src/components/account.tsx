@@ -12,6 +12,23 @@ import { LoginScreen, PasswordUpdateForm } from '@/components/login-screen';
 
 interface AccountContextValue { user: User | null; status: string; conflicts: Module[]; sync: () => Promise<void> }
 const AccountContext = createContext<AccountContextValue>({user:null,status:'Device only',conflicts:[],sync:async () => {}});
+function getCachedUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        const item = localStorage.getItem(key);
+        if (item) {
+          const parsed = JSON.parse(item);
+          if (parsed?.user?.id) return parsed.user as User;
+        }
+      }
+    }
+  } catch {}
+  return null;
+}
+
 export function AccountProvider({children}: {children: ReactNode}) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
@@ -21,12 +38,37 @@ export function AccountProvider({children}: {children: ReactNode}) {
   useEffect(() => {
     const client = cloudClient();
     if (!client) { setActiveAccount(null); setReady(true); return; }
+
+    let mounted = true;
+    const cached = getCachedUser();
+    if (cached) {
+      setActiveAccount(cached.id);
+      setUser(cached);
+    } else {
+      setActiveAccount(null);
+      setUser(null);
+    }
+    setReady(true);
+
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       setActiveAccount(session?.user.id ?? null);
       setUser(session?.user ?? null);
       setReady(true);
     });
-    return () => subscription.unsubscribe();
+
+    client.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      if (session?.user) {
+        setActiveAccount(session.user.id);
+        setUser(session.user);
+      }
+    }).catch(() => {});
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
   const sync = async () => {
     if (!user || syncing.current) return;
@@ -56,7 +98,34 @@ export function AccountProvider({children}: {children: ReactNode}) {
     window.addEventListener('cloud-data', run);
     return () => { stopped = true; clearInterval(timer); window.removeEventListener('online', run); window.removeEventListener('focus', run); window.removeEventListener('cloud-data', run); };
   }, [user?.id]); // Sync only changes identity when the account changes.
-  if (!ready) return <main className="platform-loading"><p role="status">Opening your space…</p></main>;
+  if (!ready) return (
+    <main className="platform-loading">
+      <p role="status">Opening your space…</p>
+      <button
+        type="button"
+        style={{
+          marginTop: "1.2rem",
+          padding: "7px 16px",
+          background: "rgba(255, 255, 255, 0.08)",
+          border: "1px solid rgba(255, 255, 255, 0.18)",
+          borderRadius: "8px",
+          color: "#ddd",
+          fontSize: "12px",
+          cursor: "pointer",
+        }}
+        onClick={() => {
+          const cached = getCachedUser();
+          if (cached) {
+            setActiveAccount(cached.id);
+            setUser(cached);
+          }
+          setReady(true);
+        }}
+      >
+        Skip to workspace
+      </button>
+    </main>
+  );
   if (!user) return <LoginScreen />;
   return <AccountContext.Provider value={{user,status,conflicts,sync}}><div key={user.id}>{children}</div></AccountContext.Provider>;
 }

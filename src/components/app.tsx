@@ -117,14 +117,21 @@ export default function App() {
     };
     hash();
     window.addEventListener("hashchange", hash);
-    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production")
-      navigator.serviceWorker
-        .register("/sw.js")
-        .catch(() =>
-          setNotice(
-            "Offline support could not start. You can still use the app while connected.",
-          ),
-        );
+    if ("serviceWorker" in navigator) {
+      if (process.env.NODE_ENV === "production") {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .catch(() =>
+            setNotice(
+              "Offline support could not start. You can still use the app while connected.",
+            ),
+          );
+      } else {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) reg.unregister();
+        });
+      }
+    }
     return () => {
       channel.close();
       window.removeEventListener("focus", sync);
