@@ -130,7 +130,7 @@ export function insertLiveTimerItem(
   );
 
   const timeblocks = data.timeblocks?.map(block =>
-    block.name === liveTimer.name ? { ...block, tasks: [...block.tasks, newTask] } : block
+    block.name === liveTimer.name ? { ...block, schedule: undefined, tasks: [...block.tasks, newTask] } : block
   );
 
   return {
@@ -208,4 +208,3 @@ export function reorderLiveTimer(
   const liveTimer = reorderTimerBlocks(data.liveTimer, fromIndex, toIndex, now);
   return { ...data, liveTimer };
 }
-

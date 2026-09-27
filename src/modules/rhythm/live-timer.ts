@@ -88,8 +88,10 @@ export function timerPosition(blocks: ScheduleBlock[], now: number) {
 
 export const MIN_BLOCK_HEIGHT = 60;
 
-export function timerBlockHeight(block: ScheduleBlock) {
+export function timerBlockHeight(block: ScheduleBlock, variant: 'timer' | 'preview' = 'timer') {
   const minutes = (Date.parse(block.end) - Date.parse(block.start)) / 60000;
+  // The roomier planning canvas follows the Figma scale; both views use the same renderer.
+  if (variant === 'preview') return block.isBreak ? 92 : Math.max(92, Math.min(240, 40 + minutes * 4 / 3));
   const calculatedHeight = Math.max(82, Math.min(240, 66 + minutes * 0.75));
   return block.isBreak ? 64 : Math.max(MIN_BLOCK_HEIGHT, calculatedHeight);
 }

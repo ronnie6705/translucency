@@ -48,31 +48,6 @@
   .plan-add-actions { gap: 16px; }
   .plan-add-actions button { display: flex; justify-content: center; align-items: center; gap: 8px; justify-self: stretch; height: 40px; min-height: 40px; border: 1px dashed #ffffff33; background: transparent; font-size: 13px; padding: 10px; }
   .plan-add-actions img { width: 16px; height: 16px; }
-  .plan-time-section { border: 0; padding: 0; gap: 32px; min-width: 0; }
-  .plan-presets { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; }
-  .plan-presets button { display: flex; gap: 12px; align-items: center; min-width: 0; padding: 12px; border: 1px solid #ffffff14; border-radius: 20px; background: #ffffff08; color: #fff; text-align: left; cursor: pointer; }
-  .plan-presets button[aria-pressed='true'] { border-color: #8fa2ff; background: #3e45df26; box-shadow: inset 0 0 0 .5px #8fa2ff, 0 4px 63px #0004; }
-  .preset-icon { background: #ffffff0d; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; flex-shrink: 0; }
-  .preset-icon img { width: 20px; height: 20px; }
-  .plan-presets strong { display: block; font-size: 15px; font-weight: 600; }
-  .plan-presets small { display: block; margin-top: 4px; font-size: 12px; line-height: 15px; color: #ffffffb3; }
-  .plan-presets [aria-pressed='true'] small { color: #9a9eff; }
-  .plan-clock-editor { display: flex; flex-direction: column; align-items: center; gap: 20px; min-height: 626px; padding-top: 16px; padding-bottom: 16px; }
-  .time-zone-selector label { gap: 6px; font-size: 11px; color: #ffffff66; }
-  .time-zone-selector select { height: 41px; min-height: 41px; padding: 10px 14px; background: #ffffff1a; font-size: 14px; }
-  .plan-digital-range { display: flex; align-items: center; justify-content: center; gap: 12px; }
-  .plan-digital-pair { display: flex; gap: 12px; align-items: center; }
-  .range-connector { width: 43px; height: 13px; margin-top: 18px; }
-  .plan-digital-field { display: grid; gap: 7px; text-align: center; }
-  .plan-digital-field > span { font-size: 10px; line-height: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .84px; color: #8fa2ffa6; }
-  .plan-digital-field button { min-width: 149px; height: 60px; padding: 10px 24px; border: 1px solid #9a9eff55; border-radius: 84px; background: #ffffff0d; color: #aeb4d6; font-size: 27px; font-weight: 700; white-space: nowrap; cursor: pointer; }
-  .plan-digital-field button small { font-size: 17px; font-weight: 500; color: #8996db; }
-  .plan-digital-field.active > span { color: #8fa2ff; }
-  .plan-digital-field.active button { border-color: #9a9eff; background: #ffffff1a; color: #8fa2ff; box-shadow: 0 3px 53px #2225798c; }
-  .plan-period { display: flex; width: 292px; max-width: 100%; padding: 6px; border: 1px solid #9a9eff33; border-radius: 28px; background: #ffffff1a; }
-  .plan-period button { flex: 1; height: 44px; border: 0; border-radius: 22px; background: transparent; color: #ffffff80; font-size: 16px; letter-spacing: 1px; font-weight: 600; cursor: pointer; }
-  .plan-period button[aria-pressed='true'] { color: #fff; font-weight: 700; background: rgba(154,157,254,.72); box-shadow: 0 0 16px #3e45df; }
-  .plan-error { margin: 0; }
   .plan-task-settings-group { display: flex; align-items: center; gap: 8px; }
   .plan-task-settings { width: 40px; height: 41px; flex-shrink: 0; position: relative; transition: width 160ms ease; }
   .plan-task-settings button { display: grid; place-items: center; border: 0; padding: 8px; height: 40px; border-radius: 12px; background: #ffffff0d; cursor: pointer; }
@@ -90,15 +65,15 @@
 
 }
 /* Both radial modes occupy the same face; only their layers cross-fade. */
-.rhythm-module .flow-modal.flow-unified[data-modal-size] .radial-instructions {
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-instructions {
   display: grid; width: 100%; min-height: 40px; align-items: center; text-align: center;
 }
-.rhythm-module .flow-modal.flow-unified[data-modal-size] .radial-instructions p {
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-instructions p {
   grid-area: 1 / 1; margin: 0; color: #c4c7e8; font-size: 14px; line-height: 20px;
   opacity: 0; transition: opacity 180ms ease; pointer-events: none;
 }
-.rhythm-module .flow-modal.flow-unified[data-modal-size] .radial-instructions p.visible { opacity: 1; }
-.rhythm-module .flow-modal.flow-unified[data-modal-size] .radial-clock {
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-instructions p.visible { opacity: 1; }
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-clock {
   width: 417.6px; max-width: 100%; aspect-ratio: 1; position: relative; flex-shrink: 0;
   touch-action: none; user-select: none; cursor: crosshair; outline: none;
   > img { position: absolute; pointer-events: none; }
@@ -125,11 +100,11 @@
   .minute .radial-hand > span { left: -2.5px; width: 5px; border-radius: 2.5px; background: #757eff; }
   .radial-preview { position: absolute; bottom: 1%; width: 100%; text-align: center; color: #9a9eff; font-size: 13px; pointer-events: none; }
 }
-.rhythm-module .flow-modal.flow-unified[data-modal-size] .radial-clock[data-mode='minute'] {
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-clock[data-mode='minute'] {
   .radial-outer-ring { opacity: .22; }
   .radial-minute-ring { opacity: 1; }
 }
-.rhythm-module .flow-modal.flow-unified[data-modal-size] .radial-clock.complete { cursor: default; }
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-clock.complete { cursor: default; }
 @media (max-width: 1400px) {
   .rhythm-module .flow-modal.flow-unified[data-modal-size]:has(.adjust-mode, .legacy-radial-range) {
     padding: 28px;
@@ -174,7 +149,7 @@
 }
 
 /* Pointer visuals are updated once per animation frame, independently of React. */
-.rhythm-module .flow-modal.flow-unified[data-modal-size] .radial-clock {
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-clock {
   .radial-tick {
     --lift: 0; --emphasis: 0;
     transform: translate(-50%, -50%) rotate(var(--spoke-angle)) translateY(calc(-3px * var(--lift))) scaleY(calc(1 + .65 * var(--lift)));
@@ -348,4 +323,33 @@
   line-height: 1;
   color: #8996db;
   text-align: center;
+}
+
+/* Shared time-window editor controls, used by the legacy planner and the three-step flow. */
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) {
+  .plan-time-section { border: 0; padding: 0; gap: 32px; min-width: 0; }
+  .plan-presets { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; }
+  .plan-presets button { display: flex; gap: 12px; align-items: center; min-width: 0; padding: 12px; border: 1px solid #ffffff14; border-radius: 20px; background: #ffffff08; color: #fff; text-align: left; cursor: pointer; }
+  .plan-presets button[aria-pressed='true'] { border-color: #8fa2ff; background: #3e45df26; box-shadow: inset 0 0 0 .5px #8fa2ff, 0 4px 63px #0004; }
+  .preset-icon { background: #ffffff0d; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; flex-shrink: 0; }
+  .preset-icon img { width: 20px; height: 20px; }
+  .plan-presets strong { display: block; font-size: 15px; font-weight: 600; }
+  .plan-presets small { display: block; margin-top: 4px; font-size: 12px; line-height: 15px; color: #ffffffb3; }
+  .plan-presets [aria-pressed='true'] small { color: #9a9eff; }
+  .plan-clock-editor { display: flex; flex-direction: column; align-items: center; gap: 20px; min-height: 626px; padding-top: 16px; padding-bottom: 16px; }
+  .time-zone-selector label { gap: 6px; font-size: 11px; color: #ffffff66; }
+  .time-zone-selector select { height: 41px; min-height: 41px; padding: 10px 14px; background: #ffffff1a; font-size: 14px; }
+  .plan-digital-range { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .plan-digital-pair { display: flex; gap: 12px; align-items: center; }
+  .range-connector { width: 43px; height: 13px; margin-top: 18px; }
+  .plan-digital-field { display: grid; gap: 7px; text-align: center; }
+  .plan-digital-field > span { font-size: 10px; line-height: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .84px; color: #8fa2ffa6; }
+  .plan-digital-field button { min-width: 149px; height: 60px; padding: 10px 24px; border: 1px solid #9a9eff55; border-radius: 84px; background: #ffffff0d; color: #aeb4d6; font-size: 27px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+  .plan-digital-field button small { font-size: 17px; font-weight: 500; color: #8996db; }
+  .plan-digital-field.active > span { color: #8fa2ff; }
+  .plan-digital-field.active button { border-color: #9a9eff; background: #ffffff1a; color: #8fa2ff; box-shadow: 0 3px 53px #2225798c; }
+  .plan-period { display: flex; width: 292px; max-width: 100%; padding: 6px; border: 1px solid #9a9eff33; border-radius: 28px; background: #ffffff1a; }
+  .plan-period button { flex: 1; height: 44px; border: 0; border-radius: 22px; background: transparent; color: #ffffff80; font-size: 16px; letter-spacing: 1px; font-weight: 600; cursor: pointer; }
+  .plan-period button[aria-pressed='true'] { color: #fff; font-weight: 700; background: rgba(154,157,254,.72); box-shadow: 0 0 16px #3e45df; }
+  .plan-error { margin: 0; }
 }

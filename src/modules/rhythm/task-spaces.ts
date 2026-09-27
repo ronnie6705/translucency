@@ -58,6 +58,7 @@ export function updateTask(
   );
   const timeblocks = withUpdatedLocation.timeblocks.map((b) => ({
     ...b,
+    schedule: b.tasks.some(t => t.id === ref.taskId) ? undefined : b.schedule,
     tasks: b.tasks.map((t) =>
       t.id === ref.taskId ? { ...t, ...updates, id: t.id } : t,
     ),
@@ -127,6 +128,7 @@ export function updateTimeblockTask(
     b.id === timeblockId
       ? {
           ...b,
+          schedule: undefined,
           tasks: b.tasks.map((t) =>
             t.id === taskId ? { ...t, ...updates, id: t.id } : t,
           ),

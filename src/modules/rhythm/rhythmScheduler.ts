@@ -294,7 +294,7 @@ export function generateSchedule(
     // If there's gap before this fixed task, we will fill it later with flex tasks
     // For now, just block off fixed tasks in the schedule
 
-    if (fixedEnd <= dayEnd) {
+    if (fixedStart >= dayStart && fixedEnd <= dayEnd) {
       schedule.push({
         id: `fixed-${t.id}`,
         taskId: t.id,
@@ -351,7 +351,7 @@ export function generateSchedule(
     if (!placement) continue;
 
     resultBlocks.push({
-      id: `flex-${task.id}-${placement.start.toISOString()}`,
+      id: `flex-${task.id}`,
       taskId: task.id,
       taskName: task.name,
       start: placement.start.toISOString(),
@@ -359,8 +359,6 @@ export function generateSchedule(
       isBreak: !!task.isBreak,
       energyRequired: task.energyRequired,
     });
-
-    task.durationMinutes = 0;
   }
 
   // Final sort

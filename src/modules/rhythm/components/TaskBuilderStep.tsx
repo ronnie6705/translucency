@@ -1,3 +1,4 @@
+import { handleAdjustKey as adjustTaskKey } from '../adjust-key';
 import { TaskListBadge } from "./TaskListBadge";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Chronotype, Task } from '../types';
@@ -480,35 +481,8 @@ useEffect(() => {
   };
 
   const handleAdjustKey = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget) return;
-    if (!orderedAdjustItems.length) return;
-    const key = event.key;
-    if (
-      key === 'ArrowUp' ||
-      key === 'ArrowDown' ||
-      key === 'ArrowLeft' ||
-      key === 'ArrowRight'
-    ) {
-      event.preventDefault();
-    }
-    if (key === 'ArrowUp') {
-      setSelectedAdjustIndex(prev => Math.max(0, prev - 1));
-      return;
-    }
-    if (key === 'ArrowDown') {
-      setSelectedAdjustIndex(prev => Math.min(orderedAdjustItems.length - 1, prev + 1));
-      return;
-    }
-    if (key === 'ArrowLeft' || key === 'ArrowRight') {
-      const selected = orderedAdjustItems[selectedAdjustIndex]?.task;
-      if (!selected || selected.isBreak) return;
-      const delta = key === 'ArrowRight' ? 1 : -1;
-      const nextEnergy = Math.min(5, Math.max(1, selected.energyRequired + delta));
-      if (nextEnergy !== selected.energyRequired) {
-        onUpdate(selected.id, { energyRequired: nextEnergy as 1 | 2 | 3 | 4 | 5 });
-        triggerEnergyPulse(selected.id);
-      }
-    }
+    adjustTaskKey(event, orderedAdjustItems.map(item => item.task), selectedAdjustIndex,
+      setSelectedAdjustIndex, onUpdate, triggerEnergyPulse);
   };
 
   const handleAdjustTimeChange = (taskId: string, minutes: number) => {

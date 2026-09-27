@@ -18,6 +18,7 @@ export function validateLibrary(value: unknown): RhythmLibrary {
   for (const block of value.timeblocks) {
     if (!entry(block) || !object(block) || !object(block.dayConfig)) throw new Error('Invalid timeblock in backup.');
     const config = block.dayConfig;
+    if (block.schedule !== undefined && !validLiveTimer({ id: block.id, name: block.name, timezone: config.timezone, blocks: block.schedule })) throw new Error('Invalid saved schedule in backup.');
     if (!['Lion','Bear','Wolf','Dolphin'].includes(String(config.chronotype)) || !/^\d{4}-\d{2}-\d{2}$/.test(String(config.date)) || ![config.startTime,config.endTime].every(t => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(t)))) throw new Error('Invalid day settings in backup.');
     try { new Intl.DateTimeFormat('en',{timeZone: String(config.timezone)}).format(); } catch { throw new Error('Invalid time zone in backup.'); }
   }

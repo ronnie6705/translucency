@@ -12,7 +12,7 @@ export interface PlannedTaskSegment {
 
 type MinutesWindow = { start: number; end: number };
 
-function parseTimeToMinutes(value?: string): number | null {
+export function parseTimeToMinutes(value?: string): number | null {
   if (!value) return null;
   const [hours, minutes] = value.split(':').map(Number);
   if (

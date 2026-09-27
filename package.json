@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:tasks": "node tests/task-spaces-browser.mjs",
+    "test:timeblocks": "node tests/timeblock-three-step-browser.mjs",
     "test:e2e": "node tests/browser-check.mjs",
     "test:influences": "node tests/influences-browser.mjs",
     "test:platform": "node tests/platform-browser.mjs",

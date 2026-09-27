@@ -32,6 +32,8 @@ export interface ScheduleBlock {
 }
 
 export interface SavedTimeblock {
+  /** The accepted schedule, shared with calendar export and Live Timer. */
+  schedule?: ScheduleBlock[];
   id: string;
   name: string;
   createdAt: string;

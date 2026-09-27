@@ -1,5 +1,5 @@
 import { TaskListBadge } from "./TaskListBadge";
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { completeTimerTask, formatDurationHM, timerBlockHeight, timerPosition, type LiveTimer as Timer, type TimerTaskOutcome } from '../live-timer';
 export type { LiveTimer as Timer } from '../live-timer';
 import { insertItemIntoTimer, reorderTimerBlocks, type InsertItemParams } from '../insert-live-task';
@@ -38,8 +38,8 @@ type BlockFrame = { top: number; height: number };
 type TimelineAnchor = { at: number; line: number; activeId?: string; elapsed: number; frames: Record<string, BlockFrame>; schedule: string };
 const scheduleKey = (timer: Timer) => JSON.stringify(timer.blocks.map(b => [b.id, b.start, b.end]));
 
-function TimerBlock({ block, state, timezone, height, pending, onRetain, onReflow, onComplete, before = 0, exitTop, isNewlyAdded, isDraggable, isDragging, dragOverPosition, onDragStart }: {
-  block: ScheduleBlock; state: string; timezone: string; height: number; pending?: TimerTaskOutcome;
+export function TimerBlock({ block, state, timezone, height, metadata, pending, onRetain, onReflow, onComplete, before = 0, exitTop, isNewlyAdded, isDraggable, isDragging, dragOverPosition, onDragStart }: {
+  block: ScheduleBlock; state: string; timezone: string; height: number; metadata?: ReactNode; pending?: TimerTaskOutcome;
   before?: number; exitTop?: number; isNewlyAdded?: boolean;
   isDraggable?: boolean; isDragging?: boolean; dragOverPosition?: 'above' | 'below' | null;
   onDragStart?: (e: React.PointerEvent) => void;
@@ -85,7 +85,7 @@ function TimerBlock({ block, state, timezone, height, pending, onRetain, onReflo
       onPointerDown={isDraggable ? handlePointerDown : undefined}>
       <div className="live-timer-task-icon">{clear.active ? <TimerIcon name={outcome.current === 'completed' ? 'check' : 'cross'} /> : <TimerIcon name={block.isBreak ? 'break' : 'task'} />}</div>
       <div className="live-timer-copy"><time dateTime={block.start}>{timeLabel(block.start, timezone)}</time>
-        <div className="live-timer-task-heading"><h3>{block.taskName}<TaskListBadge taskId={block.taskId} /></h3>
+        <div className="live-timer-task-heading"><h3>{block.taskName}{metadata ?? <TaskListBadge taskId={block.taskId} />}</h3>
           {onComplete && !block.isBreak && state !== 'past' && <div className="live-timer-task-actions">
             {(['completed', 'skipped'] as const).map(value => <button key={value} type="button" className={`live-timer-action ${value === 'completed' ? 'live-timer-complete' : 'live-timer-skip'}`}
               aria-label={`${value === 'completed' ? 'Complete' : 'Could not complete'} ${block.taskName}`} title={value === 'completed' ? 'Done' : 'Could not do this task'}

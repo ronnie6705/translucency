@@ -1,44 +1,40 @@
-import { TaskListBadge } from "./TaskListBadge";
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import type { Space, SavedTaskList, Task } from '../types';
-import { SpaceIcon, TaskAsset } from './space-icons';
+import { SpaceIcon } from './space-icons';
 import { formatTaskDuration } from '../task-spaces';
+import { TaskListBadge } from './TaskListBadge';
 
 export type CatalogSpace = Space & { lists: SavedTaskList[] };
-export function PlanTaskCatalog({ spaces, selected, onAdd, onRemove }: {
-  spaces: CatalogSpace[];
-  selected: Task[];
-  onAdd(task: Task): void;
-  onRemove(id: string): void;
+export function PlanTaskCatalog({ spaces, selected, onAdd, onRemove, query = '', filter = null, collapsed, onToggle }: {
+  spaces: CatalogSpace[]; selected: Task[]; onAdd(task: Task): void; onRemove(id: string): void;
+  query?: string; filter?: string | null; collapsed?: Set<string>; onToggle?(id: string): void;
 }) {
+  const [localCollapsed, setLocalCollapsed] = useState(new Set<string>());
+  const closed = collapsed ?? localCollapsed;
+  const toggle = onToggle ?? ((id: string) => setLocalCollapsed(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; }));
   const selectedIds = new Set(selected.map(task => task.id));
-  const visibleSpaces = spaces.filter(space => space.tasks.length || space.lists.some(list => list.tasks.length));
-  const renderTask = (task: Task) => {
-    const included = selectedIds.has(task.id);
-    return <button type="button" className="plan-catalog-task" key={task.id} aria-pressed={included}
-      aria-label={`${included ? 'Remove' : 'Add'} ${task.name} ${included ? 'from' : 'to'} timeblock`}
-      onClick={() => included ? onRemove(task.id) : onAdd({ ...task })}>
-      <span className="plan-catalog-check" aria-hidden="true">{included ? '✓' : '+'}</span>
-      <strong>{task.name}<TaskListBadge taskId={task.id} /></strong>
-      <span className="plan-catalog-meta">
-        <span className="plan-catalog-chip" aria-label={`Energy ${task.energyRequired}`}><TaskAsset name="row-imgLightning" />{task.energyRequired}</span>
-        <span className="plan-catalog-chip" aria-label={`Estimated time ${formatTaskDuration(task.durationMinutes)}`}><TaskAsset name="row-imgStopwatch" />{formatTaskDuration(task.durationMinutes)}</span>
-      </span>
-    </button>;
-  };
+  const match = (task: Task) => !task.completed && !task.isBreak && task.name.toLowerCase().includes(query.toLowerCase().trim());
+  const visible = spaces.filter(s => (!filter || s.id === filter) && (s.tasks.some(match) || s.lists.some(l => l.tasks.some(match))));
+  const renderTask = (task: Task) => <button type="button" className="plan-catalog-task" key={task.id} aria-pressed={selectedIds.has(task.id)}
+    aria-label={`${selectedIds.has(task.id) ? 'Remove' : 'Add'} ${task.name} ${selectedIds.has(task.id) ? 'from' : 'to'} timeblock`}
+    onClick={() => selectedIds.has(task.id) ? onRemove(task.id) : onAdd(task)}>
+    <span className="plan-catalog-check" aria-hidden="true">{selectedIds.has(task.id) ? '✓' : ''}</span>
+    <strong>{task.name}<TaskListBadge taskId={task.id} /></strong>
+    <span className="plan-catalog-meta"><span><img src="/rhythm/flow/energy.svg" alt="" />{task.energyRequired}</span><span><img src="/rhythm/flow/duration.svg" alt="" />{formatTaskDuration(task.durationMinutes)}</span></span>
+  </button>;
   return <div className="plan-task-catalog" role="group" aria-label="Tasks from all spaces">
-    <p className="adjust-hint">Select tasks from any space to include in this timeblock.</p>
-    {visibleSpaces.length ? visibleSpaces.map(space => <section className="plan-catalog-space" key={space.id} aria-label={space.name} style={{ '--space-color': space.color } as CSSProperties}>
-      <details className="plan-space-disclosure" open>
-      <summary><span className="task-icon-tile"><SpaceIcon icon={space.icon} color={space.color} /></span><strong>{space.name}</strong><img className="plan-space-chevron" src="/rhythm/planner/ChevronDown.svg" alt="" /></summary>
-      <div className="plan-space-content">
-      {space.tasks.map(renderTask)}
-      {space.lists.filter(list => list.tasks.length).map(list => <details className="plan-catalog-list" key={list.id} open>
-        <summary><span className="task-icon-tile"><TaskAsset name="add-imgListUnordered4Rec" /></span><strong>{list.name}</strong><small>{list.tasks.length} tasks</small></summary>
-        <div>{list.tasks.map(renderTask)}</div>
-      </details>)}
-      </div>
-      </details>
-    </section>) : <p className="adjust-hint">No tasks yet. Use Edit task list to add your first task.</p>}
+    {visible.map(space => <section className="plan-catalog-space" key={space.id} aria-label={space.name} style={{ '--space-color': space.color } as CSSProperties}>
+      <button type="button" className="plan-space-heading" aria-expanded={!closed.has(space.id)} onClick={() => toggle(space.id)}>
+        <span className="task-icon-tile"><SpaceIcon icon={space.icon} color={space.color} /></span><strong>{space.name}</strong>
+        <small>{space.tasks.filter(match).length + space.lists.reduce((sum, list) => sum + list.tasks.filter(match).length, 0)}</small><img className="plan-space-chevron" src="/rhythm/flow/chevron.svg" alt="" />
+      </button>
+      <div className={`plan-space-reveal${closed.has(space.id) ? ' collapsed' : ''}`} inert={closed.has(space.id)} aria-hidden={closed.has(space.id)}><div className="plan-space-content">
+        {space.tasks.filter(match).map(renderTask)}
+        {space.lists.filter(list => list.tasks.some(match)).map(list => <details className="plan-catalog-list" key={list.id} open>
+          <summary>{list.name}<small>{list.tasks.filter(match).length} tasks</small></summary><div>{list.tasks.filter(match).map(renderTask)}</div>
+        </details>)}
+      </div></div>
+    </section>)}
+    {!visible.length && <p className="tb-empty">{query ? 'No matching tasks. Press Enter to add a new one.' : 'Your tasks will appear here. Add one above to get started.'}</p>}
   </div>;
 }
