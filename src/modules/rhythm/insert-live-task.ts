@@ -1,6 +1,7 @@
 import type { RhythmLibrary } from './library';
 import { timerPosition, type LiveTimer } from './live-timer';
 import type { ScheduleBlock, Task } from './types';
+import { moveScheduleBlock } from './schedule';
 
 export interface InsertItemParams {
   title: string;
@@ -74,8 +75,20 @@ export function insertItemIntoTimer(timer: LiveTimer, params: InsertItemParams, 
     updatedBlocks.push(blocks[i]);
   }
   updatedBlocks.push(newBlock);
+  const hasAnchors = blocks.slice(insertIndex).some(b => b.pinned || b.fixed);
   for (let i = insertIndex; i < blocks.length; i++) {
     const b = blocks[i];
+    if (hasAnchors) {
+      const cursor = Date.parse(updatedBlocks.at(-1)!.end);
+      if (b.pinned || b.fixed) {
+        if (cursor > Date.parse(b.start)) throw new Error('This insertion would move a pinned or fixed task. Choose another position.');
+        updatedBlocks.push(b);
+      } else {
+        const start = Math.max(cursor, Date.parse(b.start));
+        updatedBlocks.push({ ...b, start: new Date(start).toISOString(), end: new Date(start + Date.parse(b.end) - Date.parse(b.start)).toISOString() });
+      }
+      continue;
+    }
     updatedBlocks.push({
       ...b,
       start: new Date(Date.parse(b.start) + durationMs).toISOString(),
@@ -84,7 +97,7 @@ export function insertItemIntoTimer(timer: LiveTimer, params: InsertItemParams, 
   }
 
   const currentEndsAt = Date.parse(timer.endsAt ?? blocks[blocks.length - 1].end);
-  const newEndsAt = new Date(currentEndsAt + durationMs).toISOString();
+  const newEndsAt = new Date(hasAnchors ? Math.max(currentEndsAt, Date.parse(updatedBlocks.at(-1)!.end)) : currentEndsAt + durationMs).toISOString();
 
   return {
     ...timer,
@@ -130,7 +143,7 @@ export function insertLiveTimerItem(
   );
 
   const timeblocks = data.timeblocks?.map(block =>
-    block.name === liveTimer.name ? { ...block, schedule: undefined, tasks: [...block.tasks, newTask] } : block
+    block.id === liveTimer.id ? { ...block, schedule: liveTimer.blocks, tasks: [...block.tasks, newTask] } : block
   );
 
   return {
@@ -162,6 +175,10 @@ export function reorderTimerBlocks(
   const minMovableIndex = activeIndex >= 0 ? activeIndex + 1 : (nextIndex >= 0 ? nextIndex : 0);
   if (fromIndex < minMovableIndex || toIndex < minMovableIndex) {
     return timer;
+  }
+
+  if (blocks.some(b => b.pinned || b.fixed)) {
+    return { ...timer, blocks: moveScheduleBlock(blocks, fromIndex, toIndex) };
   }
 
   const [movedBlock] = blocks.splice(fromIndex, 1);

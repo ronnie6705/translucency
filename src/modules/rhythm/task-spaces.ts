@@ -1,5 +1,6 @@
 import type { RhythmLibrary } from "./library";
 import type { Task, SavedTaskList } from "./types";
+import { updateAcceptedTask } from './schedule';
 
 export interface TaskLocation {
   spaceId: string;
@@ -56,13 +57,7 @@ export function updateTask(
       t.id === ref.taskId ? { ...t, ...updates, id: t.id } : t,
     ),
   );
-  const timeblocks = withUpdatedLocation.timeblocks.map((b) => ({
-    ...b,
-    schedule: b.tasks.some(t => t.id === ref.taskId) ? undefined : b.schedule,
-    tasks: b.tasks.map((t) =>
-      t.id === ref.taskId ? { ...t, ...updates, id: t.id } : t,
-    ),
-  }));
+  const timeblocks = withUpdatedLocation.timeblocks.map(b => updateAcceptedTask(b, ref.taskId, updates));
   let liveTimer = withUpdatedLocation.liveTimer;
   if (liveTimer && liveTimer.blocks.some((b) => b.taskId === ref.taskId)) {
     liveTimer = {
@@ -126,13 +121,7 @@ export function updateTimeblockTask(
 
   const updatedTimeblocks = data.timeblocks.map((b) =>
     b.id === timeblockId
-      ? {
-          ...b,
-          schedule: undefined,
-          tasks: b.tasks.map((t) =>
-            t.id === taskId ? { ...t, ...updates, id: t.id } : t,
-          ),
-        }
+      ? updateAcceptedTask(b, taskId, updates)
       : b,
   );
 

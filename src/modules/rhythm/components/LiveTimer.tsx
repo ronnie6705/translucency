@@ -96,7 +96,7 @@ export function TimerBlock({ block, state, timezone, height, metadata, pending, 
               onClick={() => { if (!pending) run(value); }}><TimerIcon name={value === 'completed' ? 'check' : 'cross'} /></button>)}
           </div>}
         </div>
-      <div className="live-timer-badges"><span><TimerIcon name="clock" />{durationLabel(Date.parse(block.end) - Date.parse(block.start))}</span>{!block.isBreak && <span><TimerIcon name="energy" />{block.energyRequired}</span>}</div>
+      <div className="live-timer-badges"><span><TimerIcon name="clock" />{durationLabel(Date.parse(block.end) - Date.parse(block.start))}</span>{!block.isBreak && <span><TimerIcon name="energy" />{block.energyRequired}</span>}{(block.pinned || block.fixed) && <span>{block.fixed ? 'Fixed' : 'Pinned'}</span>}</div>
       </div>
     </div>
   </div>;
@@ -696,7 +696,7 @@ export function TimerCard({
       {visibleBlocks.map((block, index) => {
         const state = now >= Date.parse(block.end) ? 'past' : timer.blocks[activeIndex]?.id === block.id ? 'active' : 'upcoming';
         const exiting = !layout[block.id] && pending.get(block.taskId)?.reflow;
-        const isDraggable = (phase === 'scheduled' || index >= minMovableIndex) && !pending.size && phase !== 'complete';
+        const isDraggable = !!onReorder && !block.pinned && !block.fixed && (phase === 'scheduled' || index >= minMovableIndex) && !pending.size && phase !== 'complete';
         const isDragging = dragState?.draggingId === block.id;
         const dragOverPosition = dragState && dragState.hoverIndex === index && !isDragging
           ? (dragState.fromIndex < index ? 'below' : 'above')
@@ -771,6 +771,7 @@ export function LiveTimerModal({
   const now = useClock();
   const [localTimer, setLocalTimer] = useState<Timer | null>(null);
   const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
+  const [placementError, setPlacementError] = useState('');
   const captureAnchorRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -780,11 +781,15 @@ export function LiveTimerModal({
   const currentTimer = localTimer ?? timer;
 
   const handleInsert = async (params: InsertItemParams) => {
+    setPlacementError('');
+    if (!onInsertItem) return;
     // 1. Anchor current visual state and marker line before modifying schedule
     captureAnchorRef.current?.();
 
     // 2. Insert item into local schedule immediately
-    const next = insertItemIntoTimer(currentTimer, params, now);
+    let next: Timer;
+    try { next = insertItemIntoTimer(currentTimer, params, now); }
+    catch (error) { setPlacementError(error instanceof Error ? error.message : 'Could not insert this task.'); return; }
     const addedBlock = next.blocks.find(b => !currentTimer.blocks.some(prev => prev.id === b.id));
     if (addedBlock) {
       setNewlyAddedId(addedBlock.id);
@@ -804,8 +809,12 @@ export function LiveTimerModal({
   };
 
   const handleReorder = async (fromIndex: number, toIndex: number) => {
+    setPlacementError('');
+    if (!onReorderBlocks) return;
     captureAnchorRef.current?.();
-    const next = reorderTimerBlocks(currentTimer, fromIndex, toIndex, now);
+    let next: Timer;
+    try { next = reorderTimerBlocks(currentTimer, fromIndex, toIndex, now); }
+    catch (error) { setPlacementError(error instanceof Error ? error.message : 'Could not move this task.'); return; }
     setLocalTimer(next);
 
     if (onReorderBlocks) {
@@ -870,9 +879,9 @@ export function LiveTimerModal({
               onClose={onClose}
               onComplete={onComplete}
               onRegisterCapture={capture => { captureAnchorRef.current = capture; }}
-              onReorder={handleReorder}
+              onReorder={onReorderBlocks ? handleReorder : undefined}
               newlyAddedId={newlyAddedId}
-              error={error}
+              error={placementError || error}
               hideHeader
             />
           </main>

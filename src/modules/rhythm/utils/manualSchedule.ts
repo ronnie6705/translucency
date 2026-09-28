@@ -205,6 +205,7 @@ export function buildManualSchedule(
       end: blockEnd.toISOString(),
       isBreak: !!segment.task.isBreak,
       energyRequired: segment.task.energyRequired,
+      ...(segment.task.fixedStart ? { fixed: true } : {}),
     };
   });
 }

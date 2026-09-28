@@ -99,6 +99,8 @@ Current coverage includes login-first deep links, password login without sending
 
 This checkout starts from Translucency commit `97b6ea1` and imports Rhythm from the local `/Users/ranvijaysingh/rhythm-app` checkout (commit `214a5ac`). The original Rhythm repository has not been modified. The earlier temporary Vite starter in the parent directory is not the integrated app.
 
-Both products share navigation, presentation, and required Supabase sign-in. Their domain records stay separate. Cloud sync uses per-user offline caches and revision-checked writes; conflicts require review. Supabase provisioning and email delivery must be configured for account creation/recovery. Password sign-in does not send an email. There are no background OS notifications, automatic mental-state scheduling, or new live timer. Physical-device PWA installation still needs real-device testing. Existing scheduling heuristics remain the basis of Rhythm; broader algorithm improvements are a separate feature.
+Both products share navigation, presentation, and required Supabase sign-in. Their domain records stay separate. Cloud sync uses per-user offline caches and revision-checked writes; conflicts require review. Supabase provisioning and email delivery must be configured for account creation/recovery. Password sign-in does not send an email. There are no background OS notifications, automatic mental-state scheduling, or new live timer. Physical-device PWA installation still needs real-device testing.
+
+Rhythm now uses shared numerical energy profiles, deterministic energy-fit scheduling, pinned manual placements, and a persisted accepted schedule across previews and outputs. The existing chronotype SVG illustrations are unchanged. See [the scheduling rules and verification notes](docs/energy-scheduling.md).
 
 Original Translucency background and constraints are retained in [docs/translucency-v1.md](docs/translucency-v1.md) and [docs/product-spec.md](docs/product-spec.md).

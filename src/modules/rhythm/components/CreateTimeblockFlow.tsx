@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DayConfig, ScheduleBlock, Task } from '../types';
-import { generateSchedule } from '../rhythmScheduler';
+import { planSchedule, type ScheduleIssue } from '../rhythmScheduler';
 import { validateTimeblockPlan } from '../timeblock-plan';
 import { workloadSummary } from '../workload';
 import { PlanTaskCatalog, type CatalogSpace } from './PlanTaskCatalog';
@@ -11,6 +11,7 @@ import { useLayoutMotion } from './use-layout-motion';
 
 type Props = {
   tasks: Task[]; spaces: CatalogSpace[]; config: DayConfig; busy: boolean; error: string | null;
+  initialSchedule?: ScheduleBlock[];
   onTasksChange(tasks: Task[]): void; onConfigChange(config: DayConfig): void;
   onCreateTask(task: Task, spaceId: string | null): Promise<boolean>;
   onFinish(blocks: ScheduleBlock[], launch: boolean, exportCalendar: boolean): Promise<void>;
@@ -26,13 +27,14 @@ function TimeWindowEditor({ config, onChange, onClose }: { config: DayConfig; on
   const valid = validateTimeblockPlan([], draft.startTime, draft.endTime).validRange;
   useEffect(() => { const trigger = document.activeElement as HTMLElement | null; dialog.current?.showModal(); return () => trigger?.focus(); }, []);
   return <dialog className="tb-range-dialog" ref={dialog} aria-label="Edit today's time window" onCancel={e => { e.preventDefault(); e.stopPropagation(); onClose(); }}>
+    <label className="tb-plan-date">Plan date<input type="date" aria-label="Plan date" value={draft.date} onChange={e => { if (e.target.value) setDraft(prev => ({ ...prev, date: e.target.value })); }} /></label>
     <PlanTimeRange startTime={draft.startTime} endTime={draft.endTime} timeZone={draft.timezone} validRange={valid}
       onRangeChange={(startTime,endTime) => setDraft(prev => ({ ...prev,startTime,endTime }))} onTimeZoneChange={timezone => setDraft(prev => ({ ...prev, timezone }))} />
     <div className="tb-range-actions"><button type="button" onClick={onClose}>Cancel</button><button type="button" disabled={!valid} onClick={() => { onChange(draft); onClose(); }}>Apply time window</button></div>
   </dialog>;
 }
 
-export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTasksChange, onConfigChange, onCreateTask, onFinish, onClose }: Props) {
+export function CreateTimeblockFlow({ tasks, spaces, config, initialSchedule, busy, error, onTasksChange, onConfigChange, onCreateTask, onFinish, onClose }: Props) {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState('forward');
   const [query, setQuery] = useState('');
@@ -42,17 +44,29 @@ export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTask
   const [creating, setCreating] = useState(false);
   const [launch, setLaunch] = useState(true);
   const [exportCalendar, setExportCalendar] = useState(true);
-  const [generation, setGeneration] = useState(0);
-  const [manual, setManual] = useState<{ input: string; blocks: ScheduleBlock[] } | null>(null);
+  const input = JSON.stringify({ tasks, config });
+  const [draft, setDraft] = useState(() => ({ key: initialSchedule ? input : '', blocks: initialSchedule ?? [],
+    anchors: initialSchedule?.filter(b => b.pinned) ?? [], issues: [] as ScheduleIssue[] }));
   const search = useRef<HTMLInputElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const assessments = useRef(new Map<string, Task>());
   const defaults = useRef(new Map<string, Task>());
   const catalog = useMemo(() => spaces.flatMap(s => [...s.tasks, ...s.lists.flatMap(l => l.tasks)]), [spaces]);
-  const input = JSON.stringify({ tasks, config, generation });
   const validation = validateTimeblockPlan(tasks, config.startTime, config.endTime);
-  const schedule = useMemo(() => step === 2 && validation.valid ? generateSchedule(tasks, config) : [], [tasks, config, generation, validation.valid, step]);
-  const blocks = manual?.input === input ? manual.blocks : schedule;
+  const result = useMemo(() => {
+    if (draft.key === input || step !== 2 || !validation.valid) return draft;
+    const anchors = draft.anchors.filter(b => tasks.some(t => t.id === b.taskId));
+    return planSchedule(tasks, config, { previous: [...draft.blocks.filter(b => !anchors.some(a => a.taskId === b.taskId)), ...anchors] });
+  }, [tasks, config, input, draft, validation.valid, step]);
+  const blocks = result.blocks;
+  useEffect(() => {
+    if (step === 2 && validation.valid && draft.key !== input) {
+      setDraft(prev => ({ ...prev, ...result, key: input, anchors: prev.anchors.filter(b => tasks.some(t => t.id === b.taskId)) }));
+    }
+  }, [step, validation.valid, draft.key, input, result, tasks]);
+  const changeSchedule = (next: ScheduleBlock[]) => setDraft({ key: input, blocks: next, anchors: next.filter(b => b.pinned), issues: [] });
+  const unpin = (taskId: string) => setDraft(prev => ({ ...prev, key: '', anchors: prev.anchors.filter(b => b.taskId !== taskId),
+    blocks: prev.blocks.map(b => b.taskId === taskId ? { ...b, pinned: false } : b) }));
   const summary = workloadSummary(tasks, config.startTime, config.endTime);
   const stack = useLayoutMotion(tasks.map(t => t.id).join(','));
   const [removing, setRemoving] = useState(new Set<string>());
@@ -79,6 +93,7 @@ export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTask
   };
   const remove = (id: string) => {
     if (removalTimers.current.has(id)) return;
+    setDraft(prev => ({ ...prev, key: '', anchors: prev.anchors.filter(b => b.taskId !== id), blocks: prev.blocks.filter(b => b.taskId !== id) }));
     setRemoving(prev => new Set([...prev,id]));
     const finish = () => { onTasksChange(currentTasks.current.filter(t => t.id !== id)); setRemoving(prev => { const next = new Set(prev); next.delete(id); return next; }); removalTimers.current.delete(id); };
     if (step !== 0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) finish();
@@ -93,7 +108,7 @@ export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTask
     const task: Task = { id: crypto.randomUUID(), name, durationMinutes: 90, energyRequired: 3, priority: 2, completed: false };
     try { if (await onCreateTask(task, filter)) { add(task); setQuery(''); } } finally { setCreating(false); }
   };
-  const clear = () => { removalTimers.current.forEach(clearTimeout); removalTimers.current.clear(); setRemoving(new Set()); onTasksChange([]); };
+  const clear = () => { removalTimers.current.forEach(clearTimeout); removalTimers.current.clear(); setRemoving(new Set()); setDraft({ key: '', anchors: [], blocks: [], issues: [] }); onTasksChange([]); };
   const nextAllowed = step === 0 ? tasks.some(t => !t.isBreak) && validation.validRange && !creating && !removing.size : validation.valid;
   const dragId = useRef<string | null>(null);
   const reorder = (from: number, to: number) => { if (from < 0 || to < 0 || to >= tasks.length) return; const next = [...tasks]; const [task] = next.splice(from,1); next.splice(to,0,task); onTasksChange(next); };
@@ -118,7 +133,7 @@ export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTask
         </aside>
       </>}
       {step === 1 && <TimeblockWorkload tasks={tasks} spaces={spaces} start={config.startTime} end={config.endTime} onUpdate={update} onRemove={remove} onReset={() => onTasksChange(tasks.map(t => { const d = defaults.current.get(t.id); return { ...t, durationMinutes: d?.durationMinutes ?? 90, energyRequired: d?.energyRequired ?? 3 }; }))} onViewTasks={() => go(0)} onEditTime={() => setEditingTime(true)} onAddBreak={() => add({id:crypto.randomUUID(),name:'Short break',durationMinutes:15,energyRequired:1,priority:2,isBreak:true})} />}
-      {step === 2 && <TimeblockSchedule spaces={spaces} blocks={blocks} tasks={tasks} config={config} onChronotype={chronotype => onConfigChange({ ...config, chronotype })} onRegenerate={() => setGeneration(n=>n+1)} onScheduleChange={blocks => setManual({input,blocks})} launch={launch} exportCalendar={exportCalendar} onLaunchChange={setLaunch} onExportChange={setExportCalendar} onFinish={() => { void onFinish(blocks,launch,exportCalendar); }} busy={busy} />}
+      {step === 2 && <TimeblockSchedule spaces={spaces} blocks={blocks} tasks={tasks} config={config} issues={result.issues} onUnpin={unpin} onChronotype={chronotype => onConfigChange({ ...config, chronotype })} onRegenerate={() => setDraft(prev => ({ ...prev, key: '' }))} onScheduleChange={changeSchedule} launch={launch} exportCalendar={exportCalendar} onLaunchChange={setLaunch} onExportChange={setExportCalendar} onFinish={() => { void onFinish(blocks,launch,exportCalendar); }} busy={busy} />}
     </div>
     {editingTime && <TimeWindowEditor config={config} onChange={onConfigChange} onClose={() => setEditingTime(false)} />}
   </div>;

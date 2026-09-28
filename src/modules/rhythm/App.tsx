@@ -17,6 +17,7 @@ import { insertLiveTimerItem, reorderLiveTimer } from './insert-live-task';
 import { generateSchedule } from './rhythmScheduler';
 import { validateTimeblockPlan } from './timeblock-plan';
 import { buildManualSchedule } from './utils/manualSchedule';
+import { acceptedSchedule } from './schedule';
 import { LiveTimerModal, LiveTimerPreview, type Timer } from './components/LiveTimer';
 import { TimeblockWorkspace } from './components/TimeblockWorkspace';
 import { NameListModal } from './components/task-dialogs';
@@ -46,20 +47,7 @@ function App({ section = "rhythm" }: { section?: string }) {
     if (isRunning) {
       setModalTimer(liveTimer);
     } else {
-      const rawBlocks = timeblock.schedule ?? buildManualSchedule(timeblock.tasks, timeblock.dayConfig);
-      const now = Date.now();
-      let blocks = rawBlocks;
-      if (rawBlocks.length > 0) {
-        const firstStart = Date.parse(rawBlocks[0].start);
-        if (firstStart <= now) {
-          const delta = now + 5 * 60 * 1000 - firstStart;
-          blocks = rawBlocks.map(b => ({
-            ...b,
-            start: new Date(Date.parse(b.start) + delta).toISOString(),
-            end: new Date(Date.parse(b.end) + delta).toISOString(),
-          }));
-        }
-      }
+      const blocks = acceptedSchedule(timeblock);
       const scheduledTimer: Timer = {
         id: timeblock.id,
         name: timeblock.name,
@@ -244,7 +232,7 @@ function App({ section = "rhythm" }: { section?: string }) {
     // Going back without changing the inputs preserves manual rearrangements.
     const key = JSON.stringify({ tasks: [...tasks].sort((a, b) => a.id.localeCompare(b.id)), dayConfig });
     if (generatedPlanKey.current !== key) {
-      // The existing scheduler consumes durations on its working task objects.
+      // Generate an energy-aware order for the older task-list flow.
       const schedule = generateSchedule(tasks.map(task => ({ ...task })), dayConfig);
       const ids = [...new Set(schedule.map(block => block.taskId))];
       const tasksById = new Map(tasks.map(task => [task.id, task]));
@@ -311,10 +299,7 @@ function App({ section = "rhythm" }: { section?: string }) {
     setActiveTaskListId(null);
     setActiveTimeblockId(block.id);
     setTasks(block.tasks.map(task => ({ ...task })));
-    setDayConfig(prev => ({
-      ...block.dayConfig,
-      date: prev.date,
-    }));
+    setDayConfig({ ...block.dayConfig });
     setDraftTimeRange({
       startTime: block.dayConfig.startTime,
       endTime: block.dayConfig.endTime,
@@ -501,7 +486,7 @@ function App({ section = "rhythm" }: { section?: string }) {
                 ...data,
                 timeblocks: data.timeblocks.map((b) =>
                   b.id === timeblockId
-                    ? { ...b, schedule: undefined, tasks: b.tasks.filter((t) => t.id !== taskId) }
+                    ? { ...b, schedule: acceptedSchedule(b).filter(block => block.taskId !== taskId), tasks: b.tasks.filter((t) => t.id !== taskId) }
                     : b
                 ),
               }));
@@ -634,7 +619,7 @@ function App({ section = "rhythm" }: { section?: string }) {
           <div className={flowContext === 'timeblock' ? 'tb-shell' : `flow-modal flow-unified ${modalThemeClass}`} data-modal-size={modalSize}>
             {flowContext === 'timeblock' ? (
               <CreateTimeblockFlow tasks={tasks} spaces={availableTasks} config={dayConfig} busy={startingTimer} error={storageError}
-                onTasksChange={setTasks} onConfigChange={setDayConfig} onCreateTask={handleCreatePlanningTask}
+                initialSchedule={activeTimeblockId ? savedTimeblocks.find(b => b.id === activeTimeblockId)?.schedule : undefined} onTasksChange={setTasks} onConfigChange={setDayConfig} onCreateTask={handleCreatePlanningTask}
                 onFinish={finishTimeblock} onClose={closeFlowModal} />
             ) : flowStep === 'chronotype' ? (
               <div className="task-step chronotype-step">

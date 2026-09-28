@@ -1,6 +1,7 @@
 import type { SavedTaskList, SavedTimeblock, Space, Task } from './types';
 import { activeAccount, readAccount, writeAccount } from '../../lib/cloud/storage';
 import { validLiveTimer, type LiveTimer } from './live-timer';
+import { acceptedSchedule } from './schedule';
 export interface RhythmLibrary { version: 1; spaces?: Space[]; taskLists: SavedTaskList[]; timeblocks: SavedTimeblock[]; liveTimer?: LiveTimer }
 export const emptyLibrary = (): RhythmLibrary => ({ version: 1, spaces: [], taskLists: [], timeblocks: [] });
 const DB = 'rhythm-library-v1';
@@ -18,7 +19,7 @@ export function validateLibrary(value: unknown): RhythmLibrary {
   for (const block of value.timeblocks) {
     if (!entry(block) || !object(block) || !object(block.dayConfig)) throw new Error('Invalid timeblock in backup.');
     const config = block.dayConfig;
-    if (block.schedule !== undefined && !validLiveTimer({ id: block.id, name: block.name, timezone: config.timezone, blocks: block.schedule })) throw new Error('Invalid saved schedule in backup.');
+    if (block.schedule !== undefined && !(Array.isArray(block.schedule) && block.schedule.length === 0) && !validLiveTimer({ id: block.id, name: block.name, timezone: config.timezone, blocks: block.schedule })) throw new Error('Invalid saved schedule in backup.');
     if (!['Lion','Bear','Wolf','Dolphin'].includes(String(config.chronotype)) || !/^\d{4}-\d{2}-\d{2}$/.test(String(config.date)) || ![config.startTime,config.endTime].every(t => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(t)))) throw new Error('Invalid day settings in backup.');
     try { new Intl.DateTimeFormat('en',{timeZone: String(config.timezone)}).format(); } catch { throw new Error('Invalid time zone in backup.'); }
   }
@@ -26,6 +27,7 @@ export function validateLibrary(value: unknown): RhythmLibrary {
   if (!Array.isArray(spaces) || !spaces.every(s => entry(s) && object(s) && typeof s.icon === 'string' && typeof s.color === 'string' && /^#[0-9a-f]{6}$/i.test(s.color))) throw new Error('Invalid Spaces in backup.');
   if (new Set(spaces.map(s => s.id)).size !== spaces.length) throw new Error('Duplicate Space IDs.');
   const library = { ...value, spaces: [...spaces], taskLists: [...value.taskLists] } as unknown as RhythmLibrary;
+  library.timeblocks = library.timeblocks.map(block => ({ ...block, schedule: acceptedSchedule(block) }));
   // Additive migration: keep the existing lists and task IDs, including account and backup data.
   if (library.taskLists.some(l => !l.spaceId)) {
     if (!library.spaces!.some(s => s.id === 'legacy-space')) library.spaces!.push({id:'legacy-space',name:'Personal',icon:'personal',color:'#b4a4ff',createdAt:'2026-01-01T00:00:00.000Z',tasks:[]});

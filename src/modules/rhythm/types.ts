@@ -29,6 +29,10 @@ export interface ScheduleBlock {
   end: string;   // ISO datetime
   isBreak: boolean;
   energyRequired: number;
+  /** User placement: automatic planning and regeneration must retain its start. */
+  pinned?: boolean;
+  /** Fixed task commitment, also retained during Live Timer adjustments. */
+  fixed?: boolean;
 }
 
 export interface SavedTimeblock {

@@ -14,7 +14,7 @@ import {
   ChevronDownIcon,
   AddTimeblockPlusIcon,
 } from '../assets/timeblock-icons';
-import { buildManualSchedule } from '../utils/manualSchedule';
+import { acceptedSchedule } from '../schedule';
 import { createDateInTimeZone } from '../utils/timezone';
 import { formatTaskDuration } from '../task-spaces';
 
@@ -218,22 +218,7 @@ export function TimeblockWorkspace({
           if (isLive && liveTimer) {
             scheduleTimer = liveTimer;
           } else {
-            const rawBlocks = buildManualSchedule(tb.tasks, tb.dayConfig);
-            const now = Date.now();
-            // If the timeblock is not running, ensure it renders in 'scheduled' phase without silently starting
-            let blocks = rawBlocks;
-            if (rawBlocks.length > 0) {
-              const firstStart = Date.parse(rawBlocks[0].start);
-              if (firstStart <= now) {
-                // Shift timestamps into future relative to now
-                const delta = now + 5 * 60 * 1000 - firstStart;
-                blocks = rawBlocks.map((b) => ({
-                  ...b,
-                  start: new Date(Date.parse(b.start) + delta).toISOString(),
-                  end: new Date(Date.parse(b.end) + delta).toISOString(),
-                }));
-              }
-            }
+            const blocks = acceptedSchedule(tb);
 
             scheduleTimer = {
               id: tb.id,

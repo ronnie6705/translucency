@@ -22,11 +22,19 @@ export const TIME_ZONE_OPTIONS = [
   { value: 'Australia/Sydney', label: 'Australia (AEST)' },
 ];
 
+const formatters = new Map<string, Intl.DateTimeFormat>();
 function getParts(date: Date, timeZone: string) {
-  const formatter = new Intl.DateTimeFormat('en-US', {
+  let formatter = formatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US', {
     ...DEFAULT_FORMAT_OPTIONS,
     timeZone,
+    hour12: undefined,
+    hourCycle: 'h23',
   });
+    if (formatters.size >= 64) formatters.clear();
+    formatters.set(timeZone, formatter);
+  }
   const parts = formatter.formatToParts(date);
   const map: Record<string, string> = {};
   for (const part of parts) {

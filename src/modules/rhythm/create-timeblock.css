@@ -325,3 +325,12 @@
 .rhythm-module .tb-range-dialog select { color:white; border:1px solid #ffffff22; }
 .rhythm-module .tb-range-dialog select option { background:#252430; }
 .rhythm-module .tb-header-actions .tb-back img { transform:rotate(180deg); }
+.rhythm-module .tb-placement { display:flex; align-items:center; gap:12px; padding:8px 10px 14px; }
+.rhythm-module .tb-placement p { flex:1; min-width:0; margin:0; font-size:12px; line-height:1.5; color:#ffffffb3; }
+.rhythm-module .tb-placement .tb-energy-shortfall { color:#ffcf97; }
+.rhythm-module .tb-placement button { flex-shrink:0; }
+.rhythm-module .tb-schedule-message { font-size:13px; line-height:1.5; color:#ffffffb3; }
+.rhythm-module .tb-schedule-message:empty { display:none; }
+.rhythm-module .tb-profile .tb-profile-note { font-size:11px; line-height:1.5; margin-top:12px; }
+.rhythm-module .tb-plan-date { display:flex; align-items:center; gap:16px; margin-bottom:16px; font-size:14px; }
+.rhythm-module .tb-plan-date input { border:1px solid #ffffff40; border-radius:8px; padding:8px; color:inherit; background:#ffffff0d; font:inherit; }
