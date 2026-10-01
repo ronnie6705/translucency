@@ -1,3 +1,4 @@
+import { taskEnergyStyle } from '../task-energy';
 import { handleAdjustKey as adjustTaskKey } from '../adjust-key';
 import { TaskListBadge } from "./TaskListBadge";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -693,7 +694,7 @@ useEffect(() => {
                     {sectionLabel && (
                       <p className="adjust-section-label">{sectionLabel}</p>
                     )}
-                    <div className={cardClass} onClick={() => setSelectedAdjustIndex(index)}>
+                    <div style={taskEnergyStyle(item.task.energyRequired, item.task.isBreak)} className={cardClass} onClick={() => setSelectedAdjustIndex(index)}>
                       <div className="adjust-task-header">
                         <div>
                           <p>{item.label}</p>

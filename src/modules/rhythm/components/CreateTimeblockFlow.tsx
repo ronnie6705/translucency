@@ -4,7 +4,7 @@ import { generateSchedule } from '../rhythmScheduler';
 import { validateTimeblockPlan } from '../timeblock-plan';
 import { workloadSummary } from '../workload';
 import { PlanTaskCatalog, type CatalogSpace } from './PlanTaskCatalog';
-import { PlanTimeRange } from './PlanTimeRange';
+import { TimeWindowEditor } from './TimeWindowEditor';
 import { FlowIcon, TimeblockWorkload, TimeWindowCard } from './TimeblockWorkload';
 import { TimeblockSchedule } from './TimeblockSchedule';
 import { useLayoutMotion } from './use-layout-motion';
@@ -20,17 +20,6 @@ const titles = ["Gather Today's Tasks", "Assess Today's Workload", 'Your Timeblo
 const descriptions = ['Get everything out of your head. You can plan the details next.', 'Rate effort and energy for each task to build your ideal schedule.', "Based on your tasks, estimated effort and energy profile, here's a suggested plan."];
 const icons = ['stack','energy','schedule'];
 
-function TimeWindowEditor({ config, onChange, onClose }: { config: DayConfig; onChange(config: DayConfig): void; onClose(): void }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [draft, setDraft] = useState(config);
-  const valid = validateTimeblockPlan([], draft.startTime, draft.endTime).validRange;
-  useEffect(() => { const trigger = document.activeElement as HTMLElement | null; dialog.current?.showModal(); return () => trigger?.focus(); }, []);
-  return <dialog className="tb-range-dialog" ref={dialog} aria-label="Edit today's time window" onCancel={e => { e.preventDefault(); e.stopPropagation(); onClose(); }}>
-    <PlanTimeRange startTime={draft.startTime} endTime={draft.endTime} timeZone={draft.timezone} validRange={valid}
-      onRangeChange={(startTime,endTime) => setDraft(prev => ({ ...prev,startTime,endTime }))} onTimeZoneChange={timezone => setDraft(prev => ({ ...prev, timezone }))} />
-    <div className="tb-range-actions"><button type="button" onClick={onClose}>Cancel</button><button type="button" disabled={!valid} onClick={() => { onChange(draft); onClose(); }}>Apply time window</button></div>
-  </dialog>;
-}
 
 export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTasksChange, onConfigChange, onCreateTask, onFinish, onClose }: Props) {
   const [step, setStep] = useState(0);

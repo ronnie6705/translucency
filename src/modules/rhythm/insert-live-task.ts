@@ -1,8 +1,10 @@
+import { hasRunCommand, mutationCommand, recordScheduleChange, type RunCommand } from './timeblock-run';
 import type { RhythmLibrary } from './library';
 import { timerPosition, type LiveTimer } from './live-timer';
 import type { ScheduleBlock, Task } from './types';
 
 export interface InsertItemParams {
+  blockId?: string;
   title: string;
   durationMinutes: number;
   isBreak: boolean;
@@ -48,7 +50,7 @@ export function insertItemIntoTimer(timer: LiveTimer, params: InsertItemParams, 
   insertIndex = Math.max(0, Math.min(blocks.length, insertIndex));
 
   const durationMs = durationMinutes * 60000;
-  const newBlockId = `live-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const newBlockId = params.blockId ?? `live-${timer.runId ?? timer.id}-${now}-${timer.blocks.length}`;
   const newTaskId = params.isBreak ? `break-${newBlockId}` : `task-${newBlockId}`;
 
   let insertStartMs: number;
@@ -100,15 +102,20 @@ export function insertLiveTimerItem(
   data: RhythmLibrary,
   timerId: string,
   params: InsertItemParams,
-  now: number
+  now: number,
+  command?: RunCommand
 ): RhythmLibrary {
   if (!data.liveTimer || data.liveTimer.id !== timerId) {
     throw new Error('This live timer has changed. Reopen it and try again.');
   }
 
+  command ??= mutationCommand(data.liveTimer, 'insert', now);
+  if (hasRunCommand(data, data.liveTimer, command)) return data;
+  const before = data.liveTimer;
   const liveTimer = insertItemIntoTimer(data.liveTimer, params, now);
   if (liveTimer === data.liveTimer) return data;
 
+  data = recordScheduleChange(data, before, liveTimer, 'insert', now, command);
   if (params.isBreak) {
     return { ...data, liveTimer };
   }
@@ -199,12 +206,17 @@ export function reorderLiveTimer(
   timerId: string,
   fromIndex: number,
   toIndex: number,
-  now: number
+  now: number,
+  command?: RunCommand
 ): RhythmLibrary {
   if (!data.liveTimer || data.liveTimer.id !== timerId) {
     throw new Error('This live timer has changed. Reopen it and try again.');
   }
 
+  command ??= mutationCommand(data.liveTimer, 'reorder', now);
+  if (hasRunCommand(data, data.liveTimer, command)) return data;
+  const before = data.liveTimer;
   const liveTimer = reorderTimerBlocks(data.liveTimer, fromIndex, toIndex, now);
+  data = recordScheduleChange(data, before, liveTimer, 'reorder', now, command);
   return { ...data, liveTimer };
 }

@@ -1,0 +1,88 @@
+.rhythm-module { --task-card-border-opacity:50%; }
+/* Shared card border token: text, energy badges and fills retain their own opacity. */
+.rhythm-module :is(.tb-workload-row,.live-timer-block,.schedule-list li,.adjust-task-card,.calendar-block) {
+  --task-card-border:color-mix(in srgb,var(--task-energy-solid,#ffffff40) var(--task-card-border-opacity),transparent);
+}
+.rhythm-module .tasks-row { border-color:color-mix(in srgb,#ffffff33 var(--task-card-border-opacity),transparent); }
+.rhythm-module .tasks-row:focus-within { border-color:#ffffff80; }
+.rhythm-module .tb-flow .plan-catalog-task { border-color:color-mix(in srgb,#ffffff1a var(--task-card-border-opacity),transparent); }
+.rhythm-module .tb-flow .plan-catalog-task[aria-pressed=true] { border-color:#9a9eff88; }
+.rhythm-module .tb-stack-row { border-color:color-mix(in srgb,#9a9eff33 var(--task-card-border-opacity),transparent); }
+.rhythm-module .tb-workload-row { border-color:var(--task-card-border); background:var(--task-energy-tint); transition:border-color 150ms,background-color 150ms; }
+.rhythm-module .tb-workload-row.selected { scale:1; box-shadow:inset 0 0 0 1px #ffffff55; }
+.rhythm-module .tb-energy { color:var(--task-energy-solid); transition:color 150ms; }
+.rhythm-module .live-timer-block:not(.is-break), .rhythm-module .schedule-list li:not(.schedule-break) { border-color:var(--task-card-border); background:var(--task-energy-tint); }
+.rhythm-module .live-timer-block:not(.is-break) .live-timer-task-icon { box-shadow:inset 0 0 0 1px var(--task-energy-solid); }
+.rhythm-module .live-timer-block { transition: min-height 320ms ease, background-color 150ms, border-color 150ms; }
+@media(prefers-reduced-motion:reduce) { .rhythm-module .live-timer-block, .rhythm-module .tb-energy { transition:none; } }
+.rhythm-module .adjust-task-card[class*="energy-level-"], .rhythm-module .calendar-block:not(.break) { background:var(--task-energy-tint); border:1px solid var(--task-card-border); transition:background-color 150ms,border-color 150ms; }
+.rhythm-module .tb-bar { display:flex; }
+.rhythm-module .tb-workload-row.retiring { animation:workload-remove 180ms ease forwards; pointer-events:none; }
+@keyframes workload-remove { to { opacity:0; transform:translateX(12px); } }
+.rhythm-module .workload-settings { gap:16px; }
+.rhythm-module .workload-settings .plan-task-settings { width:34.975px; height:33.31px; transition:width 800ms var(--gentle-ease, cubic-bezier(.47,0,.23,1.38)); }
+.rhythm-module .workload-settings .plan-task-settings.open { width:58.682px; }
+.rhythm-module .workload-settings .plan-task-settings button { height:33.31px; padding:6.662px; border-radius:9.993px; }
+.rhythm-module .workload-settings .plan-task-settings img { width:auto; height:auto; max-width:none; }
+.rhythm-module .workload-settings .plan-settings-trigger { transition:opacity 800ms var(--gentle-ease, cubic-bezier(.47,0,.23,1.38)); }
+.rhythm-module .workload-settings .plan-settings-actions { gap:6.5px; border-radius:10.562px; transform:translateX(6.662px); transition:opacity 800ms var(--gentle-ease, cubic-bezier(.47,0,.23,1.38)),transform 800ms var(--gentle-ease, cubic-bezier(.47,0,.23,1.38)),visibility 800ms; }
+.rhythm-module .workload-settings .plan-settings-actions button { height:32.498px; padding:6.5px; border-radius:9.749px; }
+.rhythm-module .workload-settings .plan-settings-actions .plan-delete { padding:3.25px; background:#ff515170; }
+.rhythm-module .workload-settings .plan-task-fixed { display:flex; flex-direction:row; align-items:center; gap:5px; padding:5px 10px; margin:0; height:34px; border-radius:10px; background:#ffffff14; animation:fixed-time-reveal 210ms ease; }
+.rhythm-module .workload-settings .plan-task-fixed img { width:24px; height:24px; }
+.rhythm-module .workload-settings .plan-task-fixed input { width:92px; padding:0; margin:0; border:0; color:white; background:none; font-size:13px; font-weight:600; color-scheme:dark; }
+@keyframes fixed-time-reveal { from { opacity:0; max-width:0; } to { opacity:1; max-width:145px; } }
+.rhythm-module .live-timer-panel .tb-window.compact { display:flex; gap:12px; padding:24px; margin:0; border:0; border-radius:28px; background:#ffffff1a; box-shadow:0 4px 63px #0000008c; backdrop-filter:blur(10px); }
+.rhythm-module .live-timer-panel .tb-window.compact > div { flex:1; }
+.rhythm-module .live-timer-panel .tb-window.compact strong { font-size:14px; font-weight:600; }
+.rhythm-module .live-timer-panel .tb-window.compact p { font-size:12px; color:#ffffffb3; margin:2px 0 0; }
+.rhythm-module .live-timer-panel .tb-window .tb-icon-tile { width:36px; height:36px; padding:6px; border-radius:12px; background:#ffffff1a; }
+.rhythm-module .live-timer-panel .tb-window .tb-count,.rhythm-module .live-timer-panel .tb-window .tb-small { white-space:nowrap; margin:0; padding:5px 10px; border-radius:12px; background:#ffffff1a; color:white; }
+.rhythm-module .live-timer-panel .tb-window .tb-small:hover { background:#ffffff26; }
+.rhythm-module .live-timer-panel .tb-window .tb-small:active { background:#ffffff33; }
+.rhythm-module .tb-live-window-note { color:#ffffffb3; font-size:13px; }
+@media(max-width:620px) { .rhythm-module .live-timer-panel .tb-window.compact { flex-wrap:wrap; } .rhythm-module .tb-row-controls { flex-wrap:wrap; } }
+@media(prefers-reduced-motion:reduce) { .rhythm-module .workload-settings *, .rhythm-module .tb-workload-row.retiring { animation:none!important; transition:none!important; } }
+/* The reusable settings component also appears outside the legacy planner scope. */
+.rhythm-module .workload-settings { display:flex; align-items:center; }
+.rhythm-module .workload-settings .plan-task-settings { position:relative; flex-shrink:0; }
+.rhythm-module .workload-settings .plan-task-settings button { display:grid; place-items:center; border:0; margin:0; background:#ffffff0d; cursor:pointer; }
+.rhythm-module .workload-settings .plan-settings-trigger { position:absolute; right:0; top:0; }
+.rhythm-module .workload-settings .plan-settings-actions { display:flex; position:absolute; right:0; top:0; background:#ffffff1a; opacity:0; visibility:hidden; }
+.rhythm-module .workload-settings .plan-task-settings.open .plan-settings-trigger { opacity:0; pointer-events:none; }
+.rhythm-module .workload-settings .plan-task-settings.open .plan-settings-actions { opacity:1; visibility:visible; transform:none; }
+.rhythm-module .workload-settings .plan-settings-actions button.active { background:#ffffff26; }
+.rhythm-module .live-timer-add-drawer[aria-hidden="true"] { margin-top:0; overflow:hidden; visibility:hidden; }
+.rhythm-module .live-timer-panel .tb-window.compact { flex-shrink:0; }
+.rhythm-module .tb-flow label.tb-duration { color:white; }
+.rhythm-module .workload-settings .plan-task-fixed input { outline:none; }
+.rhythm-module .workload-settings .plan-task-fixed:focus-within { outline:2px solid #b7baff; outline-offset:3px; }
+.rhythm-module .task-energy-value { color:var(--task-energy-solid); transition:color 150ms,background-color 150ms; }
+.rhythm-module button.task-energy-value, .rhythm-module .task-energy-options button[aria-pressed="true"] { background:var(--task-energy-tint); box-shadow:inset 0 0 0 1px var(--task-energy-solid); }
+.rhythm-module .task-energy-options button { color:var(--task-energy-solid); }
+.rhythm-module .live-timer-panel .tb-window.compact strong { line-height:16px; }
+.rhythm-module .live-timer-panel .tb-window.compact p { line-height:15px; }
+.rhythm-module .live-timer-panel .tb-window .tb-count { font-size:14px; line-height:16px; }
+.rhythm-module .live-timer-panel .tb-window .tb-small { font-size:13px; font-weight:500; line-height:15px; margin-left:-4px; }
+.rhythm-module .workload-settings .plan-task-fixed input::-webkit-calendar-picker-indicator { display:none; }
+@media(prefers-reduced-motion:reduce) { .rhythm-module .task-energy-value, .rhythm-module .task-energy-options button { transition:none; } }
+
+/* Figma 2025:10004: scale also scales radius, stroke and shadow. */
+.rhythm-module .tb-schedule-blocks { position:relative; padding:4px 12px 16px; }
+.rhythm-module .tb-schedule-slot { position:relative; }
+.rhythm-module .tb-schedule-slot.can-reorder { touch-action:none; user-select:none; cursor:grab; }
+.rhythm-module .tb-schedule-slot.schedule-dragging { z-index:10; cursor:grabbing; }
+.rhythm-module .tb-schedule-slot .live-timer-block { border-width:2px; border-radius:22px; padding:13.62px; gap:14px; box-shadow:0 4px 59px #00000080; transform-origin:center; transition:scale var(--schedule-motion) var(--schedule-spring),border-color var(--schedule-motion) var(--schedule-spring),background-color var(--schedule-motion) var(--schedule-spring); }
+.rhythm-module .tb-schedule-slot.can-reorder:is(:hover,.schedule-dragging) .live-timer-block { scale:1.018125; border-color:var(--task-energy-solid); background:color-mix(in srgb,var(--task-energy-solid) 40%,transparent); }
+.rhythm-module .schedule-drag-handle { display:flex; align-self:stretch; align-items:center; justify-content:center; flex-shrink:0; width:0; margin-right:-14px; overflow:hidden; background:#ffffff1a; border-radius:40px; pointer-events:none; transition:width var(--schedule-motion) var(--schedule-spring),margin-right var(--schedule-motion) var(--schedule-spring); }
+.rhythm-module .schedule-drag-handle img { flex-shrink:0; width:auto; height:auto; max-width:none; transform:scale(.982198); }
+.rhythm-module .tb-schedule-slot.can-reorder:is(:hover,.schedule-dragging) .schedule-drag-handle { width:18px; margin-right:-.38px; }
+.rhythm-module .tb-schedule-message { color:#ffffffb3; font-size:13px; margin:0; }
+.rhythm-module .tb-schedule-message:empty { display:none; }
+@media(prefers-reduced-motion:reduce) { .rhythm-module .tb-schedule-slot .live-timer-block,.rhythm-module .schedule-drag-handle { transition:none; } }
+
+/* Shared legacy card consumers also use the single opacity multiplier. */
+.rhythm-module .task-list-item { border-color:color-mix(in srgb,var(--card-border) var(--task-card-border-opacity),transparent); }
+.rhythm-module .timeblock-workspace-card:not(.is-live):not(:hover) { border-color:color-mix(in srgb,#ffffff1a var(--task-card-border-opacity),transparent); }
+.rhythm-module .live-timer-card.live-timer-embedded .live-timer-block { border-color:color-mix(in srgb,#bfc1f133 var(--task-card-border-opacity),transparent); }
+.rhythm-module .live-timer-block:not(.is-break):is(.active,.is-dragging) { border-color:var(--task-energy-solid); }

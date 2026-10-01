@@ -1,3 +1,4 @@
+import { taskEnergyStyle } from '../task-energy';
 import { TaskListBadge } from "./TaskListBadge";
 import { useRef, useState } from "react";
 import type { Space, Task } from "../types";
@@ -247,7 +248,7 @@ export function QuickTaskValue({
           <div className="task-energy-options">
             {[1, 2, 3, 4, 5].map((n) => (
               <button
-                autoFocus={n === task.energyRequired}
+                style={taskEnergyStyle(n)} autoFocus={n === task.energyRequired}
                 type="button"
                 key={n}
                 disabled={saving}

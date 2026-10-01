@@ -1,3 +1,4 @@
+import { taskEnergyStyle } from '../task-energy';
 import { TaskListBadge } from "./TaskListBadge";
 import { useBlockClear } from "./use-block-clear";
 import { useEffect, useRef, useState, type DragEvent } from "react";
@@ -443,7 +444,7 @@ export function TaskRow({
         <div className="task-quick-anchor">
           <button
             disabled={busy || clear.active}
-            aria-label={`Edit energy for ${task.name}`}
+            className="task-energy-value" style={taskEnergyStyle(task.energyRequired,task.isBreak)} aria-label={`Edit energy for ${task.name}`}
             aria-expanded={quick === "energy"}
             onClick={() => setQuick(quick === "energy" ? null : "energy")}
           >

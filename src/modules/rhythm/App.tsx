@@ -1,4 +1,6 @@
 "use client";
+import { createTimeblockRun, launchTimeblockRun, createRunCommand } from './timeblock-run';
+import { updateLiveTimerTimeWindow } from './update-live-time-window';
 // src/App.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTaskWorkspace } from "./task-workspace";
@@ -26,6 +28,7 @@ import './timeblock-flow.css';
 import './plan-timeblock.css';
 import './timeblock-workspace.css';
 import './create-timeblock.css';
+import './task-energy.css';
 
 const today = new Date();
 const todayStr = [
@@ -41,8 +44,8 @@ function App({ section = "rhythm" }: { section?: string }) {
   const [modalTimer, setModalTimer] = useState<Timer | null>(null);
   const [renamingTimeblock, setRenamingTimeblock] = useState<SavedTimeblock | null>(null);
 
-  const handleOpenTimeblockTimer = (timeblock: SavedTimeblock) => {
-    const isRunning = liveTimer != null && (liveTimer.id === timeblock.id || liveTimer.name === timeblock.name);
+  const handleOpenTimeblockTimer = async (timeblock: SavedTimeblock) => {
+    const isRunning = liveTimer != null && liveTimer.id === timeblock.id;
     if (isRunning) {
       setModalTimer(liveTimer);
     } else {
@@ -68,7 +71,9 @@ function App({ section = "rhythm" }: { section?: string }) {
         startedAt: blocks[0]?.start ?? createDateInTimeZone(timeblock.dayConfig.date, timeblock.dayConfig.startTime || '09:00', timeblock.dayConfig.timezone).toISOString(),
         endsAt: blocks[blocks.length - 1]?.end ?? createDateInTimeZone(timeblock.dayConfig.date, timeblock.dayConfig.endTime || '17:00', timeblock.dayConfig.timezone).toISOString(),
       };
-      setModalTimer(scheduledTimer);
+      if (!blocks.length) return;
+      const run = createTimeblockRun(scheduledTimer, timeblock.dayConfig.chronotype, timeblock.id);
+      if (await save(data => launchTimeblockRun(data, scheduledTimer, run))) setModalTimer({...scheduledTimer,runId:run.id});
     }
   };
 
@@ -174,7 +179,8 @@ function App({ section = "rhythm" }: { section?: string }) {
       startedAt: createDateInTimeZone(dayConfig.date, dayConfig.startTime, dayConfig.timezone).toISOString(),
       endsAt: createDateInTimeZone(dayConfig.date, dayConfig.endTime, dayConfig.timezone).toISOString(),
     };
-    const saved = await save(data => ({ ...data, liveTimer: timer }));
+    const run = createTimeblockRun(timer, dayConfig.chronotype, activeTimeblockId ?? undefined);
+    const saved = await save(data => launchTimeblockRun(data, timer, run));
     setStartingTimer(false);
     if (!saved) return;
     if (exportCalendar) generateICS(blocks, formatICSFileName(dayConfig.date), dayConfig.timezone);
@@ -201,9 +207,9 @@ function App({ section = "rhythm" }: { section?: string }) {
       const timeblock: SavedTimeblock = { id, name, createdAt: existing?.createdAt ?? new Date().toISOString(), dayConfig: { ...dayConfig }, tasks, schedule: blocks };
       const timer: Timer = { id, name, timezone: dayConfig.timezone, blocks,
         startedAt: blocks[0].start, endsAt: blocks[blocks.length - 1].end };
-      const saved = await save(data => ({ ...data,
+      const run = launch ? createTimeblockRun(timer, dayConfig.chronotype, id) : undefined;
+      const saved = await save(data => ({ ...(run ? launchTimeblockRun(data, timer, run) : data),
         timeblocks: existing ? data.timeblocks.map(block => block.id === id ? timeblock : block) : [timeblock, ...data.timeblocks],
-        ...(launch ? { liveTimer: timer } : {}),
       }));
       if (!saved) return;
       if (exportCalendar) generateICS(blocks, formatICSFileName(dayConfig.date), dayConfig.timezone);
@@ -336,10 +342,11 @@ function App({ section = "rhythm" }: { section?: string }) {
       await save(d => ({
         ...d,
         liveTimer: undefined,
+        runs: d.runs?.filter(run => run.timeblockId !== timeblockId && run.id !== d.liveTimer?.runId),
         timeblocks: d.timeblocks.filter(item => item.id !== timeblockId),
       }));
     } else {
-      await setSavedTimeblocks(prev => prev.filter(item => item.id !== timeblockId));
+      await save(d => ({...d, timeblocks:d.timeblocks.filter(item=>item.id!==timeblockId),runs:d.runs?.filter(run=>run.timeblockId!==timeblockId)}));
     }
     setActiveTimeblockId(current => (current === timeblockId ? null : current));
   };
@@ -700,7 +707,8 @@ function App({ section = "rhythm" }: { section?: string }) {
       )}
       {modalTimer && (
         <LiveTimerModal
-          timer={liveTimer && (liveTimer.id === modalTimer.id || liveTimer.name === modalTimer.name) ? liveTimer : modalTimer}
+          onTimeWindowChange={liveTimer && liveTimer.id === modalTimer.id ? (newEndTime, now) => { const command = createRunCommand(); return save(library => updateLiveTimerTimeWindow({library,timerId:liveTimer.id,newEndTime,now,command})); } : undefined}
+          timer={liveTimer && liveTimer.id === modalTimer.id ? liveTimer : modalTimer}
           onClose={() => {
             setTimerOpen(false);
             setModalTimer(null);
@@ -708,19 +716,20 @@ function App({ section = "rhythm" }: { section?: string }) {
           error={storageError}
           onComplete={(taskId, now, outcome) => {
             const currentId = modalTimer.id;
-            if (liveTimer && (liveTimer.id === currentId || liveTimer.name === modalTimer.name)) {
-              return save(data => completeLiveTask(data, liveTimer.id, taskId, now, outcome));
+            if (liveTimer && liveTimer.id === currentId) {
+              const command = createRunCommand();
+              return save(data => completeLiveTask(data, liveTimer.id, taskId, now, outcome, command));
             }
             return Promise.resolve(false);
           }}
           onInsertItem={
-            liveTimer && (liveTimer.id === modalTimer.id || liveTimer.name === modalTimer.name)
-              ? (params, now) => save(data => insertLiveTimerItem(data, liveTimer.id, params, now))
+            liveTimer && liveTimer.id === modalTimer.id
+              ? (params, now) => { const command = createRunCommand(); return save(data => insertLiveTimerItem(data, liveTimer.id, params, now, command)); }
               : undefined
           }
           onReorderBlocks={
-            liveTimer && (liveTimer.id === modalTimer.id || liveTimer.name === modalTimer.name)
-              ? (fromIndex, toIndex, now) => save(data => reorderLiveTimer(data, liveTimer.id, fromIndex, toIndex, now))
+            liveTimer && liveTimer.id === modalTimer.id
+              ? (fromIndex, toIndex, now) => { const command = createRunCommand(); return save(data => reorderLiveTimer(data, liveTimer.id, fromIndex, toIndex, now, command)); }
               : undefined
           }
         />
@@ -728,11 +737,12 @@ function App({ section = "rhythm" }: { section?: string }) {
       {!modalTimer && timerOpen && liveTimer && (
         <LiveTimerModal
           timer={liveTimer}
+          onTimeWindowChange={(newEndTime, now) => { const command = createRunCommand(); return save(library => updateLiveTimerTimeWindow({library,timerId:liveTimer.id,newEndTime,now,command})); }}
           onClose={() => setTimerOpen(false)}
           error={storageError}
-          onComplete={(taskId, now, outcome) => save(data => completeLiveTask(data, liveTimer.id, taskId, now, outcome))}
-          onInsertItem={(params, now) => save(data => insertLiveTimerItem(data, liveTimer.id, params, now))}
-          onReorderBlocks={(fromIndex, toIndex, now) => save(data => reorderLiveTimer(data, liveTimer.id, fromIndex, toIndex, now))}
+          onComplete={(taskId, now, outcome) => { const command = createRunCommand(); return save(data => completeLiveTask(data, liveTimer.id, taskId, now, outcome, command)); }}
+          onInsertItem={(params, now) => { const command = createRunCommand(); return save(data => insertLiveTimerItem(data, liveTimer.id, params, now, command)); }}
+          onReorderBlocks={(fromIndex, toIndex, now) => { const command = createRunCommand(); return save(data => reorderLiveTimer(data, liveTimer.id, fromIndex, toIndex, now, command)); }}
         />
       )}
       {renamingTimeblock && (

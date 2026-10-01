@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 
 /** FLIP keeps keyed rows alive while their actual layout changes. */
-export function useLayoutMotion(key: string) {
+export function useLayoutMotion(key: string, duration = 420, easing = 'cubic-bezier(.22,.7,.3,1)') {
   const ref = useRef<HTMLDivElement>(null);
   const previous = useRef(new Map<string, number>());
   useLayoutEffect(() => {
@@ -11,14 +11,14 @@ export function useLayoutMotion(key: string) {
       const id = node.dataset.motionId!;
       const top = node.offsetTop;
       const old = previous.current.get(id);
-      if (!reduced && old !== undefined && old !== top) {
+      if (!node.dataset.motionDragging && !reduced && old !== undefined && old !== top) {
         node.getAnimations().forEach(animation => animation.cancel());
         node.animate([{ transform: `translateY(${old - top}px)` }, { transform: 'translateY(0)' }],
-          { duration: 420, easing: 'cubic-bezier(.22,.7,.3,1)' });
+          { duration, easing });
       }
       next.set(id, top);
     });
     previous.current = next;
-  }, [key]);
+  }, [key, duration, easing]);
   return ref;
 }

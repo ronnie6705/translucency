@@ -15,7 +15,7 @@ await context.route('https://*.supabase.co/**',async route=>{
  const request=route.request(); const url=new URL(request.url()); const path=url.pathname;
  const reply=(json)=>route.fulfill({json});
  if(request.method()==='OPTIONS') return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'GET,POST,PUT,OPTIONS'}});
- const token=[Buffer.from('{}').toString('base64url'),Buffer.from(JSON.stringify({sub:user.id,exp:Date.parse('2026-10-01T00:00:00Z')/1000})).toString('base64url'),'test'].join('.');
+ const token=[Buffer.from('{}').toString('base64url'),Buffer.from(JSON.stringify({sub:user.id,exp:Math.floor(Date.now()/1000)+864000})).toString('base64url'),'test'].join('.');
  if(path.endsWith('/token')) return reply({access_token:token,refresh_token:'synthetic',expires_in:864000,token_type:'bearer',user});
  if(path.endsWith('/user')) return reply(user);
  if(path.endsWith('/logout')) return reply({});
@@ -25,7 +25,7 @@ await context.route('https://*.supabase.co/**',async route=>{
 });
 try {
  fs.mkdirSync('test-results',{recursive:true});
- const page=await context.newPage(); page.on('pageerror',e=>errors.push(e.message));
+ const page=await context.newPage(); await page.clock.setFixedTime(new Date('2026-10-01T00:00:00Z')); page.on('pageerror',e=>errors.push(e.message));
  await page.goto(base+'/#rhythm-timeblocks');
  await page.getByLabel('Email',{exact:true}).fill(user.email);
  await page.getByLabel('Password',{exact:true}).fill('synthetic-password');
@@ -72,14 +72,14 @@ try {
  await expect(initialWorkload).toBeFocused();
  await expect(flow.locator('.tb-workload-row').first()).toHaveClass(/selected/);
  await expect(initialWorkload).toHaveCSS('outline-style','none');
- await expect(flow.locator('.tb-workload-row').first()).toHaveCSS('border-top-color','rgb(255, 92, 104)');
+ await expect(flow.locator('.tb-workload-row').first()).toHaveCSS('border-top-color','color(srgb 1 0.360784 0.407843 / 0.5)');
  await expect(flow.locator('.tb-workload-row').first()).toHaveCSS('background-color','rgba(255, 92, 104, 0.3)');
- await expect(flow.locator('.tb-workload-row').first()).toHaveCSS('scale','1.012');
+ await expect(flow.locator('.tb-workload-row').first()).toHaveCSS('scale','1');
  await page.keyboard.press('ArrowDown');
  await expect(flow.locator('.tb-workload-row').nth(1)).toHaveClass(/selected/);
  await page.keyboard.press('ArrowUp');
  await page.keyboard.press('ArrowLeft');
- await expect(flow.locator('.tb-workload-row').first()).toHaveCSS('border-top-color','rgb(255, 133, 54)');
+ await expect(flow.locator('.tb-workload-row').first()).toHaveCSS('border-top-color','color(srgb 1 0.521569 0.211765 / 0.5)');
  await page.keyboard.press('ArrowRight');
  await page.screenshot({path:'test-results/timeblock-energy-cards.png',fullPage:true,animations:'disabled'});
  await flow.getByLabel('Duration for Build feature',{exact:true}).selectOption('15');
@@ -106,6 +106,45 @@ try {
  await flow.getByRole('button',{name:'Next',exact:true}).click();
  await expect(flow.getByLabel('Duration for Build feature',{exact:true})).toHaveValue('90');
  await expect(flow.getByRole('button',{name:'Set energy 4 for Build feature',exact:true})).toHaveAttribute('aria-pressed','true');
+ for(const [level,color] of [[1,'rgb(130, 127, 255)'],[2,'rgb(77, 159, 255)'],[3,'rgb(55, 205, 180)'],[4,'rgb(255, 133, 54)'],[5,'rgb(255, 92, 104)']]) {
+   await flow.getByLabel(`Set energy ${level} for Build feature`,{exact:true}).click();
+   assert.match(await flow.locator('.tb-workload-row').first().evaluate(el=>getComputedStyle(el).borderTopColor), /(?:0\.5|50%)/);
+ }
+ await flow.getByLabel('Set energy 4 for Build feature',{exact:true}).click();
+ // New settings reuse fixed scheduling without changing task energy or duration.
+ const firstRow=flow.locator('.tb-workload-row').filter({hasText:'Build feature'});
+ await flow.locator('.tb-workload-row').filter({hasText:'Build feature'}).locator('.plan-task-settings').hover();
+ await expect(firstRow.locator('.plan-task-settings')).toHaveClass(/open/);
+ await expect(firstRow.locator('.plan-task-settings')).toHaveCSS('transition-duration','0.8s');
+ await firstRow.getByLabel('Fixed Time Slot for Build feature',{exact:true}).click();
+ await flow.getByLabel('Fixed time for Build feature',{exact:true}).fill('10:00');
+ await flow.getByLabel('Fixed time for Build feature',{exact:true}).press('ArrowLeft');
+ await expect(flow.getByLabel('Set energy 4 for Build feature',{exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.mouse.move(0,0);
+ await flow.locator('.tb-workload-row').filter({hasText:'Read a chapter'}).locator('.plan-task-settings').hover();
+ await expect(flow.locator('.plan-task-settings.open')).toHaveCount(1);
+ await page.mouse.move(0,0);
+ await page.screenshot({path:'test-results/workload-fixed-settings.png',fullPage:true,animations:'disabled'});
+ await flow.getByRole('button',{name:'Next',exact:true}).click();
+ for(const name of ['Lion','Wolf']) {
+   await flow.getByRole('button',{name,exact:true}).click();
+   await expect(flow.locator('[data-task-id="b"] time')).toHaveAttribute('datetime',/T00:00:00/);
+ }
+ const fixedCard=flow.locator('.tb-schedule-slot:has([data-task-id="b"])');
+ await expect(fixedCard).toHaveClass(/is-fixed/);
+ await expect(fixedCard.locator('.schedule-drag-handle')).toHaveCount(0);
+ await flow.getByRole('button',{name:'Edit schedule order',exact:true}).click();
+ await expect(flow.getByRole('button',{name:'Move Build feature down',exact:true})).toBeDisabled();
+ await flow.getByRole('button',{name:'Edit schedule order',exact:true}).click();
+ await flow.getByRole('button',{name:'Back',exact:true}).click();
+ await expect(flow.getByLabel('Fixed time for Build feature',{exact:true})).toHaveValue('10:00');
+ await flow.locator('.tb-workload-row').filter({hasText:'Build feature'}).locator('.plan-task-settings').hover();
+ await flow.getByLabel('Fixed Time Slot for Build feature',{exact:true}).click();
+ await expect(flow.getByLabel('Fixed time for Build feature',{exact:true})).toHaveCount(0);
+ await flow.getByRole('button',{name:'+ Add break',exact:true}).click();
+ await flow.locator('.tb-workload-row').last().locator('.plan-task-settings').hover();
+ await flow.getByLabel('Remove Short break',{exact:true}).click();
+ await expect(flow.locator('.tb-workload-row')).toHaveCount(3);
  await page.screenshot({path:'test-results/timeblock-workload.png',fullPage:true,animations:'disabled'});
  await page.setViewportSize({width:390,height:844});
  assert.equal(await flow.evaluate(el=>el.scrollWidth<=el.clientWidth),true,'Workload has no horizontal overflow');
@@ -119,6 +158,25 @@ try {
  assert.notDeepEqual(lion,wolf,'Wolf must change placement');
  await flow.getByRole('button',{name:'Bear',exact:true}).click(); const bear=await readBlocks();
  assert.notDeepEqual(wolf,bear,'Bear must change placement');
+ // Whole-card pointer drag works before opening keyboard controls and retains DOM nodes.
+ const cards=flow.locator('.tb-schedule-slot');
+ const firstId=await cards.first().getAttribute('data-motion-id');
+ await cards.first().evaluate(el=>el.dataset.retained='yes');
+ await cards.first().hover();
+ await expect(cards.first().locator('.schedule-drag-handle')).toHaveCSS('width','18px');
+ await expect(cards.first().locator('.live-timer-block')).toHaveCSS('scale',/^1\.0181[23]$/);
+ await page.screenshot({path:'test-results/schedule-hover.png',fullPage:true});
+ const source=await cards.first().boundingBox(), target=await cards.nth(1).boundingBox();
+ await page.mouse.move(source.x+source.width/2,source.y+source.height/2);
+ await page.mouse.down();
+ await page.mouse.move(target.x+target.width/2,target.y+target.height*.8,{steps:12});
+ await expect(flow.locator('.schedule-dragging')).toHaveCount(1);
+ await page.screenshot({path:'test-results/schedule-dragging.png',fullPage:true});
+ await page.mouse.up();
+ assert.notDeepEqual(await readBlocks(),bear,'Full card pointer drag changes ordering');
+ await expect(flow.locator(`[data-motion-id="${firstId}"]`)).toHaveAttribute('data-retained','yes');
+ await flow.getByRole('button',{name:'Regenerate schedule',exact:true}).click();
+ assert.deepEqual(await readBlocks(),bear);
  await flow.getByRole('button',{name:'Edit schedule order',exact:true}).click();
  await flow.getByRole('button',{name:'Move Build feature down',exact:true}).click();
  assert.notDeepEqual(await readBlocks(),bear,'Schedule supports manual reorder');
@@ -157,6 +215,36 @@ try {
  assert.equal(original.energyRequired,5,'Assessment does not change universal task energy');
  assert.equal(original.durationMinutes,60,'Assessment does not change universal task estimate');
  assert.ok(saved.spaces.some(s=>s.tasks.some(t=>t.name==='Acceptance new task')),'Created task saved to ordinary task store');
+ assert.equal(saved.runs.length,1);
+ const runId=saved.liveTimer.runId;
+ assert.equal(saved.runs[0].id,runId);
+ assert.deepEqual(saved.runs[0].initialPlan.blocks,saved.timeblocks[0].schedule);
+ const live=page.getByRole('dialog',{name:'Live timer',exact:true});
+ await page.screenshot({path:'test-results/live-energy-window.png',fullPage:true,animations:'disabled'});
+ await live.locator('[data-task-id="b"]').evaluate(el=>el.dataset.retained='yes');
+ await live.getByRole('button',{name:'Edit',exact:true}).click();
+ await expect(range.getByLabel('Edit Start time',{exact:true})).toBeDisabled();
+ await range.getByLabel('Edit End time',{exact:true}).click();
+ await range.getByLabel('Select hour 7',{exact:true}).click();
+ await range.getByLabel('Select minutes 00',{exact:true}).click();
+ await range.getByRole('button',{name:'PM',exact:true}).click();
+ await page.screenshot({path:'test-results/live-window-editor.png',fullPage:true,animations:'disabled'});
+ await range.getByRole('button',{name:'Apply time window',exact:true}).click();
+ await expect(range).toHaveCount(0);
+ await expect.poll(()=>docs.get('rhythm').payload.liveTimer.endsAt).toMatch(/T09:00:00/);
+ await expect(live.locator('[data-task-id="b"]').first()).toHaveAttribute('data-retained','yes');
+ await expect(live.locator('[data-task-id="b"]').first()).toHaveAttribute('aria-current','step');
+ const changed=docs.get('rhythm').payload;
+ assert.equal(changed.liveTimer.runId,runId);
+ assert.equal(changed.liveTimer.blocks.find(b=>b.taskId==='b').start,saved.liveTimer.blocks.find(b=>b.taskId==='b').start);
+ await page.screenshot({path:'test-results/live-window-updated.png',fullPage:true,animations:'disabled'});
+ assert.equal(changed.runs[0].events.at(-1).reason,'time-window-change');
+ assert.deepEqual(changed.runs[0].initialPlan,saved.runs[0].initialPlan);
+ await live.getByRole('button',{name:'Edit',exact:true}).click();
+ await range.getByRole('button',{name:'Cancel',exact:true}).click();
+ await expect(live).toBeVisible();
+ await page.reload();
+ await expect(page.getByRole('button',{name:/Open live timer/})).toBeVisible();
  assert.deepEqual(errors,[]);
  console.log('PASS: three-stage flow, persistence, keyboard, capacity, chronotypes, mobile, ICS and exact Live Timer handoff.');
 } catch(error) { const page=context.pages()[0]; if(page) { await page.screenshot({path:'test-results/timeblock-failure.png',fullPage:true,animations:'disabled'}); console.log(await page.locator('body').innerText()); } throw error; } finally {await browser.close();}

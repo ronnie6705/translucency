@@ -2724,25 +2724,10 @@
   border: 1px solid transparent;
 }
 
-.rhythm-module .adjust-task-card.energy-level-1 {
-  background: linear-gradient(180deg, #685BE3 0%, #39327D 100%);
-}
 
-.rhythm-module .adjust-task-card.energy-level-2 {
-  background: linear-gradient(180deg, #3B2BDD 0%, #201777 100%);
-}
 
-.rhythm-module .adjust-task-card.energy-level-3 {
-  background: linear-gradient(180deg, #291AB0 0%, #201777 100%);
-}
 
-.rhythm-module .adjust-task-card.energy-level-4 {
-  background: linear-gradient(180deg, #292074 0%, #201777 100%);
-}
 
-.rhythm-module .adjust-task-card.energy-level-5 {
-  background: linear-gradient(180deg, #282169 0%, #0C083A 100%);
-}
 
 .rhythm-module .adjust-task-card.break-card {
   background: linear-gradient(180deg, #9dffd8 0%, #08bd75 100%);
@@ -3279,25 +3264,10 @@
   flex: 0 0 auto;
 }
 
-.rhythm-module .calendar-block.energy-level-1 {
-  background: linear-gradient(180deg, #685BE3 0%, #39327D 100%);
-}
 
-.rhythm-module .calendar-block.energy-level-2 {
-  background: linear-gradient(180deg, #3B2BDD 0%, #201777 100%);
-}
 
-.rhythm-module .calendar-block.energy-level-3 {
-  background: linear-gradient(180deg, #291AB0 0%, #201777 100%);
-}
 
-.rhythm-module .calendar-block.energy-level-4 {
-  background: linear-gradient(180deg, #292074 0%, #201777 100%);
-}
 
-.rhythm-module .calendar-block.energy-level-5 {
-  background: linear-gradient(180deg, #282169 0%, #0C083A 100%);
-}
 
 .rhythm-module .calendar-block.readonly {
   cursor: default;

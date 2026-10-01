@@ -4,6 +4,7 @@ import { clockTimeToString, clockTimeToMinutes, rangeArc, parseClockTime, TIME_R
 import { TIME_ZONE_OPTIONS } from '../utils/timezone';
 
 interface Props {
+  lockStart?: boolean;
   startTime: string;
   endTime: string;
   timeZone: string;
@@ -11,8 +12,8 @@ interface Props {
   onRangeChange(start: string, end: string): void;
   onTimeZoneChange(zone: string): void;
 }
-export function PlanTimeRange({ startTime, endTime, timeZone, validRange, onRangeChange, onTimeZoneChange }: Props) {
-  const [activeField, setActiveField] = useState<ActiveTimeField>('start');
+export function PlanTimeRange({ lockStart = false, startTime, endTime, timeZone, validRange, onRangeChange, onTimeZoneChange }: Props) {
+  const [activeField, setActiveField] = useState<ActiveTimeField>(lockStart ? 'end' : 'start');
   const [mode, setMode] = useState<ClockSelectionMode>('hour');
   const [complete, setComplete] = useState(validRange);
   const [rangeEstablished, setRangeEstablished] = useState(validRange);
@@ -42,13 +43,13 @@ export function PlanTimeRange({ startTime, endTime, timeZone, validRange, onRang
   }
   return <section className="plan-time-section" aria-labelledby="plan-time-title">
     <h4 id="plan-time-title">Time Range</h4>
-    <div className="plan-presets" role="group" aria-label="Time range presets">
+    {!lockStart && <div className="plan-presets" role="group" aria-label="Time range presets">
       {TIME_RANGE_PRESETS.map(p => <button type="button" key={p.name} aria-pressed={preset === p.name} onClick={() => { setCustomSelected(false); setComplete(true); setRangeEstablished(true); setInteraction(value => value + 1); onRangeChange(p.start, p.end); }}>
         <span className="preset-icon"><img src={`/rhythm/planner/${p.icon}.svg`} alt="" /></span><span><strong>{p.name}</strong><small>{formatTime(p.start)} – {formatTime(p.end)}</small></span>
       </button>)}
       <button type="button" aria-pressed={preset === 'Custom'} onClick={() => { setCustomSelected(true); edit('start'); }}><span className="preset-icon"><img src="/rhythm/planner/Moon.svg" alt="" /></span><span><strong>Custom</strong><small>Set your own hours</small></span></button>
     </div>
-    <div className="plan-clock-editor">
+    }<div className="plan-clock-editor">
       <div className="radial-instructions" aria-live="polite" aria-atomic="true">
         {(['start', 'end'] as const).flatMap(field => (['hour', 'minute', 'complete'] as const).map(stage => {
           const visible = activeField === field && (showingRange ? stage === 'complete' : stage === mode);
@@ -78,7 +79,7 @@ export function PlanTimeRange({ startTime, endTime, timeZone, validRange, onRang
         {(['start', 'end'] as const).map((field, i) => <div className="plan-digital-pair" key={field}>
           {i === 1 && <img className="range-connector" src="/rhythm/planner/Frame278.svg" alt="" />}
           <div className={`plan-digital-field${activeField === field && !showingRange ? ' active' : ''}`}><span>{field}</span>
-            <button ref={element => { fields.current[field] = element; }} type="button" aria-label={`Edit ${field === 'start' ? 'Start' : 'End'} time`} aria-pressed={activeField === field && !showingRange} aria-describedby={!validRange ? 'plan-range-error' : undefined} data-time={field === 'start' ? startTime : endTime} onClick={() => edit(field)}>
+            <button ref={element => { fields.current[field] = element; }} type="button" disabled={lockStart && field === 'start'} aria-label={`Edit ${field === 'start' ? 'Start' : 'End'} time`} aria-pressed={activeField === field && !showingRange} aria-describedby={!validRange ? 'plan-range-error' : undefined} data-time={field === 'start' ? startTime : endTime} onClick={() => edit(field)}>
               {(field === 'start' ? start : end) ? <>{(field === 'start' ? start : end)!.hour}:{String((field === 'start' ? start : end)!.minute).padStart(2, '0')} <small>{(field === 'start' ? start : end)!.period}</small></> : <span className="plan-time-placeholder">Select time</span>}
             </button>
           </div>
@@ -89,7 +90,7 @@ export function PlanTimeRange({ startTime, endTime, timeZone, validRange, onRang
       </div>
       {!validRange && <p className="plan-error" id="plan-range-error" role="status">{start && end ? 'End must be later than Start on the same day.' : 'Choose a Start and End time to continue.'}</p>}
     </div>
-    <div className="time-zone-selector full"><label><span>Time Zone</span><select aria-label="Time Zone" value={timeZone} onChange={event => onTimeZoneChange(event.target.value)}>{TIME_ZONE_OPTIONS.map(zone => <option key={zone.label} value={zone.value}>{zone.label}</option>)}</select></label></div>
+    <div className="time-zone-selector full"><label><span>Time Zone</span><select disabled={lockStart} aria-label="Time Zone" value={timeZone} onChange={event => onTimeZoneChange(event.target.value)}>{TIME_ZONE_OPTIONS.map(zone => <option key={zone.label} value={zone.value}>{zone.label}</option>)}</select></label></div>
   </section>;
 }
 function formatTime(value: string) {

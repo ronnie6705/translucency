@@ -1,3 +1,4 @@
+import { taskEnergyStyle } from '../task-energy';
 import { TaskListBadge } from "./TaskListBadge";
 import React, { useEffect, useMemo, useState } from 'react';
 import type { Chronotype, Task } from '../types';
@@ -635,7 +636,7 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
                       (draggingId === task.id ? ' dragging' : '') +
                       (dropTargetId === task.id ? ' drop-target' : '')
                     }
-                    style={{ height: `${height}px` }}
+                    style={{ ...taskEnergyStyle(task.energyRequired, task.isBreak), height: `${height}px` }}
                     draggable
                     onDragStart={event => handleDragStartBlock(event, task.id)}
                     onDragEnd={handleDragEndBlock}

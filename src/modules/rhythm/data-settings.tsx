@@ -14,7 +14,7 @@ export function RhythmDataSettings() {
     <p>For another browser or address, import a Rhythm JSON backup. Imports keep existing records with the same ID. When signed in, imported records are uploaded to your account.</p>
     {(library.error || message) && <p role={library.error ? 'alert' : 'status'}>{library.error || message}</p>}
     <div className="settings-actions"><button className="button secondary" disabled={!library.ready || busy} onClick={() => {
-      const blob = new Blob([JSON.stringify({version:1,spaces:library.spaces,taskLists:library.taskLists,timeblocks:library.timeblocks},null,2)],{type:'application/json'});
+      const blob = new Blob([JSON.stringify({version:1,spaces:library.spaces,taskLists:library.taskLists,timeblocks:library.timeblocks,liveTimer:library.liveTimer,runs:library.runs},null,2)],{type:'application/json'});
       const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='rhythm-backup.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
     }}>Export Rhythm data</button></div>
     <label>Import Rhythm backup<input type="file" accept=".json,application/json" disabled={!library.ready || busy} onChange={async e => {
@@ -23,7 +23,7 @@ export function RhythmDataSettings() {
       catch (error) { setMessage(error instanceof Error ? error.message : 'Could not import this backup.'); }
       finally { setBusy(false); e.target.value=''; }
     }} /></label>
-    <details className="delete-controls"><summary>Delete Rhythm planning data</summary><p>This removes saved Rhythm lists and timeblocks from the active workspace. When signed in, this deletion syncs to your account and other devices. Export a backup first to keep a copy. Your Translucency reflections remain available.</p>
+    <details className="delete-controls"><summary>Delete Rhythm planning data</summary><p>This removes saved Rhythm lists, timeblocks, and execution history from the active workspace. When signed in, this deletion syncs to your account and other devices. Export a backup first to keep a copy. Your Translucency reflections remain available.</p>
       <label>Type RHYTHM to confirm<input value={confirm} onChange={e => setConfirm(e.target.value)} /></label>
       <button className="button secondary" disabled={confirm !== 'RHYTHM' || busy || !library.ready} onClick={async () => { setBusy(true); if (await library.save(emptyLibrary)) { try { if (!activeAccount()) { localStorage.removeItem('rhythm:saved-task-lists'); localStorage.removeItem('rhythm:saved-timeblocks'); } } catch { /* IndexedDB deletion succeeded */ } setConfirm(''); setMessage('Rhythm planning data deleted from this workspace. Check account sync status if signed in.'); } setBusy(false); }}>Delete Rhythm data</button>
     </details>

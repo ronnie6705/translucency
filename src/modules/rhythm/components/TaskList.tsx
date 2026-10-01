@@ -1,3 +1,4 @@
+import { taskEnergyStyle } from '../task-energy';
 // src/components/TaskList.tsx
 import { TaskListBadge } from "./TaskListBadge";
 import React from 'react';
@@ -25,8 +26,8 @@ export const TaskList: React.FC<Props> = ({ tasks, onRemove }) => {
         {tasks.map(t => (
           <li key={t.id} className="task-list-item">
             <div>
-              <strong>{t.name}<TaskListBadge taskId={t.id} /></strong> · {t.durationMinutes} mins · Energy{' '}
-              {t.energyRequired}/5
+              <strong>{t.name}<TaskListBadge taskId={t.id} /></strong> · {t.durationMinutes} mins
+              {!t.isBreak && <span className="task-energy-value" style={taskEnergyStyle(t.energyRequired)}> · Energy {t.energyRequired}/5</span>}
               {t.isBreak && <span> · Break</span>}
               {t.fixedStart && <span> · Fixed at {t.fixedStart}</span>}
             </div>

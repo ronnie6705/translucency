@@ -1,3 +1,9 @@
+import { TimeWindowEditor } from './TimeWindowEditor';
+import { TimeWindowCard } from './TimeblockWorkload';
+import { adjustTimerTimeWindow } from '../update-live-time-window';
+import { createDateInTimeZone, formatISOToTimeZone } from '../utils/timezone';
+import type { DayConfig } from '../types';
+import { taskEnergyStyle } from '../task-energy';
 import { TaskListBadge } from "./TaskListBadge";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { completeTimerTask, formatDurationHM, timerBlockHeight, timerPosition, type LiveTimer as Timer, type TimerTaskOutcome } from '../live-timer';
@@ -38,8 +44,9 @@ type BlockFrame = { top: number; height: number };
 type TimelineAnchor = { at: number; line: number; activeId?: string; elapsed: number; frames: Record<string, BlockFrame>; schedule: string };
 const scheduleKey = (timer: Timer) => JSON.stringify(timer.blocks.map(b => [b.id, b.start, b.end]));
 
-export function TimerBlock({ block, state, timezone, height, metadata, pending, onRetain, onReflow, onComplete, before = 0, exitTop, isNewlyAdded, isDraggable, isDragging, dragOverPosition, onDragStart }: {
+export function TimerBlock({ block, state, timezone, height, metadata, scheduleDraggable, pending, onRetain, onReflow, onComplete, before = 0, exitTop, isNewlyAdded, isDraggable, isDragging, dragOverPosition, onDragStart }: {
   block: ScheduleBlock; state: string; timezone: string; height: number; metadata?: ReactNode; pending?: TimerTaskOutcome;
+  scheduleDraggable?: boolean;
   before?: number; exitTop?: number; isNewlyAdded?: boolean;
   isDraggable?: boolean; isDragging?: boolean; dragOverPosition?: 'above' | 'below' | null;
   onDragStart?: (e: React.PointerEvent) => void;
@@ -81,8 +88,9 @@ export function TimerBlock({ block, state, timezone, height, metadata, pending, 
   return <div className="task-clear-slot live-timer-slot" ref={clear.slot} style={exitTop === undefined ? { marginTop: before } : { position: 'absolute', top: exitTop, width: '100%' }}>
     <div ref={card} data-block-id={block.id} data-task-id={block.taskId} data-outcome={clear.active ? outcome.current : undefined}
       className={`live-timer-block ${state}${block.isBreak ? ' is-break' : ''}${isNewlyAdded ? ' is-newly-added' : ''}${isDraggable ? ' is-draggable' : ''}${dragClass}`}
-      style={{ minHeight: height }} aria-current={state === 'active' ? 'step' : undefined}
+      style={{ ...taskEnergyStyle(block.energyRequired, block.isBreak), minHeight: height }} aria-current={state === 'active' ? 'step' : undefined}
       onPointerDown={isDraggable ? handlePointerDown : undefined}>
+      {scheduleDraggable && <span className="schedule-drag-handle" aria-hidden="true"><img src="/rhythm/flow/schedule-drag.svg" alt="" draggable={false} /></span>}
       <div className="live-timer-task-icon">{clear.active ? <TimerIcon name={outcome.current === 'completed' ? 'check' : 'cross'} /> : <TimerIcon name={block.isBreak ? 'break' : 'task'} />}</div>
       <div className="live-timer-copy"><time dateTime={block.start}>{timeLabel(block.start, timezone)}</time>
         <div className="live-timer-task-heading"><h3>{block.taskName}{metadata ?? <TaskListBadge taskId={block.taskId} />}</h3>
@@ -96,7 +104,7 @@ export function TimerBlock({ block, state, timezone, height, metadata, pending, 
               onClick={() => { if (!pending) run(value); }}><TimerIcon name={value === 'completed' ? 'check' : 'cross'} /></button>)}
           </div>}
         </div>
-      <div className="live-timer-badges"><span><TimerIcon name="clock" />{durationLabel(Date.parse(block.end) - Date.parse(block.start))}</span>{!block.isBreak && <span><TimerIcon name="energy" />{block.energyRequired}</span>}</div>
+      <div className="live-timer-badges"><span><TimerIcon name="clock" />{durationLabel(Date.parse(block.end) - Date.parse(block.start))}</span>{!block.isBreak && <span><TimerIcon name="energy" />{block.energyRequired ?? '—'}</span>}</div>
       </div>
     </div>
   </div>;
@@ -106,7 +114,9 @@ function LiveTimerPanel({
   timer,
   now,
   onInsertItem,
+  onEditTime,
 }: {
+  onEditTime?: () => void;
   timer: Timer;
   now: number;
   onInsertItem: (params: InsertItemParams) => void;
@@ -225,7 +235,7 @@ function LiveTimerPanel({
                 {!activeBlock.isBreak && (
                   <div className="live-timer-badge">
                     <TimerIcon name="energy" />
-                    <span>{activeBlock.energyRequired}</span>
+                    <span>{activeBlock.energyRequired ?? '—'}</span>
                   </div>
                 )}
               </div>
@@ -248,7 +258,7 @@ function LiveTimerPanel({
                 {!upcomingBlock.isBreak && (
                   <div className="live-timer-badge">
                     <TimerIcon name="energy" />
-                    <span>{upcomingBlock.energyRequired}</span>
+                    <span>{upcomingBlock.energyRequired ?? '—'}</span>
                   </div>
                 )}
               </div>
@@ -421,6 +431,7 @@ function LiveTimerPanel({
           </div>
         </div>
       </form>
+      {onEditTime && <TimeWindowCard compact icon="window-time" description="Edit your time range if you wish" start={timerClock(timer.startedAt ?? timer.blocks[0].start, timer.timezone)} end={timerClock(timer.endsAt ?? timer.blocks.at(-1)!.end,timer.timezone)} available={remainingMs / 60000} onEdit={onEditTime} />}
     </aside>
   );
 }
@@ -696,7 +707,7 @@ export function TimerCard({
       {visibleBlocks.map((block, index) => {
         const state = now >= Date.parse(block.end) ? 'past' : timer.blocks[activeIndex]?.id === block.id ? 'active' : 'upcoming';
         const exiting = !layout[block.id] && pending.get(block.taskId)?.reflow;
-        const isDraggable = (phase === 'scheduled' || index >= minMovableIndex) && !pending.size && phase !== 'complete';
+        const isDraggable = !!onReorder && (phase === 'scheduled' || index >= minMovableIndex) && !pending.size && phase !== 'complete';
         const isDragging = dragState?.draggingId === block.id;
         const dragOverPosition = dragState && dragState.hoverIndex === index && !isDragging
           ? (dragState.fromIndex < index ? 'below' : 'above')
@@ -727,7 +738,8 @@ export function TimeblockSchedule({
   onClick?: () => void;
   className?: string;
 }) {
-  const now = useClock();
+  // Freeze historical previews before their first block, preserving original timestamps.
+  const now = Date.parse(timer.blocks[0]?.start ?? timer.startedAt ?? '') - 1;
   return (
     <div className={`timeblock-schedule-wrapper ${className}`}>
       <TimerCard
@@ -758,12 +770,14 @@ export function LiveTimerModal({
   onComplete,
   onInsertItem,
   onReorderBlocks,
+  onTimeWindowChange,
   error,
 }: {
   timer: Timer;
   onClose: () => void;
   onComplete: CompleteTask;
   onInsertItem?: (params: InsertItemParams, now: number) => Promise<boolean>;
+  onTimeWindowChange?: (newEndTime: string, now: number) => Promise<boolean>;
   onReorderBlocks?: (fromIndex: number, toIndex: number, now: number) => Promise<boolean>;
   error?: string;
 }) {
@@ -778,8 +792,11 @@ export function LiveTimerModal({
   }, [timer]);
 
   const currentTimer = localTimer ?? timer;
+  const [editingTime, setEditingTime] = useState(false);
+  const windowConfig = timerWindowConfig(currentTimer);
 
   const handleInsert = async (params: InsertItemParams) => {
+    params = {...params, blockId:crypto.randomUUID()};
     // 1. Anchor current visual state and marker line before modifying schedule
     captureAnchorRef.current?.();
 
@@ -861,6 +878,7 @@ export function LiveTimerModal({
             timer={currentTimer}
             now={now}
             onInsertItem={handleInsert}
+            onEditTime={onTimeWindowChange ? () => setEditingTime(true) : undefined}
           />
           <main className="live-timer-main">
             <TimerCard
@@ -878,6 +896,26 @@ export function LiveTimerModal({
           </main>
         </div>
       </div>
+      {editingTime && onTimeWindowChange && <TimeWindowEditor config={windowConfig} lockStart onClose={() => setEditingTime(false)} validate={draft => {
+        try { adjustTimerTimeWindow(currentTimer,createDateInTimeZone(draft.date,draft.endTime,draft.timezone).toISOString(),now); return undefined; }
+        catch (error) { return error instanceof Error ? error.message : 'Choose a valid end time.'; }
+      }} onChange={async draft => {
+        const at = Date.now();
+        const end = createDateInTimeZone(draft.date,draft.endTime,draft.timezone).toISOString();
+        adjustTimerTimeWindow(currentTimer,end,at);
+        captureAnchorRef.current?.();
+        return onTimeWindowChange(end,at);
+      }} />}
     </dialog>
   );
+}
+
+function timerClock(iso: string, timezone: string) {
+  const value = formatISOToTimeZone(iso,timezone);
+  return `${value.slice(9,11)}:${value.slice(11,13)}`;
+}
+function timerWindowConfig(timer: Timer): DayConfig {
+  const start = timer.startedAt ?? timer.blocks[0].start;
+  const date = formatISOToTimeZone(start,timer.timezone).slice(0,8);
+  return {date:`${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}`,startTime:timerClock(start,timer.timezone),endTime:timerClock(timer.endsAt ?? timer.blocks.at(-1)!.end,timer.timezone),timezone:timer.timezone,chronotype:'Bear'};
 }

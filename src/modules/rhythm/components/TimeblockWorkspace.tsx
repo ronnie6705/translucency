@@ -89,7 +89,7 @@ export function TimeblockWorkspace({
     if (
       liveTimer &&
       !timeblocks.some(
-        (tb) => tb.id === liveTimer.id || tb.name === liveTimer.name
+        (tb) => tb.id === liveTimer.id
       )
     ) {
       const now = new Date();
@@ -109,6 +109,7 @@ export function TimeblockWorkspace({
           timezone: liveTimer.timezone,
           chronotype: 'Lion',
         },
+        schedule: liveTimer.blocks,
         tasks: liveTimer.blocks
           .filter((b) => !b.isBreak)
           .map((b) => ({
@@ -185,7 +186,7 @@ export function TimeblockWorkspace({
         {allTimeblocks.map((tb) => {
           const isLive =
             liveTimer != null &&
-            (liveTimer.id === tb.id || liveTimer.name === tb.name);
+            (liveTimer.id === tb.id);
           const isExpanded = expandedIds.has(tb.id);
 
           // Format metadata chips
@@ -213,49 +214,12 @@ export function TimeblockWorkspace({
             ? tb.tasks.filter((t) => t.name.toLowerCase().includes(cleanQuery))
             : tb.tasks;
 
-          // Prepare Schedule timer object
-          let scheduleTimer: LiveTimer;
-          if (isLive && liveTimer) {
-            scheduleTimer = liveTimer;
-          } else {
-            const rawBlocks = buildManualSchedule(tb.tasks, tb.dayConfig);
-            const now = Date.now();
-            // If the timeblock is not running, ensure it renders in 'scheduled' phase without silently starting
-            let blocks = rawBlocks;
-            if (rawBlocks.length > 0) {
-              const firstStart = Date.parse(rawBlocks[0].start);
-              if (firstStart <= now) {
-                // Shift timestamps into future relative to now
-                const delta = now + 5 * 60 * 1000 - firstStart;
-                blocks = rawBlocks.map((b) => ({
-                  ...b,
-                  start: new Date(Date.parse(b.start) + delta).toISOString(),
-                  end: new Date(Date.parse(b.end) + delta).toISOString(),
-                }));
-              }
-            }
-
-            scheduleTimer = {
-              id: tb.id,
-              name: tb.name,
-              timezone: tb.dayConfig.timezone,
-              blocks,
-              startedAt:
-                blocks[0]?.start ??
-                createDateInTimeZone(
-                  tb.dayConfig.date,
-                  tb.dayConfig.startTime || '09:00',
-                  tb.dayConfig.timezone
-                ).toISOString(),
-              endsAt:
-                blocks[blocks.length - 1]?.end ??
-                createDateInTimeZone(
-                  tb.dayConfig.date,
-                  tb.dayConfig.endTime || '17:00',
-                  tb.dayConfig.timezone
-                ).toISOString(),
-            };
-          }
+          // Historical preview belongs exclusively to this saved plan.
+          const blocks = tb.schedule ?? buildManualSchedule(tb.tasks, tb.dayConfig);
+          const scheduleTimer: LiveTimer = {
+            id: tb.id, name: tb.name, timezone: tb.dayConfig.timezone, blocks,
+            startedAt: blocks[0]?.start, endsAt: blocks.at(-1)?.end,
+          };
 
           return (
             <article

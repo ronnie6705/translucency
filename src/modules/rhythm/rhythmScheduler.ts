@@ -1,17 +1,9 @@
+import { energyAtDate, getChronotypeCurve, validateEnergyCurve, type EnergyCurve, type EnergyLevel } from './energy-curve';
 // src/rhythmScheduler.ts
-import type { DayConfig, Task, ScheduleBlock, Chronotype } from './types';
+import type { DayConfig, Task, ScheduleBlock } from './types';
 import {
   createDateInTimeZone,
-  getMinutesOfDayInTimeZone,
 } from './utils/timezone';
-
-type EnergyLevel = Task['energyRequired'];
-
-type EnergyBand = {
-  startMinutes: number;
-  endMinutes: number;
-  level: EnergyLevel;
-};
 
 type TimeWindow = { start: Date; end: Date };
 
@@ -22,106 +14,8 @@ function addMinutes(date: Date, minutes: number): Date {
   return new Date(date.getTime() + minutes * 60_000);
 }
 
-const toMinutes = (hour: number, minute = 0) => hour * 60 + minute;
-
-const LION_CURVE: EnergyBand[] = [
-  { startMinutes: toMinutes(0), endMinutes: toMinutes(3), level: 1 }, // deep sleep
-  { startMinutes: toMinutes(3), endMinutes: toMinutes(5), level: 1 }, // pre-dawn low
-  { startMinutes: toMinutes(5), endMinutes: toMinutes(6, 30), level: 2 }, // wake-up ramp
-  { startMinutes: toMinutes(6, 30), endMinutes: toMinutes(8), level: 3 }, // planning & routines
-  { startMinutes: toMinutes(8), endMinutes: toMinutes(10, 30), level: 5 }, // peak focus / interviews
-  { startMinutes: toMinutes(10, 30), endMinutes: toMinutes(12), level: 4 }, // problem-solving
-  { startMinutes: toMinutes(12), endMinutes: toMinutes(14), level: 3 }, // late-morning taper
-  { startMinutes: toMinutes(14), endMinutes: toMinutes(15), level: 2 }, // nap window
-  { startMinutes: toMinutes(15), endMinutes: toMinutes(16, 30), level: 3 }, // strength work rebound
-  { startMinutes: toMinutes(16, 30), endMinutes: toMinutes(18, 30), level: 2 }, // afternoon decline
-  { startMinutes: toMinutes(18, 30), endMinutes: toMinutes(21), level: 2 }, // run / dinner glide
-  { startMinutes: toMinutes(21), endMinutes: toMinutes(24), level: 1 }, // wind-down & sleep
-];
-
-const BEAR_CURVE: EnergyBand[] = [
-  { startMinutes: toMinutes(0), endMinutes: toMinutes(5), level: 1 },
-  { startMinutes: toMinutes(5), endMinutes: toMinutes(7), level: 2 },
-  { startMinutes: toMinutes(7), endMinutes: toMinutes(9), level: 3 },
-  { startMinutes: toMinutes(9), endMinutes: toMinutes(12), level: 5 },
-  { startMinutes: toMinutes(12), endMinutes: toMinutes(13), level: 3 },
-  { startMinutes: toMinutes(13), endMinutes: toMinutes(15), level: 2 },
-  { startMinutes: toMinutes(15), endMinutes: toMinutes(18), level: 4 },
-  { startMinutes: toMinutes(18), endMinutes: toMinutes(20), level: 3 },
-  { startMinutes: toMinutes(20), endMinutes: toMinutes(22), level: 2 },
-  { startMinutes: toMinutes(22), endMinutes: toMinutes(24), level: 1 },
-];
-
-const WOLF_CURVE: EnergyBand[] = [
-  { startMinutes: toMinutes(0), endMinutes: toMinutes(3), level: 3 },
-  { startMinutes: toMinutes(3), endMinutes: toMinutes(6), level: 2 },
-  { startMinutes: toMinutes(6), endMinutes: toMinutes(10), level: 1 },
-  { startMinutes: toMinutes(10), endMinutes: toMinutes(13), level: 2 },
-  { startMinutes: toMinutes(13), endMinutes: toMinutes(16), level: 3 },
-  { startMinutes: toMinutes(16), endMinutes: toMinutes(19), level: 5 },
-  { startMinutes: toMinutes(19), endMinutes: toMinutes(21), level: 4 },
-  { startMinutes: toMinutes(21), endMinutes: toMinutes(23), level: 3 },
-  { startMinutes: toMinutes(23), endMinutes: toMinutes(24), level: 2 },
-];
-
-const DOLPHIN_CURVE: EnergyBand[] = [
-  { startMinutes: toMinutes(0), endMinutes: toMinutes(6), level: 1 },
-  { startMinutes: toMinutes(6), endMinutes: toMinutes(8), level: 2 },
-  { startMinutes: toMinutes(8), endMinutes: toMinutes(10), level: 3 },
-  { startMinutes: toMinutes(10), endMinutes: toMinutes(13), level: 5 },
-  { startMinutes: toMinutes(13), endMinutes: toMinutes(15), level: 3 },
-  { startMinutes: toMinutes(15), endMinutes: toMinutes(17), level: 2 },
-  { startMinutes: toMinutes(17), endMinutes: toMinutes(19), level: 4 },
-  { startMinutes: toMinutes(19), endMinutes: toMinutes(21), level: 3 },
-  { startMinutes: toMinutes(21), endMinutes: toMinutes(24), level: 1 },
-];
-
-const DEFAULT_CURVE: EnergyBand[] = [
-  { startMinutes: toMinutes(0), endMinutes: toMinutes(6), level: 1 },
-  { startMinutes: toMinutes(6), endMinutes: toMinutes(9), level: 3 },
-  { startMinutes: toMinutes(9), endMinutes: toMinutes(12), level: 4 },
-  { startMinutes: toMinutes(12), endMinutes: toMinutes(15), level: 3 },
-  { startMinutes: toMinutes(15), endMinutes: toMinutes(18), level: 2 },
-  { startMinutes: toMinutes(18), endMinutes: toMinutes(21), level: 2 },
-  { startMinutes: toMinutes(21), endMinutes: toMinutes(24), level: 1 },
-];
-
-const ENERGY_CURVES: Record<Chronotype, EnergyBand[]> = {
-  Lion: LION_CURVE,
-  Bear: BEAR_CURVE,
-  Wolf: WOLF_CURVE,
-  Dolphin: DOLPHIN_CURVE,
-};
-
 function minutesBetween(start: Date, end: Date): number {
   return (end.getTime() - start.getTime()) / 60_000;
-}
-
-function isMinuteWithinBand(value: number, band: EnergyBand): boolean {
-  if (band.startMinutes <= band.endMinutes) {
-    return value >= band.startMinutes && value < band.endMinutes;
-  }
-  // Wrap-around band
-  return value >= band.startMinutes || value < band.endMinutes;
-}
-
-function getEnergyCurve(chronotype: Chronotype): EnergyBand[] {
-  return ENERGY_CURVES[chronotype] ?? DEFAULT_CURVE;
-}
-
-function getEnergyLevelAt(
-  chronotype: Chronotype,
-  date: Date,
-  timeZone: string
-): EnergyLevel {
-  const minutesOfDay = getMinutesOfDayInTimeZone(date, timeZone);
-  const curve = getEnergyCurve(chronotype);
-  for (const band of curve) {
-    if (isMinuteWithinBand(minutesOfDay, band)) {
-      return band.level;
-    }
-  }
-  return 3;
 }
 
 function hasEnergyCoverage(
@@ -129,14 +23,14 @@ function hasEnergyCoverage(
   durationMinutes: number,
   requirement: EnergyLevel,
   tolerance: number,
-  chronotype: Chronotype,
+  curve: EnergyCurve,
   timeZone: string
 ): boolean {
   let evaluated = 0;
   let cursor = new Date(start);
 
   while (evaluated < durationMinutes) {
-    const available = getEnergyLevelAt(chronotype, cursor, timeZone);
+    const available = energyAtDate(curve, cursor, timeZone);
     if (available + tolerance < requirement) {
       return false;
     }
@@ -154,7 +48,7 @@ function hasEnergyCoverage(
 function findStartInWindow(
   window: TimeWindow,
   task: Task,
-  chronotype: Chronotype,
+  curve: EnergyCurve,
   timeZone: string,
   tolerance: number
 ): Date | null {
@@ -175,7 +69,7 @@ function findStartInWindow(
         task.durationMinutes,
         task.energyRequired,
         tolerance,
-        chronotype,
+        curve,
         timeZone
       )
     ) {
@@ -190,7 +84,7 @@ function findStartInWindow(
       task.durationMinutes,
       task.energyRequired,
       tolerance,
-      chronotype,
+      curve,
       timeZone
     )
   ) {
@@ -244,7 +138,7 @@ function carveWindow(
 function scheduleTaskInWindows(
   task: Task,
   windows: TimeWindow[],
-  chronotype: Chronotype,
+  curve: EnergyCurve,
   timeZone: string
 ): { start: Date; end: Date } | null {
   for (const tolerance of ENERGY_TOLERANCE_STEPS) {
@@ -252,7 +146,7 @@ function scheduleTaskInWindows(
       const startMatch = findStartInWindow(
         windows[i],
         task,
-        chronotype,
+        curve,
         timeZone,
         tolerance
       );
@@ -267,9 +161,11 @@ function scheduleTaskInWindows(
 
 export function generateSchedule(
   tasks: Task[],
-  config: DayConfig
+  config: DayConfig,
+  energyCurve?: EnergyCurve
 ): ScheduleBlock[] {
   const { date, startTime, endTime, chronotype, timezone } = config;
+  const curve = energyCurve === undefined ? getChronotypeCurve(chronotype) : validateEnergyCurve(energyCurve);
   const dayStart = createDateInTimeZone(date, startTime, timezone);
   const dayEnd = createDateInTimeZone(date, endTime, timezone);
 
@@ -345,7 +241,7 @@ export function generateSchedule(
     const placement = scheduleTaskInWindows(
       task,
       freeWindows,
-      chronotype,
+      curve,
       timezone
     );
     if (!placement) continue;

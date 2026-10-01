@@ -28,7 +28,7 @@ export interface ScheduleBlock {
   start: string; // ISO datetime
   end: string;   // ISO datetime
   isBreak: boolean;
-  energyRequired: number;
+  energyRequired?: number; // Legacy schedules may have no energy; render neutrally.
 }
 
 export interface SavedTimeblock {

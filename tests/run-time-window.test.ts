@@ -1,0 +1,84 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { emptyLibrary, validateLibrary, mergeLibraries } from '../src/modules/rhythm/library';
+import { createTimeblockRun, launchTimeblockRun, createRunCommand } from '../src/modules/rhythm/timeblock-run';
+import { completeLiveTask } from '../src/modules/rhythm/complete-live-task';
+import { reorderLiveTimer, insertLiveTimerItem } from '../src/modules/rhythm/insert-live-task';
+import { adjustTimerTimeWindow, updateLiveTimerTimeWindow } from '../src/modules/rhythm/update-live-time-window';
+import { validLiveTimer, timerPosition, type LiveTimer } from '../src/modules/rhythm/live-timer';
+const iso=(hour:number,minute=0)=>new Date(Date.UTC(2026,9,1,hour,minute)).toISOString();
+const block=(id:string,start:string,end:string,isBreak=false)=>({id,taskId:id,taskName:id,start,end,isBreak,energyRequired:3});
+const timer:LiveTimer={id:'saved',name:'Plan',timezone:'UTC',startedAt:iso(9),endsAt:iso(12),blocks:[block('past',iso(9),iso(9,30)),block('active',iso(9,30),iso(10,30)),block('break',iso(10,30),iso(10,45),true),block('next',iso(10,45),iso(11,15)),block('last',iso(11,15),iso(12))]};
+const now=Date.parse(iso(10));
+const launched=()=>launchTimeblockRun(emptyLibrary(),structuredClone(timer),createTimeblockRun(timer,'Bear','saved'));
+test('unique executions and immutable launch snapshots with energy provenance',()=>{
+ const first=launched();const snapshot=structuredClone(first.runs![0]);
+ const second=launchTimeblockRun(first,timer,createTimeblockRun(timer,'Lion','saved'));
+ assert.notEqual(second.runs![0].id,second.runs![1].id);
+ assert.equal(second.runs![0].events[0].type,'session-ended');
+ assert.deepEqual(second.runs![0].initialPlan,snapshot.initialPlan);
+ assert.equal(second.runs![0].initialPlan.energy!.source.kind,'chronotype');
+});
+for (const end of [iso(12,30),iso(16),iso(11,30)]) test(`resize to ${end} preserves active identity, elapsed prefix, history and breaks`,()=>{
+ const data=launched(); const command=createRunCommand();
+ const result=updateLiveTimerTimeWindow({library:data,timerId:timer.id,newEndTime:end,now,command});
+ assert.equal(result.liveTimer!.endsAt,end);assert.equal(result.liveTimer!.startedAt,timer.startedAt);assert.equal(result.liveTimer!.runId,data.liveTimer!.runId);
+ assert.deepEqual(result.liveTimer!.blocks.find(b=>b.id==='past'),timer.blocks[0]);
+ assert.deepEqual(result.liveTimer!.blocks.find(b=>b.id==='break'),timer.blocks[2]);
+ assert.equal(result.liveTimer!.blocks.find(b=>b.id==='active')!.start,timer.blocks[1].start);
+ const active=timerPosition(result.liveTimer!.blocks,now);assert.equal(result.liveTimer!.blocks[active.activeIndex].taskId,'active');
+ assert.deepEqual([...new Set(result.liveTimer!.blocks.filter(b=>!b.isBreak).map(b=>b.taskId))],['past','active','next','last']);
+ assert.ok(validLiveTimer(result.liveTimer));assert.equal(result.runs![0].events[0].type,'schedule-changed');
+ assert.deepEqual(updateLiveTimerTimeWindow({library:result,timerId:timer.id,newEndTime:end,now,command}),result);
+ assert.deepEqual(validateLibrary(JSON.parse(JSON.stringify(result))),result);
+});
+test('reject impossible windows without silently dropping work',()=>{
+ for(const end of [iso(9),iso(10),iso(10,31),'bad']) assert.throws(()=>adjustTimerTimeWindow(timer,end,now));
+ const noBreak={...timer,blocks:timer.blocks.filter(b=>!b.isBreak)};
+ assert.throws(()=>adjustTimerTimeWindow(noBreak,iso(10,1),now),/one minute/);
+ assert.throws(()=>updateLiveTimerTimeWindow({library:launched(),timerId:'other',newEndTime:iso(13),now}),/changed/);
+});
+for(const outcome of ['completed','skipped'] as const) test(`${outcome} recorded before disappearance; outcomes survive resize`,()=>{
+ let data=launched();const initial=structuredClone(data.runs![0].initialPlan);
+ data=completeLiveTask(data,timer.id,'active',now,outcome);
+ assert.equal(data.runs![0].events[0].type,outcome==='completed'?'task-completed':'task-skipped');
+ assert.equal(data.runs![0].events[0].occurredAt,iso(10));
+ assert.equal(data.runs![0].events[1].type,'schedule-changed');
+ assert.equal(data.liveTimer!.blocks.some(b=>b.taskId==='active'),false);
+ const repeated=completeLiveTask(data,timer.id,'active',now,outcome);assert.deepEqual(data,repeated);
+ data=updateLiveTimerTimeWindow({library:data,timerId:timer.id,newEndTime:iso(13),now});
+ assert.deepEqual(data.runs![0].initialPlan,initial);
+ assert.equal(data.liveTimer!.blocks.some(b=>b.taskId==='active'),false);
+ assert.equal(JSON.stringify(data.runs).includes('actualStart'),false);
+});
+test('insert/reorder history is deduplicated; export/import/merge preserve runs; reset clears them',()=>{
+ let data=launched();const command=createRunCommand();
+ data=insertLiveTimerItem(data,timer.id,{title:'New',durationMinutes:15,isBreak:false,anchorId:'last',position:'after'},now,command);
+ const repeated=insertLiveTimerItem(data,timer.id,{title:'New',durationMinutes:15,isBreak:false,anchorId:'last',position:'after'},now,command);assert.deepEqual(repeated,data);
+ data=reorderLiveTimer(data,timer.id,3,4,now+1);
+ assert.deepEqual(data.runs![0].events.map(e=>e.type==='schedule-changed'?e.reason:e.type),['insert','reorder']);
+ const imported=validateLibrary(JSON.parse(JSON.stringify(data)));
+ assert.deepEqual(mergeLibraries(emptyLibrary(),imported).runs,data.runs);
+ assert.equal(mergeLibraries(imported,imported).runs!.length,1);
+ assert.equal(validateLibrary(emptyLibrary()).runs,undefined);
+ assert.throws(()=>validateLibrary({...data,runs:[{...data.runs![0],events:[{type:'task-started'}]}]}),/history/);
+});
+test('legacy energy-free blocks load neutrally; importing another history branch keeps events',()=>{
+ const legacy={...timer,blocks:timer.blocks.map(({energyRequired,...b})=>b)};
+ assert.ok(validateLibrary({...emptyLibrary(),liveTimer:legacy}));
+ const data=launched();
+ const one=updateLiveTimerTimeWindow({library:data,timerId:timer.id,newEndTime:iso(13),now,command:createRunCommand()});
+ const two=updateLiveTimerTimeWindow({library:data,timerId:timer.id,newEndTime:iso(14),now:now+1,command:createRunCommand()});
+ const merged=mergeLibraries(one,two);
+ assert.equal(merged.runs![0].events.length,2);
+ assert.deepEqual(merged.runs![0].events.map(e=>e.sequence),[1,2]);
+ assert.deepEqual(merged.runs![0].initialPlan,data.runs![0].initialPlan);
+});
+test('rebudgeting preserves an inserted task between split pieces of another task',()=>{
+ const split={...timer,blocks:[block('a',iso(9),iso(10,30)),block('inserted',iso(10,30),iso(11)),{...block('a-part',iso(11),iso(12)),taskId:'a'}]};
+ const result=adjustTimerTimeWindow(split,iso(13),now);
+ assert.deepEqual(result.blocks.map(b=>b.taskId),['a','inserted','a']);
+ assert.equal(result.blocks[0].id,'a');
+ assert.equal(result.blocks[0].start,iso(9));
+ assert.equal(result.blocks.at(-1)!.end,iso(13));
+});

@@ -1,7 +1,8 @@
+import { mergeRuns, validateRuns, type TimeblockRun } from './timeblock-run';
 import type { SavedTaskList, SavedTimeblock, Space, Task } from './types';
 import { activeAccount, readAccount, writeAccount } from '../../lib/cloud/storage';
 import { validLiveTimer, type LiveTimer } from './live-timer';
-export interface RhythmLibrary { version: 1; spaces?: Space[]; taskLists: SavedTaskList[]; timeblocks: SavedTimeblock[]; liveTimer?: LiveTimer }
+export interface RhythmLibrary { version: 1; spaces?: Space[]; taskLists: SavedTaskList[]; timeblocks: SavedTimeblock[]; liveTimer?: LiveTimer; runs?: TimeblockRun[] }
 export const emptyLibrary = (): RhythmLibrary => ({ version: 1, spaces: [], taskLists: [], timeblocks: [] });
 const DB = 'rhythm-library-v1';
 function object(v: unknown): v is Record<string, unknown> { return !!v && typeof v === 'object' && !Array.isArray(v); }
@@ -15,6 +16,7 @@ function entry(v: unknown): v is SavedTaskList { return object(v) && typeof v.id
 export function validateLibrary(value: unknown): RhythmLibrary {
   if (!object(value) || value.version !== 1 || !Array.isArray(value.taskLists) || !Array.isArray(value.timeblocks) || !value.taskLists.every(entry)) throw new Error('This is not a valid Rhythm backup.');
   if (value.liveTimer !== undefined && !validLiveTimer(value.liveTimer)) throw new Error('Invalid live timer in backup.');
+  if (value.runs !== undefined) validateRuns(value.runs);
   for (const block of value.timeblocks) {
     if (!entry(block) || !object(block) || !object(block.dayConfig)) throw new Error('Invalid timeblock in backup.');
     const config = block.dayConfig;
@@ -97,5 +99,5 @@ export function mergeLibraries(existing: RhythmLibrary, incoming: RhythmLibrary)
     const added = incoming.spaces?.find(s => s.id === space.id);
     return added ? {...space,tasks:merge(space.tasks,added.tasks)} : space;
   });
-  return validateLibrary({...existing,spaces,...(existing.liveTimer || incoming.liveTimer ? {liveTimer: existing.liveTimer ?? incoming.liveTimer} : {}),version:1,taskLists:merge(existing.taskLists,incoming.taskLists),timeblocks:merge(existing.timeblocks,incoming.timeblocks)});
+  return validateLibrary({...existing,spaces,runs:mergeRuns(existing.runs ?? [],incoming.runs ?? []),...(existing.liveTimer || incoming.liveTimer ? {liveTimer: existing.liveTimer ?? incoming.liveTimer} : {}),version:1,taskLists:merge(existing.taskLists,incoming.taskLists),timeblocks:merge(existing.timeblocks,incoming.timeblocks)});
 }

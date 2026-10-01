@@ -1,41 +1,21 @@
 import { useState } from 'react';
 import type { DayConfig, ScheduleBlock, Task } from '../types';
-import { TimerBlock } from './LiveTimer';
-import { timerBlockHeight } from '../live-timer';
-import { buildManualSchedule } from '../utils/manualSchedule';
 import { formatTaskDuration } from '../task-spaces';
 import { scheduleSummary } from '../workload';
 import { ChronotypeSelector } from './ChronotypeSelector';
 import type { CatalogSpace } from './PlanTaskCatalog';
-import { FlowIcon, TaskSpaceBadge } from './TimeblockWorkload';
-import { useLayoutMotion } from './use-layout-motion';
+import { FlowIcon } from './TimeblockWorkload';
+import { ScheduleBlocks } from './ScheduleBlocks';
 
-const noop = () => {};
 export function TimeblockSchedule({ blocks, tasks, spaces, config, onChronotype, onRegenerate, onScheduleChange, launch, exportCalendar, onLaunchChange, onExportChange, onFinish, busy }: {
   blocks: ScheduleBlock[]; tasks: Task[]; spaces: CatalogSpace[]; config: DayConfig;
   onChronotype(value: DayConfig['chronotype']): void; onRegenerate(): void; onScheduleChange(blocks: ScheduleBlock[]): void;
   launch: boolean; exportCalendar: boolean; onLaunchChange(value: boolean): void; onExportChange(value: boolean): void; onFinish(): void; busy: boolean;
 }) {
   const summary = scheduleSummary(blocks);
-  const [dragged, setDragged] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [editing, setEditing] = useState(false);
-  const list = useLayoutMotion(blocks.map(b => `${b.id}:${b.start}`).join(','));
   const missing = tasks.filter(task => !blocks.some(block => block.taskId === task.id));
-  const move = (from: number, to: number) => {
-    if (from < 0 || to < 0 || to >= blocks.length || from === to) return;
-    // Reuse the existing manual planner to retain fixed appointments and breaks.
-    const reordered = blocks.map(b => b.taskId); const [id] = reordered.splice(from, 1); reordered.splice(to, 0, id);
-    // A task may span several blocks around fixed appointments; schedule it only once.
-    const ids = [...new Set(reordered)];
-    const byId = new Map(tasks.map(t => [t.id, t]));
-    const next = buildManualSchedule(ids.map(id => byId.get(id)!), config);
-    const durations = new Map<string, number>();
-    next.forEach(b => durations.set(b.taskId, (durations.get(b.taskId) ?? 0) + (Date.parse(b.end) - Date.parse(b.start)) / 60000));
-    if (ids.some(id => durations.get(id) !== byId.get(id)!.durationMinutes)) { setMessage('This order cannot fit around your fixed times. Try another position.'); return; }
-    onScheduleChange(next.map((b, i) => ({ ...b, id: `${b.taskId}-${next.slice(0,i).filter(other => other.taskId === b.taskId).length}` })));
-    setMessage('Schedule order updated.');
-  };
   const time = (value: string) => new Intl.DateTimeFormat('en-US', { timeZone: config.timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(value));
   return <>
     <section className="tb-schedule-panel live-timer-card" aria-label="Schedule preview">
@@ -43,15 +23,8 @@ export function TimeblockSchedule({ blocks, tasks, spaces, config, onChronotype,
         <button type="button" className="tb-small" onClick={() => { onRegenerate(); setMessage('Schedule regenerated using your current energy profile.'); }}><FlowIcon name="refresh" />Regenerate schedule</button>
         <button type="button" className="tb-small tb-icon-only" aria-label="Edit schedule order" aria-pressed={editing} onClick={() => setEditing(!editing)}><FlowIcon name="more" /></button></div></div>
       {missing.length > 0 && <p className="tb-warning" role="alert">Could not fit: {missing.map(t => t.name).join(', ')}. Go back to adjust durations or your time window before starting.</p>}
-      <p className="tb-sr-only" role="status">{message}</p>
-      <div className="tb-schedule-blocks" ref={list}>
-        {blocks.map((block, index) => <div className="tb-schedule-slot" key={block.id} data-motion-id={block.id} draggable={editing}
-          onDragStart={e => { setDragged(block.id); e.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => setDragged(null)} onDragOver={e => { if (editing) e.preventDefault(); }} onDrop={e => { e.preventDefault(); move(blocks.findIndex(b => b.id === dragged), index); setDragged(null); }}>
-          <TimerBlock metadata={<TaskSpaceBadge id={block.taskId} spaces={spaces} />} block={block} state="preview" timezone={config.timezone} height={timerBlockHeight(block, 'preview')} onRetain={noop} onReflow={noop} />
-          {editing && <div className="tb-reorder"><button type="button" disabled={index === 0} aria-label={`Move ${block.taskName} up`} onClick={() => move(index,index-1)}>↑</button><button type="button" disabled={index === blocks.length - 1} aria-label={`Move ${block.taskName} down`} onClick={() => move(index,index+1)}>↓</button></div>}
-        </div>)}
-        {!blocks.length && <p className="tb-empty">No tasks fit this time window. Go back to review your workload.</p>}
-      </div>
+      <p className="tb-schedule-message" role="status">{message}</p>
+      <ScheduleBlocks blocks={blocks} tasks={tasks} config={config} spaces={spaces} editing={editing} onChange={onScheduleChange} onMessage={setMessage} />
     </section>
     <aside className="tb-schedule-sidebar">
       <section className="tb-profile"><h3>Energy Profile</h3><p>Change to see a different schedule.</p><ChronotypeSelector value={config.chronotype} onChange={onChronotype} variant="schedule" /></section>

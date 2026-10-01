@@ -1,3 +1,4 @@
+import { taskEnergyStyle } from '../task-energy';
 // src/components/ScheduleView.tsx
 import { TaskListBadge } from "./TaskListBadge";
 import React from 'react';
@@ -27,14 +28,14 @@ export const ScheduleView: React.FC<Props> = ({ blocks }) => {
       <h2>Schedule</h2>
       <ol className="schedule-list">
         {blocks.map(b => (
-          <li key={b.id} className={b.isBreak ? 'schedule-break' : ''}>
+          <li style={taskEnergyStyle(b.energyRequired, b.isBreak)} key={b.id} className={b.isBreak ? 'schedule-break' : ''}>
             <div className="schedule-time">
               {formatTime(b.start)} – {formatTime(b.end)}
             </div>
             <div className="schedule-task">
               <strong>{b.taskName}<TaskListBadge taskId={b.taskId} /></strong>
               {!b.isBreak && (
-                <span> · Energy {b.energyRequired}/5</span>
+                <span> · Energy {b.energyRequired ?? '—'}/5</span>
               )}
               {b.isBreak && <span> · Break</span>}
             </div>
