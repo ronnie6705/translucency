@@ -141,7 +141,7 @@ async function cached() {
   );
 }
 async function add(name) {
-  await button("Add Task").click();
+  await page.keyboard.press("Control+Space");
   await dialog("Add Task")
     .getByRole("textbox", { name: "Task name" })
     .fill(name);
@@ -193,7 +193,7 @@ try {
   assert.equal(rowBox.width, panelBox.width);
   assert.equal(rowBox.height, 58);
   await page.locator('[data-task-id="a"]').screenshot({path:'test-results/tasks/task-row.png'});
-  await button("Add Task").click();
+  await page.keyboard.press("Control+Space");
   await expect(dialog("Add Task")).toBeVisible();
   await expect(page.locator(".task-destination-drawer")).toHaveAttribute(
     "inert",
@@ -396,7 +396,7 @@ try {
   await group.locator('.task-quick-editor').getByLabel('Minutes').fill('15');
   await group.locator('.task-quick-editor').getByRole('button', {name: 'Apply', exact: true}).click();
   await expect.poll(async () => (await cached()).taskLists.find(l => l.name === 'Grouped tasks').tasks.find(t => t.id === 'c').durationMinutes).toBe(75);
-  await group.getByRole("button", { name: "Rename", exact: true }).click();
+  await group.getByRole("button", { name: "Rename Grouped tasks", exact: true }).click();
   await dialog("Rename Task List").getByLabel("Task List name").fill("Chores");
   await dialog("Rename Task List")
     .getByRole("button", { name: "Save Task List" })
@@ -424,7 +424,7 @@ try {
   await expect.poll(async()=>(await cached()).spaces.find(s=>s.name==='Adventures')?.color).toBe('#69d6cf');
   // Existing list editing and timeblocking remain available, and keep the list's Space.
   const chores=page.locator('.tasks-list-group').filter({has:page.getByText('Chores',{exact:true})});
-  await chores.getByRole('button',{name:'Edit list',exact:true}).click();
+  await chores.getByRole('button',{name:'Edit Chores list',exact:true}).click();
   page.once('dialog',d=>d.accept('Chores'));
   await page.getByRole('dialog',{name:'Build a task list'}).getByRole('button',{name:'Save',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'Build a task list'})).toHaveCount(0);
@@ -446,7 +446,7 @@ try {
   await page.getByRole('link',{name:'Rhythm',exact:true}).click();
   await page.getByRole('link',{name:'Tasks',exact:true}).click();
   await page.setViewportSize({ width: 390, height: 844 });
-  await button("Add Task").click();
+  await page.keyboard.press("Control+Space");
   await dialog("Add Task")
     .getByRole("textbox", { name: "Task name" })
     .fill("Mobile task");

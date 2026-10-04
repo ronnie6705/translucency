@@ -1,7 +1,8 @@
+import { InlineTaskComposer } from "./InlineTaskComposer";
 import { taskEnergyStyle } from '../task-energy';
 import { TaskListBadge } from "./TaskListBadge";
 import { useBlockClear } from "./use-block-clear";
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type DragEvent } from "react";
 import { useTaskWorkspace } from "../task-workspace";
 import {
   changeTasks,
@@ -29,7 +30,7 @@ export function TasksPanel({
   onEditList(id: string): void;
   onDeleteList(id: string): void;
 }) {
-  const { library, activeSpaceId, showCompleted, openTask, openSpace, selectSpace } =
+  const { library, activeSpaceId, showCompleted, openSpace, selectSpace } =
     useTaskWorkspace();
   const [search, setSearch] = useState("");
   const [clearing, setClearing] = useState<Set<string>>(() => new Set());
@@ -150,7 +151,8 @@ export function TasksPanel({
               : "Your tasks, in their own space."}
           </h1>
         </div>
-        <label>
+        <label className="tasks-search">
+          <TaskAsset name="tasks-search" />
           <span className="sr-only">Search tasks and lists</span>
           <input
             type="search"
@@ -160,14 +162,6 @@ export function TasksPanel({
           />
         </label>
       </div>
-      <button
-        className="tasks-add-button"
-        aria-label="Add Task"
-        onClick={openTask}
-      >
-        <TaskAsset name="add-imgPlusRec1" />
-        Add Task<kbd>⌘ / Ctrl + Space</kbd>
-      </button>
       {(library.error || notice) && (
         <p role={library.error ? "alert" : "status"}>
           {library.error || notice}
@@ -190,12 +184,15 @@ export function TasksPanel({
         const direct = space.tasks.filter((t) =>
           visible(t) && t.name.toLowerCase().includes(query),
         );
+        const matchingLists = lists.filter(l =>
+          l.name.toLowerCase().includes(query) || l.tasks.some(t => t.name.toLowerCase().includes(query)));
         if (showCompleted && !direct.length && !lists.some((list) => list.name.toLowerCase().includes(query) || list.tasks.some((t) => t.name.toLowerCase().includes(query)))) return null;
         return (
           <section
             className="tasks-space"
             key={space.id}
             aria-label={space.name}
+            style={{ "--space-color": space.color } as CSSProperties}
           >
             <div
               className={`tasks-space-heading ${drop === space.id ? "task-drop-target" : ""}`}
@@ -221,21 +218,13 @@ export function TasksPanel({
                 >
                   <TaskAsset name="row-imgGear" />
                 </button>
-                <button onClick={() => setListModal({ spaceId: space.id })}>
-                  + Add New Task List
-                </button>
               </div>
             </div>
+            {!showCompleted && <InlineTaskComposer spaceId={space.id} />}
             <div className="tasks-row-stack">
               {direct.map((t) => renderTask(t, { spaceId: space.id }))}
             </div>
-            {lists
-              .filter(
-                (l) =>
-                  l.name.toLowerCase().includes(query) ||
-                  l.tasks.some((t) => t.name.toLowerCase().includes(query)),
-              )
-              .map((list) => (
+            {matchingLists.map((list) => (
                 <details
                   open
                   key={list.id}
@@ -257,33 +246,21 @@ export function TasksPanel({
                 >
                   <summary>
                     <span className="task-icon-tile">
-                      <TaskAsset name="add-imgListUnordered4Rec" />
+                      <TaskAsset name="list-title" style={{ width: 24, height: 24 }} />
                     </span>
                     <strong>{list.name}</strong>
-                    <span>{list.tasks.length} tasks</span>
+                    <button className="tasks-list-rename" aria-label={`Rename ${list.name}`} onClick={e => {
+                      e.preventDefault(); setListModal({ spaceId: space.id, id: list.id, name: list.name });
+                    }}><TaskAsset name="list-rename" style={{ width: 19.6, height: 19.6 }} /></button>
+                    <span className="tasks-list-count">{list.tasks.length} {list.tasks.length === 1 ? "Task" : "Tasks"}</span>
+                    <span className="tasks-list-actions" onClick={e => e.stopPropagation()}>
+                      <button aria-label={`Edit ${list.name} list`} title="Edit list" onClick={e => { e.preventDefault(); onEditList(list.id); }}><TaskAsset name="row-imgGear" /></button>
+                      <button disabled={showCompleted || !list.tasks.some(t => !t.isBreak)} onClick={e => { e.preventDefault(); onTimeblock(list.id); }}><TaskAsset name="list-timeblock" style={{ width: 24, height: 24 }} /><span>Timeblock</span></button>
+                      <button className="tasks-list-delete" aria-label={`Delete ${list.name} list`} title="Delete list" onClick={e => { e.preventDefault(); onDeleteList(list.id); }}><TaskAsset name="list-delete" style={{ width: 16.23, height: 16.23 }} /></button>
+                    </span>
+                    <span className="tasks-list-chevron"><TaskAsset name="list-chevron" style={{ width: 21, height: 21 }} /></span>
                   </summary>
-                  <div className="tasks-list-actions">
-                    <button
-                      onClick={() =>
-                        setListModal({
-                          spaceId: space.id,
-                          id: list.id,
-                          name: list.name,
-                        })
-                      }
-                    >
-                      Rename
-                    </button>
-                    <button onClick={() => onEditList(list.id)}>
-                      Edit list
-                    </button>
-                    <button disabled={showCompleted || !list.tasks.some((t) => !t.isBreak)} onClick={() => onTimeblock(list.id)}>
-                      Timeblock
-                    </button>
-                    <button onClick={() => onDeleteList(list.id)}>
-                      Delete list
-                    </button>
-                  </div>
+                  {!showCompleted && <InlineTaskComposer spaceId={space.id} listId={list.id} listName={list.name} />}
                   <div className="tasks-row-stack">
                     {list.tasks
                       .filter(
@@ -296,13 +273,13 @@ export function TasksPanel({
                       )}
                     {!list.tasks.length && (
                       <p className="tasks-list-empty">
-                        Drag a task here or choose this list when adding a task.
+                        Add a task above or drag one into this list.
                       </p>
                     )}
                   </div>
                 </details>
               ))}
-            {!direct.length && !lists.length && (
+            {!direct.length && !matchingLists.length && (
               <p className="tasks-list-empty">
                 {query
                   ? "No matching tasks."
