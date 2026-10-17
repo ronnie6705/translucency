@@ -78,15 +78,18 @@ export function insertItemIntoTimer(timer: LiveTimer, params: InsertItemParams, 
   updatedBlocks.push(newBlock);
   for (let i = insertIndex; i < blocks.length; i++) {
     const b = blocks[i];
-    updatedBlocks.push({
-      ...b,
-      start: new Date(Date.parse(b.start) + durationMs).toISOString(),
-      end: new Date(Date.parse(b.end) + durationMs).toISOString(),
-    });
+    const previousEnd = Date.parse(updatedBlocks.at(-1)!.end);
+    if (b.isFixed) {
+      if (previousEnd > Date.parse(b.start)) throw new Error('This insertion would overlap a fixed appointment. Choose another position.');
+      updatedBlocks.push(b);
+    } else {
+      const start = Math.max(previousEnd, Date.parse(b.start));
+      updatedBlocks.push({ ...b, start: new Date(start).toISOString(), end: new Date(start + Date.parse(b.end) - Date.parse(b.start)).toISOString() });
+    }
   }
 
   const currentEndsAt = Date.parse(timer.endsAt ?? blocks[blocks.length - 1].end);
-  const newEndsAt = new Date(currentEndsAt + durationMs).toISOString();
+  const newEndsAt = new Date(Math.max(currentEndsAt, Date.parse(updatedBlocks.at(-1)!.end))).toISOString();
 
   return {
     ...timer,
@@ -171,6 +174,7 @@ export function reorderTimerBlocks(
     return timer;
   }
 
+  if (blocks[fromIndex].isFixed) return timer;
   const [movedBlock] = blocks.splice(fromIndex, 1);
   blocks.splice(toIndex, 0, movedBlock);
 
@@ -182,6 +186,10 @@ export function reorderTimerBlocks(
       ? Date.parse(timer.startedAt ?? blocks[0].start)
       : Date.parse(blocks[i - 1].end);
     
+    if (b.isFixed) {
+      if (startMs > Date.parse(b.start)) return timer;
+      continue;
+    }
     blocks[i] = {
       ...b,
       start: new Date(startMs).toISOString(),

@@ -1,3 +1,4 @@
+import { DEFAULT_TASK_ESTIMATE, updateTaskEstimate } from "../task-duration";
 import { taskEnergyStyle } from '../task-energy';
 import { TaskListBadge } from "./TaskListBadge";
 import { useRef, useState } from "react";
@@ -322,10 +323,7 @@ export function AddTaskOverlay({
   onClose(): void;
 }) {
   const [name, setName] = useState("");
-  const [task, setTask] = useState({
-    durationMinutes: 90,
-    energyRequired: 3 as Task["energyRequired"],
-  });
+  const [task, setTask] = useState<Pick<Task, "durationMinutes" | "energyRequired" | "durationMode">>({ ...DEFAULT_TASK_ESTIMATE });
   const [destination, setDestination] = useState<TaskLocation | null>(
     spaceId ? { spaceId } : null,
   );
@@ -399,7 +397,7 @@ export function AddTaskOverlay({
                   <QuickTaskValue
                     task={task}
                     mode="energy"
-                    onChange={(u) => setTask((t) => ({ ...t, ...u }))}
+                    onChange={(u) => setTask((t) => updateTaskEstimate(t, u))}
                     onClose={() => {
                       setQuick(null);
                       nameRef.current?.focus();
@@ -420,7 +418,7 @@ export function AddTaskOverlay({
                   <QuickTaskValue
                     task={task}
                     mode="time"
-                    onChange={(u) => setTask((t) => ({ ...t, ...u }))}
+                    onChange={(u) => setTask((t) => updateTaskEstimate(t, u))}
                     onClose={() => {
                       setQuick(null);
                       nameRef.current?.focus();

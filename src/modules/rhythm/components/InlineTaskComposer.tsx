@@ -1,3 +1,4 @@
+import { DEFAULT_TASK_ESTIMATE, updateTaskEstimate } from "../task-duration";
 import { useRef, useState, type PointerEvent } from "react";
 import { useTaskWorkspace } from "../task-workspace";
 import { changeTasks, formatTaskDuration, type TaskLocation } from "../task-spaces";
@@ -14,7 +15,7 @@ export function InlineTaskComposer({ spaceId, listId, listName }: TaskLocation &
   const [mode, setMode] = useState<Mode | null>(null);
   const [taskName, setTaskName] = useState("");
   const [listTitle, setListTitle] = useState("");
-  const [values, setValues] = useState({ durationMinutes: 90, energyRequired: 3 as Task["energyRequired"] });
+  const [values, setValues] = useState<Pick<Task, "durationMinutes" | "energyRequired" | "durationMode">>({ ...DEFAULT_TASK_ESTIMATE });
   const [quick, setQuick] = useState<"energy" | "time" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -62,7 +63,7 @@ export function InlineTaskComposer({ spaceId, listId, listName }: TaskLocation &
         {taskName && <span>{kind === "energy" ? values.energyRequired : formatTaskDuration(values.durationMinutes)}</span>}
       </button>
       {quick === kind && <QuickTaskValue task={values} mode={kind}
-        onChange={updates => { setValues(v => ({ ...v, ...updates })); return true; }}
+        onChange={updates => { setValues(v => updateTaskEstimate(v, updates)); return true; }}
         onClose={() => { setQuick(null); taskInput.current?.focus(); }} />}
     </div>
   );

@@ -47,5 +47,5 @@ test('96 mixed-task schedules match the pre-refactor scheduler baseline', async(
    const tasks=Array.from({length:8},(_,i)=>({id:String(i),name:'Task '+i,durationMinutes:15+((seed+i)%6)*15,energyRequired:(1+(seed+i)%5) as Task['energyRequired'],priority:(1+i%3) as Task['priority'],...(i===0?{fixedStart:'13:00'}:{})}));
    outputs.push(generateSchedule(tasks,{date:'2026-10-01',startTime:'05:'+(seed%2?'05':'00'),endTime:'23:00',timezone:'Australia/Melbourne',chronotype}));
  }
- assert.equal(createHash('sha256').update(JSON.stringify(outputs)).digest('hex'),'3342539b8bbf9190d83f5cb43d4288daa8c8fe4841bfcd7a450f1012cc984489');
+ assert.equal(createHash('sha256').update(JSON.stringify(outputs.map(blocks => blocks.map(({ isFixed, ...block }) => block)))).digest('hex'),'3342539b8bbf9190d83f5cb43d4288daa8c8fe4841bfcd7a450f1012cc984489');
 });

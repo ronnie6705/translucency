@@ -1,6 +1,7 @@
 import { energyAtDate, getChronotypeCurve, validateEnergyCurve, type EnergyCurve, type EnergyLevel } from './energy-curve';
 // src/rhythmScheduler.ts
 import type { DayConfig, Task, ScheduleBlock } from './types';
+import { validateTimeblockPlan } from './timeblock-plan';
 import {
   createDateInTimeZone,
 } from './utils/timezone';
@@ -169,7 +170,7 @@ export function generateSchedule(
   const dayStart = createDateInTimeZone(date, startTime, timezone);
   const dayEnd = createDateInTimeZone(date, endTime, timezone);
 
-  if (dayEnd <= dayStart) return [];
+  if (dayEnd <= dayStart || !validateTimeblockPlan(tasks, startTime, endTime).valid) return [];
 
   // Separate fixed-time and flexible tasks
   const fixedTasks = tasks.filter(t => t.fixedStart);
@@ -193,6 +194,7 @@ export function generateSchedule(
     if (fixedStart >= dayStart && fixedEnd <= dayEnd) {
       schedule.push({
         id: `fixed-${t.id}`,
+        isFixed: true,
         taskId: t.id,
         taskName: t.name,
         start: fixedStart.toISOString(),
@@ -257,7 +259,70 @@ export function generateSchedule(
     });
   }
 
+  if (resultBlocks.length < tasks.length) {
+    const recovered = recoverSchedule(flexSorted, freeSegments, curve, timezone);
+    if (recovered) return [...schedule, ...recovered].sort((a, b) => a.start.localeCompare(b.start));
+  }
+
   // Final sort
   resultBlocks.sort((a, b) => a.start.localeCompare(b.start));
   return resultBlocks;
+}
+
+
+/** Bounded bin-packing search avoids splits when a different arrangement fits. */
+function recoverSchedule(tasks: Task[], segments: TimeWindow[], curve: EnergyCurve, timezone: string): ScheduleBlock[] | null {
+  const available = segments.reduce((sum, w) => sum + minutesBetween(w.start, w.end), 0);
+  if (tasks.reduce((sum, t) => sum + t.durationMinutes, 0) > available + 1e-6) return null;
+  const ordered = [...tasks].sort((a, b) => b.durationMinutes - a.durationMinutes || a.priority - b.priority);
+  const copy = () => segments.map(w => ({ start: new Date(w.start), end: new Date(w.end) }));
+  const make = (task: Task, start: Date, minutes: number, part = 0): ScheduleBlock => ({
+    id: `flex-${task.id}${part ? `-part-${part}` : ''}`, taskId: task.id, taskName: task.name,
+    start: start.toISOString(), end: addMinutes(start, minutes).toISOString(), isBreak: !!task.isBreak, energyRequired: task.energyRequired,
+  });
+  let attempts = 0;
+  const windows = copy();
+  const placed: ScheduleBlock[] = [];
+  const search = (index: number): boolean => {
+    if (index === ordered.length) return true;
+    if (++attempts > 2000 || index > 100) return false;
+    const task = ordered[index];
+    const candidates = windows.map((w, i) => ({ i, spare: minutesBetween(w.start, w.end) - task.durationMinutes,
+      mismatch: Math.max(0, task.energyRequired - energyAtDate(curve, w.start, timezone)) }))
+      .filter(c => c.spare >= -1e-6).sort((a, b) => a.mismatch - b.mismatch || a.spare - b.spare || a.i - b.i);
+    for (const { i } of candidates) {
+      const start = windows[i].start;
+      placed.push(make(task, start, task.durationMinutes));
+      windows[i].start = addMinutes(start, task.durationMinutes);
+      if (search(index + 1)) return true;
+      windows[i].start = start;
+      placed.pop();
+    }
+    return false;
+  };
+  if (search(0)) return placed;
+
+  // Full estimates are preserved. Prefer a whole energy-compatible placement,
+  // then consume the largest available windows to avoid unnecessary tiny parts.
+  const free = copy();
+  const split: ScheduleBlock[] = [];
+  for (const task of tasks) {
+    const whole = scheduleTaskInWindows(task, free, curve, timezone);
+    if (whole) { split.push(make(task, whole.start, task.durationMinutes)); continue; }
+    let remaining = task.durationMinutes, part = 0;
+    const largest = [...free].sort((a, b) => minutesBetween(b.start, b.end) - minutesBetween(a.start, a.end));
+    const selected: TimeWindow[] = [];
+    let capacity = 0;
+    for (const w of largest) { selected.push(w); capacity += minutesBetween(w.start, w.end); if (capacity >= remaining) break; }
+    selected.sort((a, b) => a.start.getTime() - b.start.getTime());
+    for (const w of selected) {
+      const minutes = Math.min(remaining, minutesBetween(w.start, w.end));
+      if (minutes <= 0) continue;
+      split.push(make(task, w.start, minutes, part++));
+      w.start = addMinutes(w.start, minutes);
+      remaining -= minutes;
+    }
+    if (remaining > 1e-6) return null;
+  }
+  return split;
 }

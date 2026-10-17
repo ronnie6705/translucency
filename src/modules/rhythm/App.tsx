@@ -16,6 +16,8 @@ import { generateICS } from './ics';
 import { createDateInTimeZone, DEVICE_TIME_ZONE } from './utils/timezone';
 import { completeLiveTask } from './complete-live-task';
 import { insertLiveTimerItem, reorderLiveTimer } from './insert-live-task';
+import { updateTaskEstimate } from './task-duration';
+import { validateSchedule } from './schedule-validation';
 import { generateSchedule } from './rhythmScheduler';
 import { validateTimeblockPlan } from './timeblock-plan';
 import { buildManualSchedule } from './utils/manualSchedule';
@@ -147,7 +149,7 @@ function App({ section = "rhythm" }: { section?: string }) {
   };
 
   const handleUpdateTask = (id: string, updates: Partial<Task>) => {
-    setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
+    setTasks(prev => prev.map(t => (t.id === id ? updateTaskEstimate(t, updates) : t)));
   };
 
   const handleRemoveTask = (id: string) => {
@@ -198,7 +200,7 @@ function App({ section = "rhythm" }: { section?: string }) {
   };
 
   const finishTimeblock = async (blocks: ScheduleBlock[], launch: boolean, exportCalendar: boolean) => {
-    if (startingTimer || !blocks.length || (!launch && !exportCalendar)) return;
+    if (startingTimer || !validateSchedule(tasks, dayConfig, blocks).valid || (!launch && !exportCalendar)) return;
     setStartingTimer(true);
     try {
       const existing = savedTimeblocks.find(block => block.id === activeTimeblockId);

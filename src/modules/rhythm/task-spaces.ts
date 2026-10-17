@@ -1,3 +1,4 @@
+import { updateTaskEstimate } from "./task-duration";
 import type { RhythmLibrary } from "./library";
 import type { Task, SavedTaskList } from "./types";
 
@@ -53,14 +54,14 @@ export function updateTask(
     throw new Error("This task no longer exists.");
   const withUpdatedLocation = changeTasks(data, ref, (tasks) =>
     tasks.map((t) =>
-      t.id === ref.taskId ? { ...t, ...updates, id: t.id } : t,
+      t.id === ref.taskId ? { ...updateTaskEstimate(t, updates), id: t.id } : t,
     ),
   );
   const timeblocks = withUpdatedLocation.timeblocks.map((b) => ({
     ...b,
     schedule: b.tasks.some(t => t.id === ref.taskId) ? undefined : b.schedule,
     tasks: b.tasks.map((t) =>
-      t.id === ref.taskId ? { ...t, ...updates, id: t.id } : t,
+      t.id === ref.taskId ? { ...updateTaskEstimate(t, updates), id: t.id } : t,
     ),
   }));
   let liveTimer = withUpdatedLocation.liveTimer;
@@ -130,7 +131,7 @@ export function updateTimeblockTask(
           ...b,
           schedule: undefined,
           tasks: b.tasks.map((t) =>
-            t.id === taskId ? { ...t, ...updates, id: t.id } : t,
+            t.id === taskId ? { ...updateTaskEstimate(t, updates), id: t.id } : t,
           ),
         }
       : b,
@@ -139,14 +140,14 @@ export function updateTimeblockTask(
   const updatedSpaces = data.spaces?.map((space) => ({
     ...space,
     tasks: space.tasks.map((t) =>
-      t.id === taskId ? { ...t, ...updates, id: t.id } : t,
+      t.id === taskId ? { ...updateTaskEstimate(t, updates), id: t.id } : t,
     ),
   }));
 
   const updatedTaskLists = data.taskLists.map((list) => ({
     ...list,
     tasks: list.tasks.map((t) =>
-      t.id === taskId ? { ...t, ...updates, id: t.id } : t,
+      t.id === taskId ? { ...updateTaskEstimate(t, updates), id: t.id } : t,
     ),
   }));
 

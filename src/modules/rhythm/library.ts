@@ -10,7 +10,7 @@ function tasks(v: unknown): v is Task[] {
   return Array.isArray(v) && v.every(t => object(t) && typeof t.id === 'string' && typeof t.name === 'string' &&
     Number.isFinite(t.durationMinutes) && Number(t.durationMinutes) > 0 && [1,2,3,4,5].includes(Number(t.energyRequired)) &&
     [1,2,3].includes(Number(t.priority)) && (t.fixedStart === undefined || /^([01]\d|2[0-3]):[0-5]\d$/.test(String(t.fixedStart))) &&
-    (t.completed === undefined || typeof t.completed === 'boolean') && (t.isBreak === undefined || typeof t.isBreak === 'boolean'));
+    (t.durationMode === undefined || t.durationMode === 'automatic' || t.durationMode === 'custom') && (t.completed === undefined || typeof t.completed === 'boolean') && (t.isBreak === undefined || typeof t.isBreak === 'boolean'));
 }
 function entry(v: unknown): v is SavedTaskList { return object(v) && typeof v.id === 'string' && typeof v.name === 'string' && typeof v.createdAt === 'string' && Number.isFinite(Date.parse(v.createdAt)) && tasks(v.tasks); }
 export function validateLibrary(value: unknown): RhythmLibrary {
@@ -28,6 +28,14 @@ export function validateLibrary(value: unknown): RhythmLibrary {
   if (!Array.isArray(spaces) || !spaces.every(s => entry(s) && object(s) && typeof s.icon === 'string' && typeof s.color === 'string' && /^#[0-9a-f]{6}$/i.test(s.color))) throw new Error('Invalid Spaces in backup.');
   if (new Set(spaces.map(s => s.id)).size !== spaces.length) throw new Error('Duplicate Space IDs.');
   const library = { ...value, spaces: [...spaces], taskLists: [...value.taskLists] } as unknown as RhythmLibrary;
+  // Recover fixed-time metadata for saved plans created before blocks carried it.
+  library.timeblocks = library.timeblocks.map(plan => ({ ...plan, ...(plan.schedule ? {
+    schedule: plan.schedule.map(block => block.isFixed === undefined && plan.tasks.some(task => task.id === block.taskId && task.fixedStart) ? { ...block, isFixed: true } : block),
+  } : {}) }));
+  const timerPlan = library.timeblocks.find(plan => plan.id === library.liveTimer?.id);
+  if (library.liveTimer && timerPlan) library.liveTimer = { ...library.liveTimer,
+    blocks: library.liveTimer.blocks.map(block => block.isFixed === undefined && timerPlan.tasks.some(task => task.id === block.taskId && task.fixedStart) ? { ...block, isFixed: true } : block),
+  };
   // Additive migration: keep the existing lists and task IDs, including account and backup data.
   if (library.taskLists.some(l => !l.spaceId)) {
     if (!library.spaces!.some(s => s.id === 'legacy-space')) library.spaces!.push({id:'legacy-space',name:'Personal',icon:'personal',color:'#b4a4ff',createdAt:'2026-01-01T00:00:00.000Z',tasks:[]});

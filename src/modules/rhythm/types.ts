@@ -6,6 +6,8 @@ export interface Task {
   id: string;
   name: string;
   durationMinutes: number;
+  /** Saved estimates stay unchanged until the user edits energy or duration. */
+  durationMode?: 'automatic' | 'custom';
   energyRequired: 1 | 2 | 3 | 4 | 5;
   priority: 1 | 2 | 3; // 1 = high, 3 = low
   completed?: boolean;
@@ -28,6 +30,7 @@ export interface ScheduleBlock {
   start: string; // ISO datetime
   end: string;   // ISO datetime
   isBreak: boolean;
+  isFixed?: boolean;
   energyRequired?: number; // Legacy schedules may have no energy; render neutrally.
 }
 

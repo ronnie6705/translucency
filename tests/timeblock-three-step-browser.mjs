@@ -95,7 +95,7 @@ try {
  await expect(flow.getByRole('button',{name:'Set energy 3 for Read a chapter',exact:true})).toHaveAttribute('aria-pressed','true');
  await flow.getByLabel('Duration for Build feature',{exact:true}).selectOption('90');
  await flow.getByLabel('Duration for Acceptance new task',{exact:true}).selectOption('45');
- await expect(flow.getByTestId('estimated-time')).toHaveText('2h 45m');
+ await expect(flow.getByTestId('estimated-time')).toHaveText('3h');
  // Native select keys never change the active task's energy.
  await flow.getByLabel('Duration for Acceptance new task',{exact:true}).press('ArrowLeft');
  await expect(flow.getByRole('button',{name:'Set energy 3 for Read a chapter',exact:true})).toHaveAttribute('aria-pressed','true');
@@ -184,7 +184,7 @@ try {
  assert.deepEqual(await readBlocks(),bear,'Regenerate uses the same deterministic engine and assessments');
  await flow.getByRole('button',{name:'Edit schedule order',exact:true}).click();
  await flow.getByRole('button',{name:'Back',exact:true}).click();
- await expect(flow.getByLabel('Duration for Build feature',{exact:true})).toHaveValue('90');
+ await expect(flow.getByLabel('Duration for Build feature',{exact:true})).toHaveValue('60');
  await flow.getByRole('button',{name:'Next',exact:true}).click();
  await flow.getByRole('checkbox',{name:'Start Live Timer',exact:false}).uncheck();
  await expect(flow.getByRole('button',{name:'Export to Calendar',exact:true})).toBeEnabled();
@@ -219,6 +219,8 @@ try {
  const runId=saved.liveTimer.runId;
  assert.equal(saved.runs[0].id,runId);
  assert.deepEqual(saved.runs[0].initialPlan.blocks,saved.timeblocks[0].schedule);
+ // Keep the clock inside the task now that energy 4 suggests 60 minutes.
+ await page.clock.setFixedTime(new Date('2026-09-30T23:30:00Z'));
  const live=page.getByRole('dialog',{name:'Live timer',exact:true});
  await page.screenshot({path:'test-results/live-energy-window.png',fullPage:true,animations:'disabled'});
  await live.locator('[data-task-id="b"]').evaluate(el=>el.dataset.retained='yes');

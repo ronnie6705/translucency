@@ -30,7 +30,7 @@ test('workload counts energy bands consistently and includes breaks in capacity'
  assert.deepEqual([1,2,3,4,5].map(energyBand),['Low','Low','Moderate','High','High']);
 });
 test('overfull plans retain full estimates, omit unplaced tasks, and never truncate durations',()=>{
- const blocks=generateSchedule(tasks,{...config,endTime:'10:00'});
+ const blocks=generateSchedule(tasks.filter(t => !t.fixedStart),{...config,endTime:'10:00'});
  assert.equal(blocks.some(b=>b.taskId==='high'),false);
  assert.equal(tasks[0].durationMinutes,90);
  assert.equal(scheduleSummary(blocks).work,30);

@@ -1,3 +1,4 @@
+import { ENERGY_DURATIONS } from "../task-duration";
 import { taskEnergyStyle } from '../task-energy';
 import { handleAdjustKey as adjustTaskKey } from '../adjust-key';
 import { TaskListBadge } from "./TaskListBadge";
@@ -261,13 +262,24 @@ export const TaskBuilderStep: React.FC<TaskBuilderStepProps> = ({
   initialStep = 'tasks',
 }) => {
   const [taskName, setTaskName] = useState('');
-  const [energy, setEnergy] = useState(3);
-  const [hours, setHours] = useState(1);
-  const [minutes, setMinutes] = useState(30);
+  const [energy, setEnergyValue] = useState(3);
+  const [durationMode, setDurationMode] = useState<Task["durationMode"]>("automatic");
+  const [hours, setHoursValue] = useState(0);
+  const [minutes, setMinutesValue] = useState(45);
   const [isBreak, setIsBreak] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [fixedStart, setFixedStart] = useState('');
   const [fixedEnd, setFixedEnd] = useState('');
+  const setHours = (value: number) => { setDurationMode('custom'); setHoursValue(value); };
+  const setMinutes = (value: number) => { setDurationMode('custom'); setMinutesValue(value); };
+  const setEnergy = (value: number) => {
+    setEnergyValue(value);
+    if (!fixedStart && !isBreak) {
+      setDurationMode('automatic');
+      const duration = ENERGY_DURATIONS[value as Task['energyRequired']];
+      setHoursValue(Math.floor(duration / 60)); setMinutesValue(duration % 60);
+    }
+  };
   const [fixedTimeError, setFixedTimeError] = useState('');
   const [isTaskInputFocused, setTaskInputFocused] = useState(false);
   const [quickEditMode, setQuickEditMode] = useState<'none' | 'time' | 'energy'>('none');
@@ -339,6 +351,7 @@ export const TaskBuilderStep: React.FC<TaskBuilderStepProps> = ({
       id: crypto.randomUUID(),
       name: taskName.trim(),
       durationMinutes: durationMinutes,
+      durationMode,
       energyRequired: Math.min(5, Math.max(1, energy)) as 1 | 2 | 3 | 4 | 5,
       priority: 2,
       isBreak,
@@ -348,8 +361,9 @@ export const TaskBuilderStep: React.FC<TaskBuilderStepProps> = ({
     onAdd(newTask);
     setTaskName('');
     setEnergy(3);
-    setHours(1);
-    setMinutes(30);
+    setHoursValue(0);
+    setMinutesValue(45);
+    setDurationMode("automatic");
     setIsBreak(false);
     setFixedStart('');
     setFixedEnd('');

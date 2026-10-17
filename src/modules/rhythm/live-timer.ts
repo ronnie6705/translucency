@@ -36,7 +36,7 @@ export function rebudgetRemainingTimer(timer: LiveTimer, now: number, minimum = 
   const result = { ...timer, startedAt, endsAt };
   if (start >= end) return { ...result, blocks: remaining };
 
-  const breaks = remaining.filter(b => b.isBreak);
+  const breaks = remaining.filter(b => b.isBreak || b.isFixed).sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
   const windows: { start: number; end: number }[] = [];
   let cursor = start;
   for (const rest of breaks) {
@@ -48,7 +48,7 @@ export function rebudgetRemainingTimer(timer: LiveTimer, now: number, minimum = 
   const available = windows.reduce((sum, w) => sum + w.end - w.start, 0);
   const work = new Map<string, { segments: ScheduleBlock[]; weight: number }>();
   let item: { segments: ScheduleBlock[]; weight: number } | undefined;
-  for (const block of remaining.filter(b => !b.isBreak && Date.parse(b.end) > now)) {
+  for (const block of remaining.filter(b => !b.isBreak && !b.isFixed && Date.parse(b.end) > now)) {
     // Only join adjacent pieces of one task. An inserted task between pieces
     // is an accepted ordering constraint and must not be moved behind them.
     if (!item || item.segments[0].taskId !== block.taskId) {
@@ -61,7 +61,7 @@ export function rebudgetRemainingTimer(timer: LiveTimer, now: number, minimum = 
   }
   if (!work.size || available < work.size * minimum) return { ...result, blocks: remaining };
   const totalWeight = [...work.values()].reduce((sum, item) => sum + item.weight, 0);
-  const blocks: ScheduleBlock[] = [...breaks, ...remaining.filter(b => !b.isBreak && Date.parse(b.end) <= now)];
+  const blocks: ScheduleBlock[] = [...breaks, ...remaining.filter(b => !b.isBreak && !b.isFixed && Date.parse(b.end) <= now)];
   let allocated = 0, cumulativeWeight = 0, windowIndex = 0, taskIndex = 0;
   cursor = windows[0].start;
   for (const item of work.values()) {
@@ -121,7 +121,7 @@ export function validLiveTimer(value: unknown): value is LiveTimer {
   if ((timer.startedAt !== undefined || timer.endsAt !== undefined) && (!Number.isFinite(Date.parse(timer.startedAt!)) || !(Date.parse(timer.endsAt!) > Date.parse(timer.startedAt!)))) return false;
   if (!timer.blocks.length && !((timer.completedTaskIds?.length || timer.skippedTaskIds?.length) && timer.startedAt && timer.endsAt)) return false;
   try { new Intl.DateTimeFormat('en', { timeZone: timer.timezone }).format(); } catch { return false; }
-  return timer.blocks.every((b, i) => b && typeof b.id === 'string' && typeof b.taskId === 'string' && typeof b.taskName === 'string' && typeof b.isBreak === 'boolean' && (b.energyRequired === undefined || Number.isFinite(b.energyRequired)) && Number.isFinite(Date.parse(b.start)) && Date.parse(b.end) > Date.parse(b.start) && (i === 0 || Date.parse(b.start) >= Date.parse(timer.blocks[i - 1].end)));
+  return timer.blocks.every((b, i) => b && typeof b.id === 'string' && typeof b.taskId === 'string' && typeof b.taskName === 'string' && typeof b.isBreak === 'boolean' && (b.isFixed === undefined || typeof b.isFixed === 'boolean') && (b.energyRequired === undefined || Number.isFinite(b.energyRequired)) && Number.isFinite(Date.parse(b.start)) && Date.parse(b.end) > Date.parse(b.start) && (i === 0 || Date.parse(b.start) >= Date.parse(timer.blocks[i - 1].end)));
 }
 
 export function formatDurationHM(ms: number): string {

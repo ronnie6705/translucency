@@ -8,10 +8,10 @@ export function adjustTimerTimeWindow(timer: LiveTimer, newEndTime: string, now:
   if (!Number.isFinite(now) || !Number.isFinite(end) || end <= Math.max(now,start)) throw new Error('Choose an end time after the current time and session start.');
   const oldEnd = timer.endsAt ?? timer.blocks.at(-1)?.end;
   if (end === Date.parse(oldEnd!)) return timer;
-  const eligible = timer.blocks.filter(b=>!b.isBreak && Date.parse(b.end)>now && !timer.completedTaskIds?.includes(b.taskId) && !timer.skippedTaskIds?.includes(b.taskId));
+  const eligible = timer.blocks.filter(b=>!b.isBreak && !b.isFixed && Date.parse(b.end)>now && !timer.completedTaskIds?.includes(b.taskId) && !timer.skippedTaskIds?.includes(b.taskId));
   if (!eligible.length) throw new Error('There is no remaining work to resize.');
-  const breaks = timer.blocks.filter(b=>b.isBreak && Date.parse(b.end)>now);
-  if (breaks.some(b=>Date.parse(b.end)>end)) throw new Error('The end time must leave all remaining breaks intact.');
+  const breaks = timer.blocks.filter(b=>(b.isBreak || b.isFixed) && Date.parse(b.end)>now);
+  if (breaks.some(b=>Date.parse(b.end)>end)) throw new Error('The end time must leave all remaining breaks and fixed appointments intact.');
   const available = end - Math.max(now,start) - breaks.reduce((sum,b)=>sum+Date.parse(b.end)-Math.max(now,Date.parse(b.start)),0);
   const count = eligible.reduce((sum,block,index)=>sum + (index === 0 || eligible[index-1].taskId !== block.taskId ? 1 : 0),0);
   if (available < count * 60_000) throw new Error('Allow at least one minute per remaining task, plus scheduled breaks.');

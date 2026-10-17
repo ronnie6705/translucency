@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DayConfig, ScheduleBlock, Task } from '../types';
+import { validateSchedule } from '../schedule-validation';
+import { DEFAULT_TASK_ESTIMATE, updateTaskEstimate } from '../task-duration';
 import { generateSchedule } from '../rhythmScheduler';
 import { validateTimeblockPlan } from '../timeblock-plan';
 import { workloadSummary } from '../workload';
@@ -40,7 +42,8 @@ export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTask
   const catalog = useMemo(() => spaces.flatMap(s => [...s.tasks, ...s.lists.flatMap(l => l.tasks)]), [spaces]);
   const input = JSON.stringify({ tasks, config, generation });
   const validation = validateTimeblockPlan(tasks, config.startTime, config.endTime);
-  const schedule = useMemo(() => step === 2 && validation.valid ? generateSchedule(tasks, config) : [], [tasks, config, generation, validation.valid, step]);
+  const schedule = useMemo(() => step > 0 && validation.valid ? generateSchedule(tasks, config) : [], [tasks, config, generation, validation.valid, step]);
+  const feasibility = useMemo(() => validateSchedule(tasks, config, schedule), [tasks, config, schedule]);
   const blocks = manual?.input === input ? manual.blocks : schedule;
   const summary = workloadSummary(tasks, config.startTime, config.endTime);
   const stack = useLayoutMotion(tasks.map(t => t.id).join(','));
@@ -73,13 +76,13 @@ export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTask
     if (step !== 0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) finish();
     else removalTimers.current.set(id,setTimeout(finish,180));
   };
-  const update = (id: string, patch: Partial<Task>) => onTasksChange(tasks.map(t => t.id === id ? { ...t, ...patch } : t));
+  const update = (id: string, patch: Partial<Task>) => onTasksChange(tasks.map(t => t.id === id ? updateTaskEstimate(t, patch) : t));
   const create = async () => {
     const name = query.trim(); if (!name || creating) return;
     const existing = catalog.find(t => t.name.toLowerCase() === name.toLowerCase());
     if (existing) { add(existing); setQuery(''); return; }
     setCreating(true);
-    const task: Task = { id: crypto.randomUUID(), name, durationMinutes: 90, energyRequired: 3, priority: 2, completed: false };
+    const task: Task = { id: crypto.randomUUID(), name, ...DEFAULT_TASK_ESTIMATE, priority: 2, completed: false };
     try { if (await onCreateTask(task, filter)) { add(task); setQuery(''); } } finally { setCreating(false); }
   };
   const clear = () => { removalTimers.current.forEach(clearTimeout); removalTimers.current.clear(); setRemoving(new Set()); onTasksChange([]); };
@@ -106,7 +109,7 @@ export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTask
           <div className="tb-stack-bottom"><button type="button" className="tb-stack-add" onClick={() => search.current?.focus()}><strong>Drag or Click</strong> to add a new task<small>Select from any space or type a new one.</small></button><TimeWindowCard compact start={config.startTime} end={config.endTime} available={summary.available} onEdit={() => setEditingTime(true)} /></div>
         </aside>
       </>}
-      {step === 1 && <TimeblockWorkload tasks={tasks} spaces={spaces} start={config.startTime} end={config.endTime} onUpdate={update} onRemove={remove} onReset={() => onTasksChange(tasks.map(t => { const d = defaults.current.get(t.id); return { ...t, durationMinutes: d?.durationMinutes ?? 90, energyRequired: d?.energyRequired ?? 3 }; }))} onViewTasks={() => go(0)} onEditTime={() => setEditingTime(true)} onAddBreak={() => add({id:crypto.randomUUID(),name:'Short break',durationMinutes:15,energyRequired:1,priority:2,isBreak:true})} />}
+      {step === 1 && <TimeblockWorkload feasibility={feasibility} tasks={tasks} spaces={spaces} start={config.startTime} end={config.endTime} onUpdate={update} onRemove={remove} onReset={() => onTasksChange(tasks.map(t => { const d = defaults.current.get(t.id); return { ...t, durationMinutes: d?.durationMinutes ?? 45, energyRequired: d?.energyRequired ?? 3, durationMode: d?.durationMode }; }))} onViewTasks={() => go(0)} onEditTime={() => setEditingTime(true)} onAddBreak={() => add({id:crypto.randomUUID(),name:'Short break',durationMinutes:15,energyRequired:1,priority:2,isBreak:true})} />}
       {step === 2 && <TimeblockSchedule spaces={spaces} blocks={blocks} tasks={tasks} config={config} onChronotype={chronotype => onConfigChange({ ...config, chronotype })} onRegenerate={() => setGeneration(n=>n+1)} onScheduleChange={blocks => setManual({input,blocks})} launch={launch} exportCalendar={exportCalendar} onLaunchChange={setLaunch} onExportChange={setExportCalendar} onFinish={() => { void onFinish(blocks,launch,exportCalendar); }} busy={busy} />}
     </div>
     {editingTime && <TimeWindowEditor config={config} onChange={onConfigChange} onClose={() => setEditingTime(false)} />}

@@ -1,3 +1,4 @@
+import type { validateSchedule } from '../schedule-validation';
 import { PlanTaskSettings } from './PlanTaskSettings';
 import { taskEnergyStyle } from '../task-energy';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
@@ -22,8 +23,8 @@ export function TimeWindowCard({ start, end, available, onEdit, compact = false,
     {compact && <span className="tb-count">{start} - {end}</span>}<button type="button" className="tb-small" onClick={onEdit}>Edit</button>
   </div>;
 }
-export function TimeblockWorkload({ tasks, spaces, start, end, onUpdate, onRemove, onReset, onEditTime, onViewTasks, onAddBreak }: {
-  tasks: Task[]; spaces: CatalogSpace[]; start: string; end: string;
+export function TimeblockWorkload({ tasks, spaces, start, end, feasibility, onUpdate, onRemove, onReset, onEditTime, onViewTasks, onAddBreak }: {
+  tasks: Task[]; spaces: CatalogSpace[]; start: string; end: string; feasibility: ReturnType<typeof validateSchedule>;
   onUpdate(id: string, updates: Partial<Task>): void; onRemove(id: string): void;
   onReset(): void; onEditTime(): void; onViewTasks(): void; onAddBreak(): void;
 }) {
@@ -79,7 +80,7 @@ export function TimeblockWorkload({ tasks, spaces, start, end, onUpdate, onRemov
       <div className="tb-metrics" aria-live="polite"><div><p><FlowIcon name="duration" />Estimated time</p><strong data-testid="estimated-time">{formatTaskDuration(summary.estimated)}</strong></div><div><p><FlowIcon name="energy" />Average energy</p><b>{summary.count ? energyBand(summary.average) : '—'}</b><span className="tb-average-dots" aria-label={`Average energy ${summary.average.toFixed(1)} out of 5`}>{[1,2,3,4,5].map(n => <i key={n} className={n <= Math.round(summary.average) ? 'filled' : ''} />)}</span></div></div>
       <div className="tb-distribution"><h4>Energy distribution</h4>{(['Low','Moderate','High'] as const).map(band => <div key={band} className={band.toLowerCase()}><span>{band}</span><span className="tb-bar">{[1,2,3,4,5].filter(level=>energyBand(level)===band).map(level=><i key={level} style={{...taskEnergyStyle(level),background:'var(--task-energy-solid)',width:`${summary.count ? tasks.filter(t=>!t.isBreak && t.energyRequired===level).length / summary.count * 100 : 0}%`}} />)}</span><span>{summary.distribution[band]} tasks</span></div>)}</div>
       <TimeWindowCard start={start} end={end} available={summary.available} onEdit={onEditTime} />
-      <div className={`tb-fit${summary.excess ? ' over' : ''}`} role="status"><h4><FlowIcon name={summary.excess ? 'time' : 'check'} />{summary.excess ? "You're over capacity" : 'Looks good!'}</h4><p>{summary.excess ? `Your tasks exceed today's available time by ${formatTaskDuration(summary.excess)}.` : `Your estimated time (${formatTaskDuration(summary.estimated)}) fits within your available time (${formatTaskDuration(summary.available)}).`}</p></div>
+      <div className={`tb-fit${!feasibility.valid ? ' over' : ''}`} role="status"><h4><FlowIcon name={feasibility.valid ? 'check' : 'time'} />{feasibility.valid ? 'Looks good!' : feasibility.excess ? "You're over capacity" : 'Review your schedule'}</h4><p>{feasibility.message}</p></div>
       <div className="tb-tip"><h4><FlowIcon name="tip" />Tip</h4><p>{tip}</p></div>
     </aside>
   </>;
