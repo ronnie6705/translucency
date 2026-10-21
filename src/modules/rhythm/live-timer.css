@@ -405,7 +405,7 @@
   margin-top: -64px;
   position: relative;
   z-index: 1;
-  max-height: 300px;
+  max-height: 440px;
   opacity: 1;
   transition: max-height 320ms var(--gentle-ease), opacity 320ms var(--gentle-ease), padding 320ms var(--gentle-ease);
 }
@@ -1092,4 +1092,30 @@
     width: 100%;
     max-width: 580px;
   }
+}
+
+.rhythm-module .live-timer-add-bar:has(input:focus) {
+  outline: 1px dashed rgba(255,255,255,0.5);
+  outline-offset: -1px;
+}
+.rhythm-module .live-timer-add-bar-left input:focus::placeholder {
+  color: rgba(255,255,255,0.38);
+  font-weight: 400;
+}
+.rhythm-module .live-timer-fixed-time {
+  flex: none;
+  gap: 8px;
+  height: 41px;
+}
+.rhythm-module .live-timer-fixed-time img { flex-shrink: 0; }
+.rhythm-module .live-timer-fixed-time input {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  font: inherit;
+  color-scheme: dark;
 }

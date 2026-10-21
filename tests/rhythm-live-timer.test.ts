@@ -455,3 +455,26 @@ test('reorderLiveTimer persists reordered timer in RhythmLibrary', () => {
 
 
 
+
+
+test('fixed live tasks and breaks honor the timer timezone and preserve current work', () => {
+  for (const isBreak of [false, true]) {
+    const next = insertItemIntoTimer(adaptive, { title: 'Fixed item', durationMinutes: 10, isBreak, anchorId: 'a', position: 'after', fixedStart: '12:40' }, Date.parse(instant(10)));
+    assert.deepEqual(next.blocks[0], adaptive.blocks[0]);
+    assert.equal(next.blocks[1].start, instant(40));
+    assert.equal(next.blocks[1].end, instant(50));
+    assert.equal(next.blocks[1].isFixed, true);
+    assert.equal(next.blocks[1].isBreak, isBreak);
+    assert.equal(next.blocks[2].start, instant(50));
+  }
+});
+
+test('fixed insertion rejects past times, placement conflicts, and fixed appointment overlaps', () => {
+  const params = { title: 'Fixed', durationMinutes: 10, isBreak: false, anchorId: 'a', position: 'after' as const };
+  const now = Date.parse(instant(10));
+  assert.throws(() => insertItemIntoTimer(adaptive, { ...params, fixedStart: '12:05' }, now), /has not passed/);
+  assert.throws(() => insertItemIntoTimer(adaptive, { ...params, fixedStart: '12:20' }, now), /placement/);
+  assert.throws(() => insertItemIntoTimer(adaptive, { ...params, fixedStart: '25:00' }, now), /valid fixed time/);
+  const fixed = { ...adaptive, blocks: adaptive.blocks.map(b => b.id === 'b' ? { ...b, isFixed: true } : b) };
+  assert.throws(() => insertItemIntoTimer(fixed, { ...params, fixedStart: '12:40' }, now), /fixed appointment/);
+});

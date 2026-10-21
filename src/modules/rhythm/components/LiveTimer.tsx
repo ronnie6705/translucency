@@ -119,7 +119,7 @@ function LiveTimerPanel({
   onEditTime?: () => void;
   timer: Timer;
   now: number;
-  onInsertItem: (params: InsertItemParams) => void;
+  onInsertItem: (params: InsertItemParams) => Promise<boolean>;
 }) {
   const { activeIndex, nextIndex, phase } = timerPosition(timer.blocks, now);
   const activeBlock = activeIndex >= 0 ? timer.blocks[activeIndex] : null;
@@ -154,6 +154,10 @@ function LiveTimerPanel({
   // 3. Unified Add Task / Break state
   const [itemType, setItemType] = useState<'task' | 'break'>('task');
   const [title, setTitle] = useState('');
+  const [titleFocused, setTitleFocused] = useState(false);
+  const [fixedStart, setFixedStart] = useState('');
+  const [insertError, setInsertError] = useState('');
+  const [isInserting, setIsInserting] = useState(false);
   const [taskDuration, setTaskDuration] = useState(30);
   const [breakDuration, setBreakDuration] = useState(10);
   const [energy, setEnergy] = useState(3);
@@ -198,19 +202,33 @@ function LiveTimerPanel({
     }
   }, [position, anchorOptions, anchorId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !anchorId || phase === 'complete') return;
-    onInsertItem({
-      title: title.trim(),
-      durationMinutes: itemType === 'task' ? taskDuration : breakDuration,
-      isBreak: itemType === 'break',
-      anchorId,
-      position,
-      energyRequired: itemType === 'task' ? energy : 1,
-    });
-    setTitle('');
-    setIsDrawerOpen(false);
+    if (!title.trim() || !anchorId || phase === 'complete' || isInserting) return;
+    setInsertError('');
+    setIsInserting(true);
+    try {
+      const ok = await onInsertItem({
+        title: title.trim(),
+        fixedStart: fixedStart || undefined,
+        durationMinutes: itemType === 'task' ? taskDuration : breakDuration,
+        isBreak: itemType === 'break',
+        anchorId,
+        position,
+        energyRequired: itemType === 'task' ? energy : 1,
+      });
+      if (!ok) {
+        setInsertError('Could not save this item. Please try again.');
+        return;
+      }
+      setTitle('');
+      setFixedStart('');
+      setIsDrawerOpen(false);
+    } catch (error) {
+      setInsertError(error instanceof Error ? error.message : 'Could not add this item.');
+    } finally {
+      setIsInserting(false);
+    }
   };
 
   return (
@@ -281,12 +299,15 @@ function LiveTimerPanel({
 
       {/* 3. Add Task / Break Form & Drawer */}
       <form className="live-timer-add-wrap" onSubmit={handleSubmit}>
+        <button type="submit" hidden disabled={isInserting}>Add task or break</button>
         <div className="live-timer-add-bar">
           <div className="live-timer-add-bar-left">
             <TimerIcon name="plus" />
             <input
               type="text"
-              placeholder="Add a Task/ Break"
+              placeholder={titleFocused ? "Enter your Task/ Break" : "Add a Task/ Break"}
+              onFocus={() => setTitleFocused(true)}
+              onBlur={() => setTitleFocused(false)}
               value={title}
               onChange={e => {
                 const val = e.target.value;
@@ -329,7 +350,7 @@ function LiveTimerPanel({
           </div>
         </div>
 
-        <div className="live-timer-add-drawer" aria-hidden={!isDrawerOpen}>
+        <div className="live-timer-add-drawer" aria-hidden={!isDrawerOpen} inert={!isDrawerOpen}>
           <div className="live-timer-add-drawer-fields">
             <span className="live-timer-drawer-label">ELEMENTS</span>
             <div className="live-timer-drawer-row">
@@ -428,6 +449,13 @@ function LiveTimerPanel({
                 <TimerIcon name="chevron-down" />
               </div>
             </div>
+            <label className="live-timer-drawer-label" htmlFor="live-timer-fixed-start">FIXED TIME (OPTIONAL)</label>
+            <div className="live-timer-drawer-field live-timer-fixed-time">
+              <img src="/rhythm/timer/fixed-time.svg" width={17} height={17} alt="" />
+              <input id="live-timer-fixed-start" type="time" value={fixedStart}
+                onChange={event => setFixedStart(event.target.value)} />
+            </div>
+            {insertError && <p role="alert">{insertError}</p>}
           </div>
         </div>
       </form>
@@ -813,11 +841,13 @@ export function LiveTimerModal({
     if (onInsertItem) {
       try {
         const ok = await onInsertItem(params, now);
-        if (!ok) setLocalTimer(null);
-      } catch {
+        if (!ok) { setLocalTimer(null); return false; }
+      } catch (error) {
         setLocalTimer(null);
+        throw error;
       }
     }
+    return true;
   };
 
   const handleReorder = async (fromIndex: number, toIndex: number) => {

@@ -1,3 +1,4 @@
+import { createDateInTimeZone, formatISOToTimeZone } from './utils/timezone';
 import { hasRunCommand, mutationCommand, recordScheduleChange, type RunCommand } from './timeblock-run';
 import type { RhythmLibrary } from './library';
 import { timerPosition, type LiveTimer } from './live-timer';
@@ -11,6 +12,7 @@ export interface InsertItemParams {
   anchorId: string;
   position: 'before' | 'after';
   energyRequired?: number;
+  fixedStart?: string;
 }
 
 /**
@@ -59,6 +61,18 @@ export function insertItemIntoTimer(timer: LiveTimer, params: InsertItemParams, 
   } else {
     insertStartMs = Date.parse(blocks[insertIndex - 1].end);
   }
+  if (params.fixedStart) {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(params.fixedStart)) {
+      throw new Error('Choose a valid fixed time.');
+    }
+    // Resolve the clock time on the placement date in the timer's timezone.
+    const local = formatISOToTimeZone(new Date(insertStartMs).toISOString(), timer.timezone);
+    const date = `${local.slice(0, 4)}-${local.slice(4, 6)}-${local.slice(6, 8)}`;
+    const fixedMs = createDateInTimeZone(date, params.fixedStart, timer.timezone).getTime();
+    if (fixedMs < now) throw new Error('Choose a fixed time that has not passed.');
+    if (fixedMs < insertStartMs) throw new Error('This fixed time conflicts with the selected placement. Choose another time or position.');
+    insertStartMs = fixedMs;
+  }
   const insertEndMs = insertStartMs + durationMs;
 
   const newBlock: ScheduleBlock = {
@@ -68,6 +82,7 @@ export function insertItemIntoTimer(timer: LiveTimer, params: InsertItemParams, 
     start: new Date(insertStartMs).toISOString(),
     end: new Date(insertEndMs).toISOString(),
     isBreak: params.isBreak,
+    ...(params.fixedStart ? { isFixed: true } : {}),
     energyRequired: params.energyRequired ?? (params.isBreak ? 1 : 3),
   };
 
@@ -133,6 +148,7 @@ export function insertLiveTimerItem(
     durationMinutes: params.durationMinutes,
     energyRequired: (params.energyRequired ?? 3) as Task['energyRequired'],
     priority: 1,
+    fixedStart: params.fixedStart,
   };
 
   const spaces = data.spaces?.map((space, i) =>
