@@ -1,4 +1,5 @@
 import { InlineTaskComposer } from "./InlineTaskComposer";
+import { PrioritySelector } from './PrioritySelector';
 import { taskEnergyStyle } from '../task-energy';
 import { TaskListBadge } from "./TaskListBadge";
 import { useBlockClear } from "./use-block-clear";
@@ -456,6 +457,7 @@ export function TaskRow({
             />
           )}
         </div>
+        <PrioritySelector task={task} disabled={busy || clear.active} onChange={change} />
         <button
           className="task-settings-button"
           disabled={clear.active}

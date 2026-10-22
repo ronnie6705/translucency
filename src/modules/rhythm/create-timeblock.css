@@ -319,3 +319,23 @@
 .rhythm-module .tb-range-dialog select { color:white; border:1px solid #ffffff22; }
 .rhythm-module .tb-range-dialog select option { background:#252430; }
 .rhythm-module .tb-header-actions .tb-back img { transform:rotate(180deg); }
+.rhythm-module .plan-catalog-row { display:flex; align-items:center; gap:8px; min-width:0; }
+.rhythm-module .tb-flow .plan-catalog-row { position:relative; }
+.rhythm-module .tb-flow .plan-catalog-row .plan-catalog-task { padding-right:46px; }
+.rhythm-module .plan-catalog-delete { display:grid; place-items:center; position:absolute; right:13px; width:24.23px; height:34px; padding:4px; border:0; border-radius:12px; background:rgba(255,81,81,.44); }
+.rhythm-module .plan-catalog-delete:hover { background:rgba(255,81,81,.65); }
+.rhythm-module .plan-catalog-delete:disabled { opacity:.4; }
+.rhythm-module .tb-priority-sort { display:inline-flex; align-items:center; gap:6px; }
+.rhythm-module .tb-priority-sort[aria-pressed=true] { background:#9a9eff33; color:#fff; }
+.rhythm-module .tb-flow .plan-catalog-row { padding:12px 13px; border:1px solid #ffffff1a; border-radius:20px; background:#ffffff0a; }
+.rhythm-module .tb-flow .plan-catalog-row:has(.plan-catalog-task[aria-pressed=true]) { border-color:#9a9eff88; background:#9a9eff1a; }
+.rhythm-module .tb-flow .plan-catalog-row .plan-catalog-task { flex:1; min-width:0; min-height:36px; padding:0; background:transparent; border:0; border-radius:0; }
+.rhythm-module .plan-catalog-controls { display:flex; align-items:center; gap:8px; flex:none; }
+.rhythm-module .plan-catalog-controls .plan-catalog-delete { position:static; flex:none; }
+.rhythm-module .plan-catalog-ranked { display:flex; flex-direction:column; gap:8px; }
+.rhythm-module .tb-flow .plan-catalog-category { display:inline-block; padding:3px 7px; margin:0 0 0 8px; border-radius:8px; font-size:11px; font-weight:400; color:var(--space-color); background:color-mix(in srgb,var(--space-color) 12%,transparent); }
+@media(max-width:640px) {
+  .rhythm-module .tb-flow .plan-catalog-row { flex-wrap:wrap; }
+  .rhythm-module .tb-flow .plan-catalog-row .plan-catalog-task { flex-basis:100%; }
+  .rhythm-module .plan-catalog-controls { margin-left:auto; flex-wrap:wrap; justify-content:flex-end; }
+}

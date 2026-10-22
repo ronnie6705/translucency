@@ -9,7 +9,7 @@ function object(v: unknown): v is Record<string, unknown> { return !!v && typeof
 function tasks(v: unknown): v is Task[] {
   return Array.isArray(v) && v.every(t => object(t) && typeof t.id === 'string' && typeof t.name === 'string' &&
     Number.isFinite(t.durationMinutes) && Number(t.durationMinutes) > 0 && [1,2,3,4,5].includes(Number(t.energyRequired)) &&
-    [1,2,3].includes(Number(t.priority)) && (t.fixedStart === undefined || /^([01]\d|2[0-3]):[0-5]\d$/.test(String(t.fixedStart))) &&
+    [1,2,3,4].includes(Number(t.priority)) && (t.fixedStart === undefined || /^([01]\d|2[0-3]):[0-5]\d$/.test(String(t.fixedStart))) &&
     (t.durationMode === undefined || t.durationMode === 'automatic' || t.durationMode === 'custom') && (t.completed === undefined || typeof t.completed === 'boolean') && (t.isBreak === undefined || typeof t.isBreak === 'boolean'));
 }
 function entry(v: unknown): v is SavedTaskList { return object(v) && typeof v.id === 'string' && typeof v.name === 'string' && typeof v.createdAt === 'string' && Number.isFinite(Date.parse(v.createdAt)) && tasks(v.tasks); }

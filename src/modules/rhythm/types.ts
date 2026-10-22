@@ -9,7 +9,7 @@ export interface Task {
   /** Saved estimates stay unchanged until the user edits energy or duration. */
   durationMode?: 'automatic' | 'custom';
   energyRequired: 1 | 2 | 3 | 4 | 5;
-  priority: 1 | 2 | 3; // 1 = high, 3 = low
+  priority: 1 | 2 | 3 | 4; // 1 = high, 2 = medium, 3 = low, 4 = unset
   completed?: boolean;
   isBreak?: boolean;
   fixedStart?: string; // "HH:MM" in 24h

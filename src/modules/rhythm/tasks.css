@@ -1179,3 +1179,17 @@
 .rhythm-module .inline-create .inline-create-name:focus {
   outline: none; box-shadow: none; border-color: transparent; background: transparent;
 }
+.rhythm-module .task-priority { display:inline-flex; align-items:center; gap:10px; padding:0 12px; border-radius:12px; background:color-mix(in srgb,var(--priority-color) 10%,transparent); color:var(--priority-color); transition:color 150ms ease,background-color 150ms ease; }
+.rhythm-module .task-priority-flag { display:inline-block; width:16px; height:16px; flex:none; background:currentColor; mask:url('/rhythm/tasks/priority-flag.svg') center/16px 16px no-repeat; }
+.rhythm-module .task-priority .task-priority-step { display:grid; place-items:center; width:10px; height:32px; min-width:0; padding:0; border:0; background:transparent; color:inherit; }
+.rhythm-module .task-priority-step span { width:10px; height:10px; border-radius:50%; background:currentColor; opacity:.2; transform:scale(1); transition:opacity 150ms ease,transform 150ms ease; }
+.rhythm-module .task-priority-step:not(:disabled):is(:hover,:focus-visible) span { opacity:1; transform:scale(1.2); }
+.rhythm-module .task-priority-step:disabled { cursor:default; opacity:.35; }
+.rhythm-module .task-priority-step:focus-visible { outline:2px solid currentColor; outline-offset:1px; }
+@media(prefers-reduced-motion:reduce) { .rhythm-module .task-priority,.rhythm-module .task-priority-step span { transition:none; } .rhythm-module .task-priority-step:not(:disabled):is(:hover,:focus-visible) span { transform:none; } }
+
+.rhythm-module .task-priority-circles { display:flex; gap:5px; }
+.rhythm-module .task-priority .task-priority-reset { display:grid; place-items:center; width:16px; height:32px; min-width:0; padding:0; border:0; background:transparent; color:inherit; }
+.rhythm-module .task-priority-reset:disabled { opacity:1; cursor:default; }
+.rhythm-module .task-priority-step[data-filled=true] span { opacity:1; }
+.rhythm-module .task-priority-reset:focus-visible { outline:2px solid currentColor; outline-offset:2px; }

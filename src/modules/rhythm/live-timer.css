@@ -1119,3 +1119,7 @@
   font: inherit;
   color-scheme: dark;
 }
+@media (max-width:640px) {
+  .rhythm-module .live-timer-modal .live-timer-callout { left:12px; transform:translateY(-110%); font-size:12px; }
+  .rhythm-module .live-timer-modal .live-timer-crossbar { left:0; right:0; }
+}

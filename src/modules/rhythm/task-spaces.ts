@@ -57,6 +57,8 @@ export function updateTask(
       t.id === ref.taskId ? { ...updateTaskEstimate(t, updates), id: t.id } : t,
     ),
   );
+  // Priority is planning metadata; accepted schedules and their snapshots stay intact.
+  if (Object.keys(updates).every(key => key === 'priority')) return withUpdatedLocation;
   const timeblocks = withUpdatedLocation.timeblocks.map((b) => ({
     ...b,
     schedule: b.tasks.some(t => t.id === ref.taskId) ? undefined : b.schedule,

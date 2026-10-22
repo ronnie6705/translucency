@@ -24,7 +24,7 @@ import { buildManualSchedule } from './utils/manualSchedule';
 import { LiveTimerModal, LiveTimerPreview, type Timer } from './components/LiveTimer';
 import { TimeblockWorkspace } from './components/TimeblockWorkspace';
 import { NameListModal } from './components/task-dialogs';
-import { changeTasks, updateTimeblockTask } from './task-spaces';
+import { changeTasks, findTaskReference, updateTask, updateTimeblockTask } from './task-spaces';
 import './live-timer.css';
 import './timeblock-flow.css';
 import './plan-timeblock.css';
@@ -644,6 +644,17 @@ function App({ section = "rhythm" }: { section?: string }) {
             {flowContext === 'timeblock' ? (
               <CreateTimeblockFlow tasks={tasks} spaces={availableTasks} config={dayConfig} busy={startingTimer} error={storageError}
                 onTasksChange={setTasks} onConfigChange={setDayConfig} onCreateTask={handleCreatePlanningTask}
+                onPriorityChange={(id, priority) => save(data => {
+                  const ref = findTaskReference(data, id);
+                  if (!ref) throw new Error('This task no longer exists.');
+                  return updateTask(data, ref, {priority});
+                })}
+                onDeleteTask={id => save(data => {
+                  const ref = findTaskReference(data, id);
+                  if (!ref) throw new Error('This task no longer exists.');
+                  // Delete the source only; accepted plans, runs and the live timer own snapshots.
+                  return changeTasks(data, ref, current => current.filter(task => task.id !== id));
+                })}
                 onFinish={finishTimeblock} onClose={closeFlowModal} />
             ) : flowStep === 'chronotype' ? (
               <div className="task-step chronotype-step">

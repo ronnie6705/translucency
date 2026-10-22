@@ -14,6 +14,8 @@ import { useLayoutMotion } from './use-layout-motion';
 type Props = {
   tasks: Task[]; spaces: CatalogSpace[]; config: DayConfig; busy: boolean; error: string | null;
   onTasksChange(tasks: Task[]): void; onConfigChange(config: DayConfig): void;
+  onPriorityChange(id: string, priority: Task['priority']): Promise<boolean>;
+  onDeleteTask(id: string): Promise<boolean>;
   onCreateTask(task: Task, spaceId: string | null): Promise<boolean>;
   onFinish(blocks: ScheduleBlock[], launch: boolean, exportCalendar: boolean): Promise<void>;
   onClose(): void;
@@ -23,8 +25,41 @@ const descriptions = ['Get everything out of your head. You can plan the details
 const icons = ['stack','energy','schedule'];
 
 
-export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTasksChange, onConfigChange, onCreateTask, onFinish, onClose }: Props) {
+export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTasksChange, onConfigChange, onCreateTask, onDeleteTask, onPriorityChange, onFinish, onClose }: Props) {
   const [step, setStep] = useState(0);
+  const [sortByPriority, setSortByPriority] = useState(false);
+  const [priorityEdit, setPriorityEdit] = useState<{id: string; priority: Task['priority']} | null>(null);
+  const displaySpaces = priorityEdit ? spaces.map(space => ({ ...space,
+    tasks: space.tasks.map(task => task.id === priorityEdit.id ? {...task, priority: priorityEdit.priority} : task),
+    lists: space.lists.map(list => ({...list, tasks: list.tasks.map(task => task.id === priorityEdit.id ? {...task, priority: priorityEdit.priority} : task)})),
+  })) : spaces;
+  const changePriority = async (id: string, priority: Task['priority']) => {
+    if (priorityEdit) return false;
+    setPriorityEdit({id, priority});
+    try {
+      const saved = await onPriorityChange(id, priority);
+      if (saved) {
+        const cached = assessments.current.get(id);
+        if (cached) assessments.current.set(id, {...cached, priority});
+        onTasksChange(currentTasks.current.map(task => task.id === id ? {...task, priority} : task));
+      }
+      return saved;
+    } finally { setPriorityEdit(null); }
+  };
+  const [deleting, setDeleting] = useState<string>();
+  const deleteTask = async (task: Task) => {
+    if (deleting) return;
+    setDeleting(task.id);
+    try {
+      if (await onDeleteTask(task.id)) {
+        clearTimeout(removalTimers.current.get(task.id));
+        removalTimers.current.delete(task.id);
+        setRemoving(prev => { const next = new Set(prev); next.delete(task.id); return next; });
+        assessments.current.delete(task.id); defaults.current.delete(task.id);
+        onTasksChange(currentTasks.current.filter(t => t.id !== task.id));
+      }
+    } finally { setDeleting(undefined); }
+  };
   const [direction, setDirection] = useState('forward');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<string | null>(null);
@@ -86,7 +121,7 @@ export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTask
     try { if (await onCreateTask(task, filter)) { add(task); setQuery(''); } } finally { setCreating(false); }
   };
   const clear = () => { removalTimers.current.forEach(clearTimeout); removalTimers.current.clear(); setRemoving(new Set()); onTasksChange([]); };
-  const nextAllowed = step === 0 ? tasks.some(t => !t.isBreak) && validation.validRange && !creating && !removing.size : validation.valid;
+  const nextAllowed = step === 0 ? tasks.some(t => !t.isBreak) && validation.validRange && !creating && !priorityEdit && !deleting && !removing.size : validation.valid;
   const dragId = useRef<string | null>(null);
   const reorder = (from: number, to: number) => { if (from < 0 || to < 0 || to >= tasks.length) return; const next = [...tasks]; const [task] = next.splice(from,1); next.splice(to,0,task); onTasksChange(next); };
   return <div className="tb-flow">
@@ -99,8 +134,8 @@ export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTask
     <div className={`tb-columns tb-step-${step} ${direction}`} key={step}>
       {step === 0 && <>
         <section className="tb-tasks-main"><form className="tb-search" onSubmit={e => { e.preventDefault(); void create(); }}><span><FlowIcon name="search" />+</span><input ref={search} aria-label="Search or Add a new task" placeholder="Search or Add a new task" value={query} onChange={e => setQuery(e.target.value)} /><button type="submit" aria-label="Add task to today's stack" disabled={!query.trim() || creating}><FlowIcon name="add" /></button></form>
-          <div className="tb-catalog-toolbar"><div className="tb-space-filters" aria-label="Filter by Space"><button type="button" aria-pressed={filter === null} onClick={() => setFilter(null)}><i />All</button>{spaces.map(space => <button type="button" key={space.id} aria-pressed={filter === space.id} onClick={() => setFilter(space.id)}><i />{space.name}<small>{space.tasks.length + space.lists.reduce((sum,l) => sum+l.tasks.length,0)}</small></button>)}</div><div><button type="button" className="tb-small" onClick={() => setCollapsed(new Set(spaces.map(s => s.id)))}>Collapse All</button><button type="button" className="tb-small" onClick={() => setCollapsed(new Set())}>Expand All</button></div></div>
-          <PlanTaskCatalog spaces={spaces} selected={tasks} onAdd={add} onRemove={remove} query={query} filter={filter} collapsed={collapsed} onToggle={id => setCollapsed(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; })} />
+          <div className="tb-catalog-toolbar"><div className="tb-space-filters" aria-label="Filter by Space"><button type="button" aria-pressed={filter === null} onClick={() => setFilter(null)}><i />All</button>{spaces.map(space => <button type="button" key={space.id} aria-pressed={filter === space.id} onClick={() => setFilter(space.id)}><i />{space.name}<small>{space.tasks.length + space.lists.reduce((sum,l) => sum+l.tasks.length,0)}</small></button>)}</div><div><button type="button" className="tb-small tb-priority-sort" aria-pressed={sortByPriority} onClick={() => setSortByPriority(value => !value)}><span className="task-priority-flag" aria-hidden="true" />Sort by Priority</button><button type="button" className="tb-small" disabled={sortByPriority} onClick={() => setCollapsed(new Set(spaces.map(s => s.id)))}>Collapse All</button><button type="button" className="tb-small" disabled={sortByPriority} onClick={() => setCollapsed(new Set())}>Expand All</button></div></div>
+          <PlanTaskCatalog onPriorityChange={changePriority} savingPriority={!!priorityEdit} sortByPriority={sortByPriority} deleting={deleting} onDelete={task => void deleteTask(task)} spaces={displaySpaces} selected={tasks} onAdd={add} onRemove={remove} query={query} filter={filter} collapsed={collapsed} onToggle={id => setCollapsed(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; })} />
         </section>
         <aside className="tb-stack" aria-label="Today's Stack"><div className="tb-panel-heading"><span className="tb-icon-tile"><FlowIcon name="stack" /></span><div><h3>Today's Stack</h3><p>Tasks you've added for today.</p></div><span className="tb-count" aria-live="polite">{summary.count} tasks</span><button type="button" className="tb-small" onClick={clear} disabled={!tasks.length}>Clear all</button></div>
           <div className="tb-stack-list" ref={stack}>{tasks.map((task,index) => <div key={task.id} data-motion-id={task.id} className={`tb-stack-slot${removing.has(task.id) ? ' removing' : ''}`}><div className="tb-stack-row" draggable onDragStart={() => { dragId.current = task.id; }} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); reorder(tasks.findIndex(t => t.id === dragId.current),index); dragId.current=null; }}>

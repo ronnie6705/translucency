@@ -33,6 +33,12 @@ function timeLabel(value: number | string, timezone: string) {
   return new Intl.DateTimeFormat('en-US', { timeZone: timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(value));
 }
 
+function timeRangeLabel(block: ScheduleBlock, timezone: string) {
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const nextDay = day.format(new Date(block.start)) !== day.format(new Date(block.end));
+  return `${timeLabel(block.start, timezone)} – ${timeLabel(block.end, timezone)}${nextDay ? ' (next day)' : ''}`;
+}
+
 function durationLabel(ms: number) {
   const mins = Math.round(ms / 60000);
   return mins >= 60 ? `${Math.floor(mins / 60)}h${mins % 60 ? ` ${mins % 60}m` : ''}` : `${mins} mins`;
@@ -92,7 +98,7 @@ export function TimerBlock({ block, state, timezone, height, metadata, scheduleD
       onPointerDown={isDraggable ? handlePointerDown : undefined}>
       {scheduleDraggable && <span className="schedule-drag-handle" aria-hidden="true"><img src="/rhythm/flow/schedule-drag.svg" alt="" draggable={false} /></span>}
       <div className="live-timer-task-icon">{clear.active ? <TimerIcon name={outcome.current === 'completed' ? 'check' : 'cross'} /> : <TimerIcon name={block.isBreak ? 'break' : 'task'} />}</div>
-      <div className="live-timer-copy"><time dateTime={block.start}>{timeLabel(block.start, timezone)}</time>
+      <div className="live-timer-copy"><time dateTime={block.start}>{timeRangeLabel(block, timezone)}</time>
         <div className="live-timer-task-heading"><h3>{block.taskName}{metadata ?? <TaskListBadge taskId={block.taskId} />}</h3>
           {onComplete && !block.isBreak && state !== 'past' && <div className="live-timer-task-actions">
             {(['completed', 'skipped'] as const).map(value => <button key={value} type="button" className={`live-timer-action ${value === 'completed' ? 'live-timer-complete' : 'live-timer-skip'}`}
