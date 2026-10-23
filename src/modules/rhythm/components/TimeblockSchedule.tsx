@@ -1,3 +1,6 @@
+import { BreakPreferences } from './BreakPreferences';
+import { anchorKey, setRecoveryOverride, type BreakPreferences as Preferences } from '../recovery/recovery-types';
+import type { SchedulingResult } from '../recovery/recovery-planner';
 import { validateSchedule } from '../schedule-validation';
 import { useState } from 'react';
 import type { DayConfig, ScheduleBlock, Task } from '../types';
@@ -8,7 +11,8 @@ import type { CatalogSpace } from './PlanTaskCatalog';
 import { FlowIcon } from './TimeblockWorkload';
 import { ScheduleBlocks } from './ScheduleBlocks';
 
-export function TimeblockSchedule({ blocks, tasks, spaces, config, onChronotype, onRegenerate, onScheduleChange, launch, exportCalendar, onLaunchChange, onExportChange, onFinish, busy }: {
+export function TimeblockSchedule({ preferences, onPreferencesChange, recovery, onEditTime, onAdjustWorkload, blocks, tasks, spaces, config, onChronotype, onRegenerate, onScheduleChange, launch, exportCalendar, onLaunchChange, onExportChange, onFinish, busy }: {
+  preferences: Preferences; onPreferencesChange(value: Preferences): void; recovery: SchedulingResult; onEditTime(): void; onAdjustWorkload(): void;
   blocks: ScheduleBlock[]; tasks: Task[]; spaces: CatalogSpace[]; config: DayConfig;
   onChronotype(value: DayConfig['chronotype']): void; onRegenerate(): void; onScheduleChange(blocks: ScheduleBlock[]): void;
   launch: boolean; exportCalendar: boolean; onLaunchChange(value: boolean): void; onExportChange(value: boolean): void; onFinish(): void; busy: boolean;
@@ -24,19 +28,23 @@ export function TimeblockSchedule({ blocks, tasks, spaces, config, onChronotype,
         <button type="button" className="tb-small" onClick={() => { onRegenerate(); setMessage('Schedule regenerated using your current energy profile.'); }}><FlowIcon name="refresh" />Regenerate schedule</button>
         <button type="button" className="tb-small tb-icon-only" aria-label="Edit schedule order" aria-pressed={editing} onClick={() => setEditing(!editing)}><FlowIcon name="more" /></button></div></div>
       {!validation.valid && <p className="tb-warning" role="alert">{validation.message} {validation.unallocated.map(t => `${t.name}: ${formatTaskDuration(t.minutes)} unscheduled`).join('; ')}</p>}
+      {recovery.notices.map(notice => <p key={notice} className="tb-recovery-notice" role="status">{notice}</p>)}
+      {recovery.status === 'invalid' && <div className="tb-warning" role="alert">{recovery.errors.join(' ')}<div><button type="button" className="tb-small" onClick={onEditTime}>Extend Time Range</button><button type="button" className="tb-small" onClick={onAdjustWorkload}>Adjust Workload</button></div></div>}
       <p className="tb-schedule-message" role="status">{message}</p>
-      <ScheduleBlocks blocks={blocks} tasks={tasks} config={config} spaces={spaces} editing={editing} onChange={onScheduleChange} onMessage={setMessage} />
+      <ScheduleBlocks preferences={preferences} onOverride={(anchor, override) => onPreferencesChange(setRecoveryOverride(preferences,anchor,override))} blocks={blocks} tasks={tasks} config={config} spaces={spaces} editing={editing} onChange={onScheduleChange} onMessage={setMessage} />
     </section>
     <aside className="tb-schedule-sidebar">
       <section className="tb-profile"><h3>Energy Profile</h3><p>Change to see a different schedule.</p><ChronotypeSelector value={config.chronotype} onChange={onChronotype} variant="schedule" /></section>
+      <BreakPreferences value={preferences} onChange={onPreferencesChange} />
+      {preferences.overrides.length > 0 && <details className="tb-recovery-overrides"><summary>Recovery adjustments ({preferences.overrides.length})</summary><p>{preferences.preset==='none' ? 'Automatic recovery is off. Saved adjustments will apply when enabled again.' : 'Restore automatic behavior for an adjusted or removed break.'}</p>{preferences.overrides.map(override => <div key={anchorKey(override.anchor)}><span>{tasks.find(t => t.id === override.anchor.taskId)?.name ?? 'Removed task'} · {override.anchor.atTaskEnd ? 'after task' : `after ${override.anchor.offsetMinutes}m`} · {override.removed ? 'removed' : `${override.durationMinutes}m`}</span><button type="button" className="tb-small" onClick={() => onPreferencesChange(setRecoveryOverride(preferences,override.anchor))}>Restore automatic</button></div>)}{recovery.inactiveOverrideKeys.length > 0 && <p>{recovery.inactiveOverrideKeys.length} adjustment(s) are inactive until their original boundary is available.</p>}</details>}
       <section className="tb-schedule-summary"><h3>Schedule Summary</h3><p>A quick overview of your planned day.</p><dl>
         <div><dt><FlowIcon name="summary-file" />Tasks</dt><dd>{summary.count}</dd></div><div><dt><FlowIcon name="summary-duration" />Work time</dt><dd>{formatTaskDuration(summary.work)}</dd></div>
-        <div><dt><FlowIcon name="summary-break" />Breaks</dt><dd>{formatTaskDuration(summary.breaks)}</dd></div><div><dt><FlowIcon name="summary-time" />Finish time</dt><dd>{summary.finish ? time(summary.finish) : '—'}</dd></div>
+        <div><dt><FlowIcon name="summary-break" />Planned breaks</dt><dd>{formatTaskDuration(summary.plannedBreaks)}</dd></div><div><dt>Recovery breaks</dt><dd>{formatTaskDuration(summary.recoveryBreaks)}</dd></div><div><dt>Total scheduled</dt><dd>{formatTaskDuration(summary.work+summary.breaks)}</dd></div><div><dt><FlowIcon name="summary-time" />Finish time</dt><dd>{summary.finish ? time(summary.finish) : '—'}</dd></div>
       </dl></section>
       <section className="tb-outputs"><h3>After scheduling</h3><p>Choose what you'd like to do with this schedule.</p>
         <label className={`tb-output${launch ? ' checked' : ''}`}><span className="tb-output-icon"><FlowIcon name="play" /></span><span><strong>Start Live Timer</strong><small>Open your schedule in focus mode with the Live Timer.</small></span><input type="checkbox" checked={launch} onChange={e => onLaunchChange(e.target.checked)} /><span className="tb-output-check" aria-hidden="true">{launch && <FlowIcon name="output-check" />}</span></label>
         <label className={`tb-output${exportCalendar ? ' checked' : ''}`}><span className="tb-output-icon"><FlowIcon name="calendar" /></span><span><strong>Export to Calendar</strong><small>Add today's schedule to your calendar (ICS file).</small></span><input type="checkbox" checked={exportCalendar} onChange={e => onExportChange(e.target.checked)} /><span className="tb-output-check" aria-hidden="true">{exportCalendar && <FlowIcon name="output-check" />}</span></label>
-        <button type="button" className="tb-finish" disabled={busy || (!launch && !exportCalendar) || !validation.valid} onClick={onFinish} aria-describedby="tb-output-status">{busy ? 'Saving…' : launch && exportCalendar ? 'Start & Export' : launch ? 'Start Live Timer' : 'Export to Calendar'}<FlowIcon name="start" /></button>
+        <button type="button" className="tb-finish" disabled={busy || (!launch && !exportCalendar) || !validation.valid || recovery.status === 'invalid'} onClick={onFinish} aria-describedby="tb-output-status">{busy ? 'Saving…' : launch && exportCalendar ? 'Start & Export' : launch ? 'Start Live Timer' : 'Export to Calendar'}<FlowIcon name="start" /></button>
         <p id="tb-output-status" className="tb-output-status" role="status">{!launch && !exportCalendar ? 'Choose at least one option to continue.' : !validation.valid ? 'Every selected task must fit in full before you continue.' : ''}</p>
       </section>
     </aside>

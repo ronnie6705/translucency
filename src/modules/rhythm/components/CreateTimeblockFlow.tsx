@@ -1,3 +1,7 @@
+import { generateScheduleResult } from '../recovery/recovery-planner';
+import { defaultBreakPreferences, type BreakPreferences } from '../recovery/recovery-types';
+import { placeOrderedBlocks } from '../schedule-placement';
+import { createDateInTimeZone } from '../utils/timezone';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DayConfig, ScheduleBlock, Task } from '../types';
 import { validateSchedule } from '../schedule-validation';
@@ -12,12 +16,13 @@ import { TimeblockSchedule } from './TimeblockSchedule';
 import { useLayoutMotion } from './use-layout-motion';
 
 type Props = {
+  initialPreferences?: BreakPreferences; initialSchedule?: ScheduleBlock[]; initialBaseSchedule?: ScheduleBlock[]; existing?: boolean;
   tasks: Task[]; spaces: CatalogSpace[]; config: DayConfig; busy: boolean; error: string | null;
   onTasksChange(tasks: Task[]): void; onConfigChange(config: DayConfig): void;
   onPriorityChange(id: string, priority: Task['priority']): Promise<boolean>;
   onDeleteTask(id: string): Promise<boolean>;
   onCreateTask(task: Task, spaceId: string | null): Promise<boolean>;
-  onFinish(blocks: ScheduleBlock[], launch: boolean, exportCalendar: boolean): Promise<void>;
+  onFinish(blocks: ScheduleBlock[], launch: boolean, exportCalendar: boolean, preferences: BreakPreferences, baseSchedule: ScheduleBlock[]): Promise<void>;
   onClose(): void;
 };
 const titles = ["Gather Today's Tasks", "Assess Today's Workload", 'Your Timeblock Is Ready'];
@@ -25,7 +30,7 @@ const descriptions = ['Get everything out of your head. You can plan the details
 const icons = ['stack','energy','schedule'];
 
 
-export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTasksChange, onConfigChange, onCreateTask, onDeleteTask, onPriorityChange, onFinish, onClose }: Props) {
+export function CreateTimeblockFlow({ initialPreferences, initialSchedule, initialBaseSchedule, existing, tasks, spaces, config, busy, error, onTasksChange, onConfigChange, onCreateTask, onDeleteTask, onPriorityChange, onFinish, onClose }: Props) {
   const [step, setStep] = useState(0);
   const [sortByPriority, setSortByPriority] = useState(false);
   const [priorityEdit, setPriorityEdit] = useState<{id: string; priority: Task['priority']} | null>(null);
@@ -69,17 +74,25 @@ export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTask
   const [launch, setLaunch] = useState(true);
   const [exportCalendar, setExportCalendar] = useState(true);
   const [generation, setGeneration] = useState(0);
-  const [manual, setManual] = useState<{ input: string; blocks: ScheduleBlock[] } | null>(null);
+  const [preferences, setPreferences] = useState<BreakPreferences>(() => initialPreferences ?? (existing ? {preset:'none',overrides:[]} : defaultBreakPreferences()));
+  const taskInput = JSON.stringify(tasks);
+  const [manual, setManual] = useState<{ input: string; blocks: ScheduleBlock[]; config: DayConfig } | null>(() => initialBaseSchedule || initialSchedule ? {input:taskInput,blocks:initialBaseSchedule ?? initialSchedule!.filter(b => !b.recovery),config} : null);
   const search = useRef<HTMLInputElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const assessments = useRef(new Map<string, Task>());
   const defaults = useRef(new Map<string, Task>());
   const catalog = useMemo(() => spaces.flatMap(s => [...s.tasks, ...s.lists.flatMap(l => l.tasks)]), [spaces]);
-  const input = JSON.stringify({ tasks, config, generation });
+
   const validation = validateTimeblockPlan(tasks, config.startTime, config.endTime);
   const schedule = useMemo(() => step > 0 && validation.valid ? generateSchedule(tasks, config) : [], [tasks, config, generation, validation.valid, step]);
   const feasibility = useMemo(() => validateSchedule(tasks, config, schedule), [tasks, config, schedule]);
-  const blocks = manual?.input === input ? manual.blocks : schedule;
+  const baseSchedule = useMemo(() => {
+    if (manual?.input !== taskInput) return schedule;
+    if (JSON.stringify(manual.config) === JSON.stringify(config)) return manual.blocks;
+    return placeOrderedBlocks(manual.blocks, createDateInTimeZone(config.date,config.startTime,config.timezone).getTime(), createDateInTimeZone(config.date,config.endTime,config.timezone).getTime()).blocks;
+  }, [manual, taskInput, config, schedule]);
+  const recovery = useMemo(() => generateScheduleResult(tasks,config,{preferences,baseSchedule}),[tasks,config,preferences,baseSchedule]);
+  const blocks = recovery.blocks;
   const summary = workloadSummary(tasks, config.startTime, config.endTime);
   const stack = useLayoutMotion(tasks.map(t => t.id).join(','));
   const [removing, setRemoving] = useState(new Set<string>());
@@ -145,7 +158,7 @@ export function CreateTimeblockFlow({ tasks, spaces, config, busy, error, onTask
         </aside>
       </>}
       {step === 1 && <TimeblockWorkload feasibility={feasibility} tasks={tasks} spaces={spaces} start={config.startTime} end={config.endTime} onUpdate={update} onRemove={remove} onReset={() => onTasksChange(tasks.map(t => { const d = defaults.current.get(t.id); return { ...t, durationMinutes: d?.durationMinutes ?? 45, energyRequired: d?.energyRequired ?? 3, durationMode: d?.durationMode }; }))} onViewTasks={() => go(0)} onEditTime={() => setEditingTime(true)} onAddBreak={() => add({id:crypto.randomUUID(),name:'Short break',durationMinutes:15,energyRequired:1,priority:2,isBreak:true})} />}
-      {step === 2 && <TimeblockSchedule spaces={spaces} blocks={blocks} tasks={tasks} config={config} onChronotype={chronotype => onConfigChange({ ...config, chronotype })} onRegenerate={() => setGeneration(n=>n+1)} onScheduleChange={blocks => setManual({input,blocks})} launch={launch} exportCalendar={exportCalendar} onLaunchChange={setLaunch} onExportChange={setExportCalendar} onFinish={() => { void onFinish(blocks,launch,exportCalendar); }} busy={busy} />}
+      {step === 2 && <TimeblockSchedule spaces={spaces} blocks={blocks} tasks={tasks} config={config} preferences={preferences} onPreferencesChange={setPreferences} recovery={recovery} onEditTime={() => setEditingTime(true)} onAdjustWorkload={() => go(1)} onChronotype={chronotype => { setManual(null); onConfigChange({ ...config, chronotype }); }} onRegenerate={() => { setManual(null); setGeneration(n=>n+1); }} onScheduleChange={blocks => setManual({input:taskInput,blocks,config})} launch={launch} exportCalendar={exportCalendar} onLaunchChange={setLaunch} onExportChange={setExportCalendar} onFinish={() => { void onFinish(blocks,launch,exportCalendar,preferences,baseSchedule); }} busy={busy} />}
     </div>
     {editingTime && <TimeWindowEditor config={config} onChange={onConfigChange} onClose={() => setEditingTime(false)} />}
   </div>;

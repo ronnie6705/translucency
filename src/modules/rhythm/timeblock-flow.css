@@ -127,3 +127,28 @@
  .rhythm-module .flow-modal.flow-unified[data-modal-size] :is(.task-step-header,.time-range-header) { flex-direction: column; align-items: stretch; gap: 16px; }
  .rhythm-module .flow-modal.flow-unified[data-modal-size] :is(.task-step-header,.time-range-header) > div:first-child { flex: none; }
 }
+
+.tb-break-preferences { border: 1px solid #ffffff18; border-radius: 18px; padding: 18px; margin: 0; background: #211f2a; }
+.tb-break-preferences legend { font-weight: 600; padding: 0 5px; }
+.tb-break-preferences > p, .tb-recovery-overrides p { color: #bbb5cc; font-size: 13px; margin: 0 0 12px; }
+.tb-break-preferences label { display: flex; gap: 10px; align-items: center; padding: 11px; margin-top: 7px; border: 1px solid transparent; border-radius: 12px; cursor: pointer; transition: background 180ms, border-color 180ms; }
+.tb-break-preferences label:hover, .tb-break-preferences label.selected { background: #b8a0ff12; border-color: #b8a0ff66; }
+.tb-break-preferences input { accent-color: #bdabfa; }
+.tb-break-preferences strong, .tb-break-preferences small { display: block; }
+.tb-break-preferences small { color: #bbb5cc; font-size: 12px; margin-top: 4px; }
+.tb-break-preferences label:focus-within, .tb-recovery-controls :focus-visible { outline: 2px solid #c5b3ff; outline-offset: 3px; }
+.tb-recovery-notice { font-size: 13px; color: #c3b9d9; margin: 8px 16px; }
+.tb-recovery-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 4px 12px 12px; font-size: 12px; }
+.tb-recovery-controls select { background: #292433; color: #eee9f7; border: 1px solid #b8a0ff66; border-radius: 6px; padding: 4px; }
+.tb-schedule-slot.is-recovery { border: 1px solid #b8a0ff28; border-radius: 16px; background: #b8a0ff08; }
+.tb-schedule-slot.is-recovery .live-timer-block { background: transparent; }
+.tb-recovery-overrides { padding: 12px; font-size: 12px; }
+.tb-recovery-overrides summary { cursor: pointer; margin-bottom: 8px; }
+.tb-recovery-overrides > div { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin: 8px 0; }
+@media (prefers-reduced-motion: reduce) { .tb-break-preferences label { transition: none; } }
+.tb-schedule-blocks { position: relative; }
+.tb-flow .tb-break-preferences label { display: grid; grid-template-columns: 18px minmax(0,1fr); text-align: left; color: #f0ebfa; padding: 9px; }
+.tb-flow .tb-break-preferences label input { width: 15px; height: 15px; margin: 0; }
+.tb-flow .tb-break-preferences label strong { color: #f0ebfa; font-size: 13px; }
+.tb-flow .tb-break-preferences label small { color: #c9c2d9; }
+.tb-flow .tb-recovery-controls label { color: #c9c2d9; }

@@ -1,3 +1,4 @@
+import { updateRecoveryPlan } from './recovery/recovery-saved-plan';
 import { updateTaskEstimate } from "./task-duration";
 import type { RhythmLibrary } from "./library";
 import type { Task, SavedTaskList } from "./types";
@@ -59,13 +60,8 @@ export function updateTask(
   );
   // Priority is planning metadata; accepted schedules and their snapshots stay intact.
   if (Object.keys(updates).every(key => key === 'priority')) return withUpdatedLocation;
-  const timeblocks = withUpdatedLocation.timeblocks.map((b) => ({
-    ...b,
-    schedule: b.tasks.some(t => t.id === ref.taskId) ? undefined : b.schedule,
-    tasks: b.tasks.map((t) =>
-      t.id === ref.taskId ? { ...updateTaskEstimate(t, updates), id: t.id } : t,
-    ),
-  }));
+  const timeblocks = withUpdatedLocation.timeblocks.map(b => b.tasks.some(t => t.id===ref.taskId)
+    ? updateRecoveryPlan(b,b.tasks.map(t => t.id===ref.taskId ? {...updateTaskEstimate(t,updates),id:t.id} : t)) : b);
   let liveTimer = withUpdatedLocation.liveTimer;
   if (liveTimer && liveTimer.blocks.some((b) => b.taskId === ref.taskId)) {
     liveTimer = {
@@ -127,17 +123,8 @@ export function updateTimeblockTask(
   if (!tb.tasks.some((t) => t.id === taskId))
     throw new Error("This task is not part of the timeblock.");
 
-  const updatedTimeblocks = data.timeblocks.map((b) =>
-    b.id === timeblockId
-      ? {
-          ...b,
-          schedule: undefined,
-          tasks: b.tasks.map((t) =>
-            t.id === taskId ? { ...updateTaskEstimate(t, updates), id: t.id } : t,
-          ),
-        }
-      : b,
-  );
+  const updatedTimeblocks = data.timeblocks.map(b => b.id===timeblockId
+    ? updateRecoveryPlan(b,b.tasks.map(t => t.id===taskId ? {...updateTaskEstimate(t,updates),id:t.id} : t)) : b);
 
   const updatedSpaces = data.spaces?.map((space) => ({
     ...space,

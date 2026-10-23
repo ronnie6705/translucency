@@ -100,9 +100,9 @@ export function TimerBlock({ block, state, timezone, height, metadata, scheduleD
       <div className="live-timer-task-icon">{clear.active ? <TimerIcon name={outcome.current === 'completed' ? 'check' : 'cross'} /> : <TimerIcon name={block.isBreak ? 'break' : 'task'} />}</div>
       <div className="live-timer-copy"><time dateTime={block.start}>{timeRangeLabel(block, timezone)}</time>
         <div className="live-timer-task-heading"><h3>{block.taskName}{metadata ?? <TaskListBadge taskId={block.taskId} />}</h3>
-          {onComplete && !block.isBreak && state !== 'past' && <div className="live-timer-task-actions">
+          {onComplete && state !== 'past' && <div className="live-timer-task-actions">
             {(['completed', 'skipped'] as const).map(value => <button key={value} type="button" className={`live-timer-action ${value === 'completed' ? 'live-timer-complete' : 'live-timer-skip'}`}
-              aria-label={`${value === 'completed' ? 'Complete' : 'Could not complete'} ${block.taskName}`} title={value === 'completed' ? 'Done' : 'Could not do this task'}
+              aria-label={`${value === 'completed' ? 'Complete' : block.isBreak ? 'Skip' : 'Could not complete'} ${block.taskName}`} title={value === 'completed' ? 'Done' : block.isBreak ? 'Skip Break' : 'Could not do this task'}
               aria-pressed={clear.active && outcome.current === value} aria-disabled={!!pending || clear.active}
               onPointerDown={e => { if (e.button === 0 && !pending && !clear.locked.current) { outcome.current = value; clear.press(); } }}
               onPointerLeave={clear.release} onPointerCancel={clear.release} onBlur={clear.release}
@@ -568,13 +568,13 @@ export function TimerCard({
     }
     return request;
   };
-  const optimisticTimer = [...pending].reduce((value, [id, entry]) => completeTimerTask(value, id, entry.at, entry.outcome), savedTimer);
+  const optimisticTimer = [...pending].reduce((value, [id, entry]) => { try { return completeTimerTask(value, id, entry.at, entry.outcome); } catch { return value; } }, savedTimer);
   const held = [...pending.values()].find(entry => !entry.reflow);
   const timer = held?.snapshot ?? optimisticTimer;
   const visibleBlocks = [...timer.blocks];
   for (const [taskId, entry] of pending) {
     entry.snapshot.blocks.forEach((block, index) => {
-      if (block.taskId === taskId && !visibleBlocks.some(b => b.id === block.id)) visibleBlocks.splice(Math.min(index, visibleBlocks.length), 0, block);
+      if ((block.taskId === taskId || block.isBreak && block.id === taskId) && !visibleBlocks.some(b => b.id === block.id)) visibleBlocks.splice(Math.min(index, visibleBlocks.length), 0, block);
     });
   }
   const originalExtent = useRef(savedTimer.blocks.reduce((sum, block) => sum + timerBlockHeight(block), 0) + Math.max(0, savedTimer.blocks.length - 1) * 12);
@@ -740,21 +740,21 @@ export function TimerCard({
     <div className="live-timer-blocks" ref={list} onScroll={e => setScrollTop(e.currentTarget.scrollTop)} style={{ minHeight: anchor && !allDone ? originalExtent.current : undefined }}>
       {visibleBlocks.map((block, index) => {
         const state = now >= Date.parse(block.end) ? 'past' : timer.blocks[activeIndex]?.id === block.id ? 'active' : 'upcoming';
-        const exiting = !layout[block.id] && pending.get(block.taskId)?.reflow;
-        const isDraggable = !!onReorder && (phase === 'scheduled' || index >= minMovableIndex) && !pending.size && phase !== 'complete';
+        const exiting = !layout[block.id] && pending.get(block.isBreak ? block.id : block.taskId)?.reflow;
+        const isDraggable = !block.recovery && !!onReorder && (phase === 'scheduled' || index >= minMovableIndex) && !pending.size && phase !== 'complete';
         const isDragging = dragState?.draggingId === block.id;
         const dragOverPosition = dragState && dragState.hoverIndex === index && !isDragging
           ? (dragState.fromIndex < index ? 'below' : 'above')
           : null;
 
-        return <TimerBlock key={block.id} block={block} state={state} timezone={timer.timezone} height={displayHeight(block)} pending={pending.get(block.taskId)?.outcome}
+        return <TimerBlock key={block.id} block={block} state={state} timezone={timer.timezone} height={displayHeight(block)} pending={pending.get(block.isBreak ? block.id : block.taskId)?.outcome}
           before={layout[block.id]?.before} exitTop={exiting ? anchor?.frames[block.id]?.top ?? 0 : undefined}
           isNewlyAdded={newlyAddedId === block.id}
           isDraggable={isDraggable}
           isDragging={isDragging}
           dragOverPosition={dragOverPosition}
           onDragStart={e => handleBlockDragStart(e, block, index)}
-          onRetain={(value, outcome) => retain(block.taskId, value, outcome)} onReflow={() => reflow(block.taskId)} onComplete={onComplete && !block.isBreak && state !== 'past' ? outcome => complete(block.taskId, outcome) : undefined} />;
+          onRetain={(value, outcome) => retain(block.isBreak ? block.id : block.taskId, value, outcome)} onReflow={() => reflow(block.isBreak ? block.id : block.taskId)} onComplete={onComplete && state !== 'past' ? outcome => complete(block.taskId, outcome) : undefined} />;
       })}
       {(phase === 'running' || phase === 'gap') && <>
         <div className="live-timer-now" style={{ top: line }} aria-hidden="true"><span>{timeLabel(now, timer.timezone)}</span></div>

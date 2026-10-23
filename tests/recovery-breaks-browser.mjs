@@ -1,0 +1,96 @@
+// Synthetic Supabase responses only: this suite never touches real accounts or records.
+import { chromium, expect } from '@playwright/test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const base = process.env.BASE_URL || 'http://127.0.0.1:3001';
+const browser = await chromium.launch({channel:process.env.BROWSER_CHANNEL || 'chrome',headless:true});
+const context = await browser.newContext({viewport:{width:1728,height:1240},timezoneId:'Australia/Sydney',acceptDownloads:true,hasTouch:true});
+const user={id:'00000000-0000-4000-8000-000000000091',email:'timer@example.test',aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{}};
+const tasks=[{id:'a',name:'Write documentation',durationMinutes:60,energyRequired:5,priority:2},{id:'b',name:'Build feature',durationMinutes:60,energyRequired:5,priority:1}];
+const completedListTask={...tasks[0],id:'done-list',name:'Finished list task',completed:true};
+const completedDirectTask={...tasks[0],id:'done-direct',name:'Finished direct task',completed:true};
+const docs=new Map([['rhythm',{payload:{version:1,spaces:[{id:'home',name:'Home',icon:'home',color:'#ffffff',createdAt:'2026-09-09T00:00:00Z',tasks:[completedDirectTask]},{id:'personal',name:'Personal',icon:'personal',color:'#81b8ff',createdAt:'2026-09-09T00:00:00Z',tasks:[{id:'personal-task',name:'Read a chapter',durationMinutes:30,energyRequired:2,priority:2}]}],taskLists:[{id:'list',spaceId:'home',name:'Sprint',createdAt:'2026-09-09T00:00:00Z',tasks:[...tasks,completedListTask]}],timeblocks:[]},revision:1}]]);
+const errors=[];
+await context.route('https://*.supabase.co/**',async route=>{
+ const request=route.request(); const url=new URL(request.url()); const path=url.pathname;
+ const reply=(json)=>route.fulfill({json});
+ if(request.method()==='OPTIONS') return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'GET,POST,PUT,OPTIONS'}});
+ const token=[Buffer.from('{}').toString('base64url'),Buffer.from(JSON.stringify({sub:user.id,exp:Math.floor(Date.now()/1000)+864000})).toString('base64url'),'test'].join('.');
+ if(path.endsWith('/token')) return reply({access_token:token,refresh_token:'synthetic',expires_in:864000,token_type:'bearer',user});
+ if(path.endsWith('/user')) return reply(user);
+ if(path.endsWith('/logout')) return reply({});
+ if(path.endsWith('/workspace_documents')) {const doc=docs.get(url.searchParams.get('module')?.replace('eq.',''));return reply(doc?[doc]:[]);}
+ if(path.endsWith('/rpc/save_workspace_document')) {const body=request.postDataJSON();const revision=body.expected_revision+1;docs.set(body.document_module,{payload:body.document_payload,revision});return reply(revision);}
+ throw Error('Unexpected Supabase request '+path);
+});
+try {
+ fs.mkdirSync('test-results',{recursive:true});
+ const page=await context.newPage(); await page.clock.setFixedTime(new Date('2026-10-01T00:00:00Z'));page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(base+'/#rhythm-timeblocks');
+ await page.getByLabel('Email',{exact:true}).fill(user.email);await page.getByLabel('Password',{exact:true}).fill('synthetic-password');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await page.getByRole('button',{name:'Add Timeblock',exact:true}).click();
+ const flow=page.getByRole('dialog',{name:'Create a timeblock',exact:true});
+ for(const name of ['Build feature','Write documentation'])await flow.getByRole('button',{name:`Add ${name} to timeblock`,exact:true}).click();
+ await flow.getByRole('button',{name:'Edit',exact:true}).click();
+ const range=page.getByRole('dialog',{name:"Edit today's time window",exact:true});
+ await range.getByRole('button',{name:/^Workday/}).click();await range.getByRole('button',{name:'Apply time window',exact:true}).click();
+ await flow.getByRole('button',{name:'Next',exact:true}).click();
+ await flow.getByRole('button',{name:'+ Add break',exact:true}).click();
+ await flow.getByRole('button',{name:'Next',exact:true}).click();
+ await flow.getByRole('button',{name:'Bear',exact:true}).click();
+ const recovery=flow.locator('.tb-schedule-slot.is-recovery[data-motion-id]');
+ await expect(flow.getByRole('radio',{name:/^Balanced/})).toBeChecked();
+ // A planned break can satisfy recovery; place it last to exercise automatic recovery.
+ await flow.getByRole('button',{name:'Edit schedule order',exact:true}).click();
+ const planned=flow.getByRole('button',{name:'Move Short break down',exact:true});
+ while(await planned.isEnabled())await planned.click();
+ await expect(recovery).toHaveCount(1);
+ await expect(recovery.locator('.schedule-drag-handle')).toHaveCount(0);
+ await recovery.getByRole('combobox').selectOption('15');
+ const order=()=>flow.locator('.tb-schedule-slot[data-motion-id] .live-timer-block:not(.is-break)').evaluateAll(nodes=>nodes.map(n=>n.dataset.taskId));
+ const original=await order();
+ await flow.getByRole('radio',{name:/^No Auto Breaks/}).check();await expect(recovery).toHaveCount(0);
+ await expect(flow.locator('.tb-schedule-slot[data-motion-id]').filter({hasText:'Short break'})).toHaveCount(1);
+ await flow.getByRole('radio',{name:/^Balanced/}).check();await expect(recovery.getByRole('combobox')).toHaveValue('15');
+ for(const name of ['Frequent Breaks','Deep Focus','Balanced']){await flow.getByRole('radio',{name:new RegExp('^'+name)}).check();assert.deepEqual(await order(),original);await expect(recovery).toHaveCount(1);}
+ await recovery.getByRole('button',{name:'Remove break',exact:true}).click();await expect(recovery).toHaveCount(0);
+ await flow.getByRole('radio',{name:/^Frequent Breaks/}).check();await expect(recovery).toHaveCount(0);
+ await flow.locator('.tb-recovery-overrides summary').click();await flow.getByRole('button',{name:'Restore automatic',exact:true}).click();await expect(recovery).toHaveCount(1);
+ await flow.getByRole('radio',{name:/^Balanced/}).check();
+ await flow.getByRole('button',{name:'Move Write documentation up',exact:true}).click();
+ const reordered=await order();assert.notDeepEqual(reordered,original);
+ await flow.getByRole('radio',{name:/^Frequent Breaks/}).check();assert.deepEqual(await order(),reordered);
+ await recovery.getByRole('combobox').selectOption('10');
+ await flow.getByRole('button',{name:'Back',exact:true}).click();await flow.getByRole('button',{name:'Next',exact:true}).click();await expect(recovery.getByRole('combobox')).toHaveValue('10');
+ await page.screenshot({path:'test-results/recovery-schedule.png',fullPage:true,animations:'disabled'});
+ await page.setViewportSize({width:390,height:844});assert.equal(await flow.evaluate(el=>el.scrollWidth<=el.clientWidth),true);
+ await page.screenshot({path:'test-results/recovery-schedule-mobile.png',fullPage:true,animations:'disabled'});await page.setViewportSize({width:1728,height:1240});
+ const accepted=await flow.locator('.tb-schedule-slot[data-motion-id] .live-timer-block').evaluateAll(nodes=>nodes.map(n=>({id:n.dataset.blockId,start:n.querySelector('time').dateTime})));
+ const downloadPromise=page.waitForEvent('download');await flow.getByRole('button',{name:'Start & Export',exact:true}).click();
+ const download=await downloadPromise;const ics=fs.readFileSync(await download.path(),'utf8');assert.match(ics,/SUMMARY:Recovery Break/);
+ await expect.poll(()=>docs.get('rhythm').payload.timeblocks.length).toBe(1);
+ const saved=structuredClone(docs.get('rhythm').payload);assert.equal(saved.timeblocks[0].breakPreferences.preset,'frequent');assert.equal(saved.timeblocks[0].breakPreferences.overrides[0].durationMinutes,10);
+ assert.deepEqual(saved.timeblocks[0].schedule,saved.liveTimer.blocks);assert.deepEqual(saved.liveTimer.blocks.map(b=>({id:b.id,start:b.start})),accepted);
+ assert.equal((ics.match(/BEGIN:VEVENT/g)||[]).length,saved.liveTimer.blocks.length);assert.equal(saved.timeblocks[0].tasks.length,3);
+ const rest=saved.liveTimer.blocks.find(b=>b.recovery);assert.ok(rest);
+ await page.clock.setFixedTime(new Date(Date.parse(rest.start)+60000));
+ const live=page.getByRole('dialog',{name:'Live timer',exact:true});
+ await expect(live.getByRole('button',{name:'Skip Recovery Break',exact:true})).toBeVisible();
+ await live.getByRole('button',{name:'Skip Recovery Break',exact:true}).click();
+ await expect.poll(()=>docs.get('rhythm').payload.runs[0].events.some(e=>e.type==='break-skipped')).toBe(true);
+ assert.deepEqual(docs.get('rhythm').payload.timeblocks[0].schedule,saved.timeblocks[0].schedule);
+ assert.ok(docs.get('rhythm').payload.liveTimer.resolvedBreakIds.includes(rest.id));
+ await page.reload();await expect(page.getByRole('button',{name:'Add Timeblock',exact:true})).toBeVisible();
+ const restored=docs.get('rhythm').payload;assert.equal(restored.liveTimer.breakPreferences.preset,'frequent');assert.ok(restored.liveTimer.breakPreferences.overrides.some(o=>o.removed));
+ await page.locator('.timeblock-settings').first().hover();
+ await page.getByRole('button',{name:"Edit Today's Plan",exact:true}).click();
+ await flow.getByRole('button',{name:'Next',exact:true}).click();await flow.getByRole('button',{name:'Next',exact:true}).click();
+ await expect(flow.getByRole('radio',{name:/^Frequent Breaks/})).toBeChecked();await expect(recovery.getByRole('combobox')).toHaveValue('10');
+ assert.deepEqual(await order(),reordered);
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await flow.getByRole('radio',{name:/^No Auto Breaks/}).check();await expect(recovery).toHaveCount(0);
+ await flow.getByRole('radio',{name:/^Balanced/}).check();await expect(recovery).toHaveCount(1);
+ assert.equal(await recovery.evaluateAll(nodes=>nodes.flatMap(n=>n.getAnimations()).length),0);
+ await page.screenshot({path:'test-results/recovery-reloaded.png',fullPage:true,animations:'disabled'});
+ assert.deepEqual(errors,[]);console.log('Recovery browser flow passed: presets, controls, reorder, planned breaks, mobile, save, export, skip history, reload.');
+} finally {await browser.close();}

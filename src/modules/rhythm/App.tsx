@@ -1,4 +1,6 @@
 "use client";
+import { updateRecoveryPlan } from './recovery/recovery-saved-plan';
+import type { BreakPreferences } from './recovery/recovery-types';
 import { createTimeblockRun, launchTimeblockRun, createRunCommand } from './timeblock-run';
 import { updateLiveTimerTimeWindow } from './update-live-time-window';
 // src/App.tsx
@@ -66,6 +68,7 @@ function App({ section = "rhythm" }: { section?: string }) {
         }
       }
       const scheduledTimer: Timer = {
+        breakPreferences: timeblock.breakPreferences,
         id: timeblock.id,
         name: timeblock.name,
         timezone: timeblock.dayConfig.timezone,
@@ -199,15 +202,15 @@ function App({ section = "rhythm" }: { section?: string }) {
     });
   };
 
-  const finishTimeblock = async (blocks: ScheduleBlock[], launch: boolean, exportCalendar: boolean) => {
+  const finishTimeblock = async (blocks: ScheduleBlock[], launch: boolean, exportCalendar: boolean, breakPreferences: BreakPreferences, recoveryBaseSchedule: ScheduleBlock[]) => {
     if (startingTimer || !validateSchedule(tasks, dayConfig, blocks).valid || (!launch && !exportCalendar)) return;
     setStartingTimer(true);
     try {
       const existing = savedTimeblocks.find(block => block.id === activeTimeblockId);
       const id = existing?.id ?? crypto.randomUUID();
       const name = existing?.name ?? "Today's Plan";
-      const timeblock: SavedTimeblock = { id, name, createdAt: existing?.createdAt ?? new Date().toISOString(), dayConfig: { ...dayConfig }, tasks, schedule: blocks };
-      const timer: Timer = { id, name, timezone: dayConfig.timezone, blocks,
+      const timeblock: SavedTimeblock = { id, name, createdAt: existing?.createdAt ?? new Date().toISOString(), dayConfig: { ...dayConfig }, tasks, schedule: blocks, breakPreferences, recoveryBaseSchedule };
+      const timer: Timer = { id, name, timezone: dayConfig.timezone, blocks, breakPreferences,
         startedAt: blocks[0].start, endsAt: blocks[blocks.length - 1].end };
       const run = launch ? createTimeblockRun(timer, dayConfig.chronotype, id) : undefined;
       const saved = await save(data => ({ ...(run ? launchTimeblockRun(data, timer, run) : data),
@@ -319,10 +322,7 @@ function App({ section = "rhythm" }: { section?: string }) {
     setActiveTaskListId(null);
     setActiveTimeblockId(block.id);
     setTasks(block.tasks.map(task => ({ ...task })));
-    setDayConfig(prev => ({
-      ...block.dayConfig,
-      date: prev.date,
-    }));
+    setDayConfig({ ...block.dayConfig });
     setDraftTimeRange({
       startTime: block.dayConfig.startTime,
       endTime: block.dayConfig.endTime,
@@ -510,7 +510,7 @@ function App({ section = "rhythm" }: { section?: string }) {
                 ...data,
                 timeblocks: data.timeblocks.map((b) =>
                   b.id === timeblockId
-                    ? { ...b, schedule: undefined, tasks: b.tasks.filter((t) => t.id !== taskId) }
+                    ? updateRecoveryPlan(b,b.tasks.filter((t) => t.id !== taskId))
                     : b
                 ),
               }));
@@ -642,7 +642,7 @@ function App({ section = "rhythm" }: { section?: string }) {
         <dialog ref={flowDialog} className={`flow-modal-backdrop${flowContext === 'timeblock' ? ' tb-backdrop' : ''}`} aria-label={flowContext === 'task-list' ? 'Build a task list' : 'Create a timeblock'} onCancel={e => { e.preventDefault(); if (!startingTimer) closeFlowModal(); }}>
           <div className={flowContext === 'timeblock' ? 'tb-shell' : `flow-modal flow-unified ${modalThemeClass}`} data-modal-size={modalSize}>
             {flowContext === 'timeblock' ? (
-              <CreateTimeblockFlow tasks={tasks} spaces={availableTasks} config={dayConfig} busy={startingTimer} error={storageError}
+              <CreateTimeblockFlow existing={!!activeTimeblockId} initialPreferences={savedTimeblocks.find(t => t.id === activeTimeblockId)?.breakPreferences} initialSchedule={savedTimeblocks.find(t => t.id === activeTimeblockId)?.schedule} initialBaseSchedule={savedTimeblocks.find(t => t.id === activeTimeblockId)?.recoveryBaseSchedule} tasks={tasks} spaces={availableTasks} config={dayConfig} busy={startingTimer} error={storageError}
                 onTasksChange={setTasks} onConfigChange={setDayConfig} onCreateTask={handleCreatePlanningTask}
                 onPriorityChange={(id, priority) => save(data => {
                   const ref = findTaskReference(data, id);

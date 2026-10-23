@@ -1,3 +1,4 @@
+import { sliceScheduleBlock } from './schedule-placement';
 import { energyAtDate, getChronotypeCurve, validateEnergyCurve, type EnergyCurve, type EnergyLevel } from './energy-curve';
 // src/rhythmScheduler.ts
 import type { DayConfig, Task, ScheduleBlock } from './types';
@@ -318,7 +319,7 @@ function recoverSchedule(tasks: Task[], segments: TimeWindow[], curve: EnergyCur
     for (const w of selected) {
       const minutes = Math.min(remaining, minutesBetween(w.start, w.end));
       if (minutes <= 0) continue;
-      split.push(make(task, w.start, minutes, part++));
+      split.push(sliceScheduleBlock(make(task, w.start, task.durationMinutes, part++), 0, minutes));
       w.start = addMinutes(w.start, minutes);
       remaining -= minutes;
     }

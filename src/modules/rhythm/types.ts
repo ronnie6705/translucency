@@ -1,3 +1,4 @@
+import type { BreakPreferences, RecoveryMetadata } from './recovery/recovery-types';
 // src/types.ts
 
 export type Chronotype = 'Lion' | 'Bear' | 'Wolf' | 'Dolphin';
@@ -24,6 +25,9 @@ export interface DayConfig {
 }
 
 export interface ScheduleBlock {
+  recovery?: RecoveryMetadata;
+  /** Stable completed-work offset for split segments. */
+  workOffsetMinutes?: number;
   id: string;
   taskId: string;
   taskName: string;
@@ -35,6 +39,9 @@ export interface ScheduleBlock {
 }
 
 export interface SavedTimeblock {
+  breakPreferences?: BreakPreferences;
+  /** Unpaced accepted order, retained for deterministic preset changes. */
+  recoveryBaseSchedule?: ScheduleBlock[];
   /** The accepted schedule, shared with calendar export and Live Timer. */
   schedule?: ScheduleBlock[];
   id: string;

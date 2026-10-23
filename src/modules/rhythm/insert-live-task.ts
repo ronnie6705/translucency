@@ -1,3 +1,4 @@
+import { replanTimerRecovery } from './recovery/recovery-timer';
 import { createDateInTimeZone, formatISOToTimeZone } from './utils/timezone';
 import { hasRunCommand, mutationCommand, recordScheduleChange, type RunCommand } from './timeblock-run';
 import type { RhythmLibrary } from './library';
@@ -130,7 +131,8 @@ export function insertLiveTimerItem(
   command ??= mutationCommand(data.liveTimer, 'insert', now);
   if (hasRunCommand(data, data.liveTimer, command)) return data;
   const before = data.liveTimer;
-  const liveTimer = insertItemIntoTimer(data.liveTimer, params, now);
+  const inserted = insertItemIntoTimer(data.liveTimer, params, now);
+  const liveTimer = inserted.breakPreferences ? replanTimerRecovery(inserted,now) : inserted;
   if (liveTimer === data.liveTimer) return data;
 
   data = recordScheduleChange(data, before, liveTimer, 'insert', now, command);
@@ -155,15 +157,12 @@ export function insertLiveTimerItem(
     i === 0 ? { ...space, tasks: [...space.tasks, newTask] } : space
   );
 
-  const timeblocks = data.timeblocks?.map(block =>
-    block.name === liveTimer.name ? { ...block, schedule: undefined, tasks: [...block.tasks, newTask] } : block
-  );
 
   return {
     ...data,
     liveTimer,
     spaces: spaces ?? data.spaces,
-    timeblocks: timeblocks ?? data.timeblocks,
+    timeblocks: data.timeblocks,
   };
 }
 
@@ -190,7 +189,7 @@ export function reorderTimerBlocks(
     return timer;
   }
 
-  if (blocks[fromIndex].isFixed) return timer;
+  if (blocks[fromIndex].isFixed || blocks[fromIndex].recovery) return timer;
   const [movedBlock] = blocks.splice(fromIndex, 1);
   blocks.splice(toIndex, 0, movedBlock);
 
@@ -240,7 +239,8 @@ export function reorderLiveTimer(
   command ??= mutationCommand(data.liveTimer, 'reorder', now);
   if (hasRunCommand(data, data.liveTimer, command)) return data;
   const before = data.liveTimer;
-  const liveTimer = reorderTimerBlocks(data.liveTimer, fromIndex, toIndex, now);
+  const reordered = reorderTimerBlocks(data.liveTimer, fromIndex, toIndex, now);
+  const liveTimer = reordered !== data.liveTimer && reordered.breakPreferences ? replanTimerRecovery(reordered,now) : reordered;
   data = recordScheduleChange(data, before, liveTimer, 'reorder', now, command);
   return { ...data, liveTimer };
 }

@@ -1,4 +1,4 @@
-import { mutationCommand, recordTaskOutcome, type RunCommand } from './timeblock-run';
+import { mutationCommand, recordTaskOutcome, recordBreakOutcome, type RunCommand } from './timeblock-run';
 import type { RhythmLibrary } from './library';
 import { completeTimerTask, type TimerTaskOutcome } from './live-timer';
 import type { Task } from './types';
@@ -8,6 +8,8 @@ export function completeLiveTask(data: RhythmLibrary, timerId: string, taskId: s
   if (!data.liveTimer || data.liveTimer.id !== timerId) throw new Error('This live timer has changed. Reopen it and try again.');
   const liveTimer = completeTimerTask(data.liveTimer, taskId, now, outcome);
   if (liveTimer === data.liveTimer) return data;
+  const rest = data.liveTimer.blocks.find(b => b.isBreak && (b.id===taskId || b.taskId===taskId));
+  if (rest) return {...recordBreakOutcome(data,data.liveTimer,liveTimer,rest.id,outcome,now,command ?? mutationCommand(data.liveTimer,`break:${rest.id}`,now)),liveTimer};
   data = recordTaskOutcome(data, data.liveTimer, liveTimer, taskId, outcome, now, command ?? mutationCommand(data.liveTimer, `outcome:${taskId}`, now));
   if (outcome === 'skipped') return { ...data, liveTimer };
   const complete = (tasks: Task[]) => tasks.map(task => task.id === taskId ? { ...task, completed: true } : task);

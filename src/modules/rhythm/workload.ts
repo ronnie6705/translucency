@@ -15,5 +15,7 @@ export function scheduleSummary(blocks: ScheduleBlock[]) {
   return { count: new Set(blocks.filter(b => !b.isBreak).map(b => b.taskId)).size,
     work: blocks.filter(b => !b.isBreak).reduce((sum, b) => sum + (Date.parse(b.end) - Date.parse(b.start)) / 60000, 0),
     breaks: blocks.filter(b => b.isBreak).reduce((sum, b) => sum + (Date.parse(b.end) - Date.parse(b.start)) / 60000, 0),
+    plannedBreaks: blocks.filter(b => b.isBreak && !b.recovery).reduce((n,b) => n+(Date.parse(b.end)-Date.parse(b.start))/60000,0),
+    recoveryBreaks: blocks.filter(b => b.recovery).reduce((n,b) => n+(Date.parse(b.end)-Date.parse(b.start))/60000,0),
     finish: blocks.at(-1)?.end };
 }
