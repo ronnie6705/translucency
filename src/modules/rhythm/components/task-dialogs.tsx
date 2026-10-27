@@ -15,12 +15,14 @@ import { TaskDetailFields } from "./TaskDetailFields";
 
 type Library = ReturnType<typeof useRhythmLibrary>;
 export function SpaceEditor({
+  onDelete,
   initial,
   onSave,
   onClose,
   error,
 }: {
   initial?: Space;
+  onDelete?(): void;
   onSave(space: Space): Promise<boolean>;
   onClose(): void;
   error?: string;
@@ -131,6 +133,7 @@ export function SpaceEditor({
             </div>
           </div>
         )}
+        {initial && onDelete && <button type="button" className="space-delete-entry" disabled={busy} onClick={onDelete}>Delete Space</button>}
         {error && <p role="alert">{error}</p>}
         <div className="task-form-actions">
           <button type="button" onClick={onClose}>

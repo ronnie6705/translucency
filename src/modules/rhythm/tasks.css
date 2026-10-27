@@ -761,7 +761,7 @@
 }
 .rhythm-module
   .task-small-form
-  input:not([type="checkbox"]):not([type="range"]) {
+  input:not([type="checkbox"]):not([type="range"]):not([type="radio"]) {
   background: #ffffff0d;
   border: 1px solid #ffffff33;
   border-radius: 10px;
@@ -1193,3 +1193,12 @@
 .rhythm-module .task-priority-reset:disabled { opacity:1; cursor:default; }
 .rhythm-module .task-priority-step[data-filled=true] span { opacity:1; }
 .rhythm-module .task-priority-reset:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+
+.rhythm-module .task-small-form .space-delete-entry { align-self:flex-start; background:transparent; color:#ff9d9d; padding:8px 0; }
+.rhythm-module .task-small-form .space-delete-button { background:#862f40; color:#fff; }
+.rhythm-module .space-delete-options { display:flex; flex-direction:column; gap:14px; border:1px solid #ffffff26; border-radius:14px; padding:16px; min-width:0; }
+.rhythm-module .space-delete-options legend { padding:0 6px; }
+.rhythm-module .space-delete-options label:has(input[type=radio]) { display:flex; flex-direction:row; align-items:center; gap:10px; }
+.rhythm-module .space-delete-options input[type=radio] { width:16px; height:16px; flex-shrink:0; accent-color:#9a9eff; }
+.rhythm-module .space-delete-options select { width:100%; padding:10px; background:#24232c; color:#fff; border:1px solid #ffffff40; border-radius:8px; }
+.rhythm-module .task-small-form .space-delete-warning { color:#ffb5b5; }
