@@ -1,3 +1,4 @@
+import { validTimeAdjustments } from './time-adjustments';
 import { validBreakPreferences } from './recovery/recovery-types';
 import { mergeRuns, validateRuns, type TimeblockRun } from './timeblock-run';
 import type { SavedTaskList, SavedTimeblock, Space, Task } from './types';
@@ -11,6 +12,9 @@ function tasks(v: unknown): v is Task[] {
   return Array.isArray(v) && v.every(t => object(t) && typeof t.id === 'string' && typeof t.name === 'string' &&
     Number.isFinite(t.durationMinutes) && Number(t.durationMinutes) > 0 && [1,2,3,4,5].includes(Number(t.energyRequired)) &&
     [1,2,3,4].includes(Number(t.priority)) && (t.fixedStart === undefined || /^([01]\d|2[0-3]):[0-5]\d$/.test(String(t.fixedStart))) &&
+    (t.allowTimeAdjustments===undefined || typeof t.allowTimeAdjustments==='boolean') &&
+    (t.workingEstimateMinutes===undefined || Number.isFinite(t.workingEstimateMinutes) && Number(t.workingEstimateMinutes)>=Number(t.durationMinutes)) &&
+    (t.plannedBreakAfterTaskId === undefined || (t.isBreak === true && typeof t.plannedBreakAfterTaskId === 'string' && t.plannedBreakAfterTaskId.length > 0)) &&
     (t.durationMode === undefined || t.durationMode === 'automatic' || t.durationMode === 'custom') && (t.completed === undefined || typeof t.completed === 'boolean') && (t.isBreak === undefined || typeof t.isBreak === 'boolean'));
 }
 function entry(v: unknown): v is SavedTaskList { return object(v) && typeof v.id === 'string' && typeof v.name === 'string' && typeof v.createdAt === 'string' && Number.isFinite(Date.parse(v.createdAt)) && tasks(v.tasks); }
@@ -21,6 +25,7 @@ export function validateLibrary(value: unknown): RhythmLibrary {
   for (const block of value.timeblocks) {
     if (!entry(block) || !object(block) || !object(block.dayConfig)) throw new Error('Invalid timeblock in backup.');
     const config = block.dayConfig;
+    if (block.timeAdjustments!==undefined && !validTimeAdjustments(block.timeAdjustments)) throw new Error('Invalid time adjustment history.');
     if (block.breakPreferences !== undefined && !validBreakPreferences(block.breakPreferences)) throw new Error('Invalid recovery preferences in backup.');
     if (block.recoveryBaseSchedule !== undefined && !validLiveTimer({id:block.id,name:block.name,timezone:config.timezone,blocks:block.recoveryBaseSchedule})) throw new Error('Invalid recovery base schedule in backup.');
     if (block.schedule !== undefined && !validLiveTimer({ id: block.id, name: block.name, timezone: config.timezone, blocks: block.schedule })) throw new Error('Invalid saved schedule in backup.');

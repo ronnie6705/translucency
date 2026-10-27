@@ -1,12 +1,18 @@
+import type { TimeAdjustments } from './time-adjustments';
 import type { BreakPreferences, RecoveryMetadata } from './recovery/recovery-types';
 // src/types.ts
 
 export type Chronotype = 'Lion' | 'Bear' | 'Wolf' | 'Dolphin';
 
 export interface Task {
+  /** A user-protected planned break follows this task’s final boundary. */
+  plannedBreakAfterTaskId?: string;
   id: string;
   name: string;
+  /** Scheduled allocation; the scheduler continues to consume this value. */
   durationMinutes: number;
+  workingEstimateMinutes?: number;
+  allowTimeAdjustments?: boolean;
   /** Saved estimates stay unchanged until the user edits energy or duration. */
   durationMode?: 'automatic' | 'custom';
   energyRequired: 1 | 2 | 3 | 4 | 5;
@@ -39,6 +45,7 @@ export interface ScheduleBlock {
 }
 
 export interface SavedTimeblock {
+  timeAdjustments?: TimeAdjustments;
   breakPreferences?: BreakPreferences;
   /** Unpaced accepted order, retained for deterministic preset changes. */
   recoveryBaseSchedule?: ScheduleBlock[];

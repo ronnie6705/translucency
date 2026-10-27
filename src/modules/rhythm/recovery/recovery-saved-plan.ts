@@ -1,3 +1,4 @@
+import { reconcileManualTaskEdits } from '../time-adjustments';
 import type { SavedTimeblock, Task, ScheduleBlock } from '../types';
 import { blockMinutes, placeOrderedBlocks, sliceScheduleBlock } from '../schedule-placement';
 import { createDateInTimeZone } from '../utils/timezone';
@@ -5,6 +6,10 @@ import { generateScheduleResult } from './recovery-planner';
 
 /** Explicit edits update this plan's accepted snapshot, never another plan or run. */
 export function updateRecoveryPlan(plan: SavedTimeblock, tasks: Task[]): SavedTimeblock {
+  if(plan.timeAdjustments) {
+    const changed=reconcileManualTaskEdits(plan.tasks,tasks,plan.timeAdjustments);
+    tasks=changed.tasks;plan={...plan,timeAdjustments:changed.adjustments};
+  }
   if (!plan.breakPreferences || !tasks.some(t => !t.isBreak)) return {...plan,tasks,schedule:undefined,recoveryBaseSchedule:undefined};
   const byId = new Map(tasks.map(t => [t.id,t]));
   const original = plan.recoveryBaseSchedule;

@@ -8,6 +8,7 @@ export function useLayoutMotion(key: string, duration = 420, easing = 'cubic-bez
   useEffect(() => () => { ghosts.current.forEach(node => node.remove()); }, []);
   const previous = useRef(new Map<string, number>());
   useLayoutEffect(() => {
+    ghosts.current.forEach(node=>node.remove()); ghosts.current.clear();
     const next = new Map<string, number>();
     const nextSnapshots = new Map<string,{node:HTMLElement;top:number;height:number;width:number}>();
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -15,13 +16,15 @@ export function useLayoutMotion(key: string, duration = 420, easing = 'cubic-bez
       const id = node.dataset.motionId!;
       const top = node.offsetTop;
       const old = previous.current.get(id);
+      if(recoveryPresence) node.getAnimations().forEach(animation=>animation.cancel());
+      if(recoveryPresence && !reduced && old===undefined && !node.classList.contains('is-recovery')) node.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'translateY(0)'}],{duration,easing});
       if (!node.dataset.motionDragging && !reduced && old !== undefined && old !== top) {
         node.getAnimations().forEach(animation => animation.cancel());
         node.animate([{ transform: `translateY(${old - top}px)` }, { transform: 'translateY(0)' }],
           { duration, easing });
       }
       if (recoveryPresence && node.classList.contains('is-recovery')) {
-        if (!reduced && old === undefined) node.animate([{opacity:0,scale:'.98'},{opacity:1,scale:'1'}],{duration:220,easing:'ease-out'});
+        if (!reduced && old === undefined) node.animate([{opacity:0,scale:'.98'},{opacity:1,scale:'1'}],{duration,easing:'ease-out'});
         nextSnapshots.set(id,{node:node.cloneNode(true) as HTMLElement,top,height:node.offsetHeight,width:node.offsetWidth});
       }
       next.set(id, top);

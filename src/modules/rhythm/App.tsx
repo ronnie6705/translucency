@@ -1,3 +1,4 @@
+import type { TimeAdjustments } from './time-adjustments';
 "use client";
 import { updateRecoveryPlan } from './recovery/recovery-saved-plan';
 import type { BreakPreferences } from './recovery/recovery-types';
@@ -202,19 +203,19 @@ function App({ section = "rhythm" }: { section?: string }) {
     });
   };
 
-  const finishTimeblock = async (blocks: ScheduleBlock[], launch: boolean, exportCalendar: boolean, breakPreferences: BreakPreferences, recoveryBaseSchedule: ScheduleBlock[]) => {
+  const finishTimeblock = async (blocks: ScheduleBlock[], launch: boolean, exportCalendar: boolean, breakPreferences: BreakPreferences, recoveryBaseSchedule: ScheduleBlock[], timeAdjustments:TimeAdjustments) => {
     if (startingTimer || !validateSchedule(tasks, dayConfig, blocks).valid || (!launch && !exportCalendar)) return;
     setStartingTimer(true);
     try {
       const existing = savedTimeblocks.find(block => block.id === activeTimeblockId);
-      const id = existing?.id ?? crypto.randomUUID();
+      const id = crypto.randomUUID();
       const name = existing?.name ?? "Today's Plan";
-      const timeblock: SavedTimeblock = { id, name, createdAt: existing?.createdAt ?? new Date().toISOString(), dayConfig: { ...dayConfig }, tasks, schedule: blocks, breakPreferences, recoveryBaseSchedule };
+      const timeblock: SavedTimeblock = structuredClone({ id, name, createdAt: new Date().toISOString(), dayConfig, tasks, schedule: blocks, breakPreferences, recoveryBaseSchedule, timeAdjustments });
       const timer: Timer = { id, name, timezone: dayConfig.timezone, blocks, breakPreferences,
         startedAt: blocks[0].start, endsAt: blocks[blocks.length - 1].end };
       const run = launch ? createTimeblockRun(timer, dayConfig.chronotype, id) : undefined;
       const saved = await save(data => ({ ...(run ? launchTimeblockRun(data, timer, run) : data),
-        timeblocks: existing ? data.timeblocks.map(block => block.id === id ? timeblock : block) : [timeblock, ...data.timeblocks],
+        timeblocks: [timeblock, ...data.timeblocks],
       }));
       if (!saved) return;
       if (exportCalendar) generateICS(blocks, formatICSFileName(dayConfig.date), dayConfig.timezone);
@@ -321,7 +322,7 @@ function App({ section = "rhythm" }: { section?: string }) {
     resetFlowVisualState();
     setActiveTaskListId(null);
     setActiveTimeblockId(block.id);
-    setTasks(block.tasks.map(task => ({ ...task })));
+    setTasks(structuredClone(block.tasks));
     setDayConfig({ ...block.dayConfig });
     setDraftTimeRange({
       startTime: block.dayConfig.startTime,
@@ -642,7 +643,7 @@ function App({ section = "rhythm" }: { section?: string }) {
         <dialog ref={flowDialog} className={`flow-modal-backdrop${flowContext === 'timeblock' ? ' tb-backdrop' : ''}`} aria-label={flowContext === 'task-list' ? 'Build a task list' : 'Create a timeblock'} onCancel={e => { e.preventDefault(); if (!startingTimer) closeFlowModal(); }}>
           <div className={flowContext === 'timeblock' ? 'tb-shell' : `flow-modal flow-unified ${modalThemeClass}`} data-modal-size={modalSize}>
             {flowContext === 'timeblock' ? (
-              <CreateTimeblockFlow existing={!!activeTimeblockId} initialPreferences={savedTimeblocks.find(t => t.id === activeTimeblockId)?.breakPreferences} initialSchedule={savedTimeblocks.find(t => t.id === activeTimeblockId)?.schedule} initialBaseSchedule={savedTimeblocks.find(t => t.id === activeTimeblockId)?.recoveryBaseSchedule} tasks={tasks} spaces={availableTasks} config={dayConfig} busy={startingTimer} error={storageError}
+              <CreateTimeblockFlow initialAdjustments={savedTimeblocks.find(t=>t.id===activeTimeblockId)?.timeAdjustments} existing={!!activeTimeblockId} initialPreferences={savedTimeblocks.find(t => t.id === activeTimeblockId)?.breakPreferences} initialSchedule={savedTimeblocks.find(t => t.id === activeTimeblockId)?.schedule} initialBaseSchedule={savedTimeblocks.find(t => t.id === activeTimeblockId)?.recoveryBaseSchedule} tasks={tasks} spaces={availableTasks} config={dayConfig} busy={startingTimer} error={storageError}
                 onTasksChange={setTasks} onConfigChange={setDayConfig} onCreateTask={handleCreatePlanningTask}
                 onPriorityChange={(id, priority) => save(data => {
                   const ref = findTaskReference(data, id);

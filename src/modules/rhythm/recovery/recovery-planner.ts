@@ -13,6 +13,10 @@ export interface SchedulingResult {
   errors: string[];
   notices: string[];
   inactiveOverrideKeys: string[];
+  /** Desired recovery after overrides, before capacity reduction. */
+  recommendedRecoveryMinutes: number;
+  scheduledRecoveryMinutes: number;
+  recoveryShortfallMinutes: number;
 }
 /** Split through the same primitive as capacity recovery. Never split fixed work or planned breaks. */
 function recoverySegments(base: ScheduleBlock[], preferences: BreakPreferences, origins: Map<string,string>): ScheduleBlock[] {
@@ -55,7 +59,8 @@ export function planRecovery(baseSchedule: ScheduleBlock[], preferences: BreakPr
     }
     return joined;
   };
-  const result = (blocks: ScheduleBlock[], status: SchedulingResult['status'], errors: string[] = [], notices: string[] = [], inactiveOverrideKeys: string[] = []): SchedulingResult => ({ blocks:status==='invalid' ? blocks : joinUnusedSplits(blocks), status, errors, notices, inactiveOverrideKeys, baseSchedule: base });
+  let recommendedRecoveryMinutes = 0;
+  const result = (blocks: ScheduleBlock[], status: SchedulingResult['status'], errors: string[] = [], notices: string[] = [], inactiveOverrideKeys: string[] = []): SchedulingResult => ({ blocks:status==='invalid' ? blocks : joinUnusedSplits(blocks), status, errors, notices, inactiveOverrideKeys, baseSchedule: base, recommendedRecoveryMinutes, scheduledRecoveryMinutes: blocks.reduce((n,b) => n + (b.recovery ? blockMinutes(b) : 0),0), recoveryShortfallMinutes: Math.max(0,recommendedRecoveryMinutes - blocks.reduce((n,b) => n + (b.recovery ? blockMinutes(b) : 0),0)) });
   if (preferences.preset === 'none') {
     const placed = placeOrderedBlocks(base, start, end, true);
     return result(placed.blocks, placed.error ? 'invalid' : 'valid', placed.error ? [placed.error] : []);
@@ -107,6 +112,7 @@ export function planRecovery(baseSchedule: ScheduleBlock[], preferences: BreakPr
     previousEnd += duration*60000;
     work=0; load=0;
   }
+  recommendedRecoveryMinutes = candidates.reduce((n,b) => n + (b.recovery ? blockMinutes(b) : 0),0);
   const inactive = preferences.overrides.map(o => anchorKey(o.anchor)).filter(key => !active.has(key));
   const notices = missedTarget ? ['Some work exceeds your preferred focus duration to preserve commitments and task boundaries.'] : [];
   let placed = placeOrderedBlocks(candidates,start,end,true);
@@ -130,7 +136,7 @@ export function planRecovery(baseSchedule: ScheduleBlock[], preferences: BreakPr
 export function generateScheduleResult(tasks: Task[], config: DayConfig, options: { preferences?: BreakPreferences; baseSchedule?: ScheduleBlock[] } = {}): SchedulingResult {
   const base = options.baseSchedule ?? generateSchedule(tasks,config);
   const validation = validateSchedule(tasks,config,base);
-  if (!validation.valid) return {status:'invalid',blocks:base,baseSchedule:base,errors:[validation.message],notices:[],inactiveOverrideKeys:[]};
+  if (!validation.valid) return {status:'invalid',blocks:base,baseSchedule:base,errors:[validation.message],notices:[],inactiveOverrideKeys:[],recommendedRecoveryMinutes:0,scheduledRecoveryMinutes:0,recoveryShortfallMinutes:0};
   const result = planRecovery(base, options.preferences ?? defaultBreakPreferences(), createDateInTimeZone(config.date,config.startTime,config.timezone).getTime(), createDateInTimeZone(config.date,config.endTime,config.timezone).getTime());
   const final = validateSchedule(tasks,config,result.blocks);
   return final.valid ? result : {...result,status:'invalid',errors:[...new Set([...result.errors,final.message])]};

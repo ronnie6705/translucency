@@ -9,11 +9,13 @@ export function updateTaskEstimate<T extends Pick<Task, 'durationMinutes' | 'ene
   if (patch.durationMinutes !== undefined && patch.durationMode !== 'automatic') next.durationMode = 'custom';
   if (next.fixedStart || next.isBreak) {
     if (patch.durationMode === 'automatic') next.durationMode = task.durationMode;
+    if (task.workingEstimateMinutes!==undefined && patch.durationMinutes!==undefined) next.workingEstimateMinutes=next.durationMinutes;
     return next;
   }
   if (patch.durationMinutes === undefined && (patch.energyRequired !== undefined || patch.durationMode === 'automatic')) {
     next.durationMode = 'automatic';
     next.durationMinutes = ENERGY_DURATIONS[next.energyRequired];
   }
+  if (task.workingEstimateMinutes!==undefined && (patch.durationMinutes!==undefined || next.durationMinutes!==task.durationMinutes)) next.workingEstimateMinutes=next.durationMinutes;
   return next;
 }

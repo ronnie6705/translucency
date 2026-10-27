@@ -65,15 +65,15 @@
 
 }
 /* Both radial modes occupy the same face; only their layers cross-fade. */
-.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-instructions {
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog, .tb-inline-adjustments) .radial-instructions {
   display: grid; width: 100%; min-height: 40px; align-items: center; text-align: center;
 }
-.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-instructions p {
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog, .tb-inline-adjustments) .radial-instructions p {
   grid-area: 1 / 1; margin: 0; color: #c4c7e8; font-size: 14px; line-height: 20px;
   opacity: 0; transition: opacity 180ms ease; pointer-events: none;
 }
-.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-instructions p.visible { opacity: 1; }
-.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-clock {
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog, .tb-inline-adjustments) .radial-instructions p.visible { opacity: 1; }
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog, .tb-inline-adjustments) .radial-clock {
   width: 417.6px; max-width: 100%; aspect-ratio: 1; position: relative; flex-shrink: 0;
   touch-action: none; user-select: none; cursor: crosshair; outline: none;
   > img { position: absolute; pointer-events: none; }
@@ -100,11 +100,11 @@
   .minute .radial-hand > span { left: -2.5px; width: 5px; border-radius: 2.5px; background: #757eff; }
   .radial-preview { position: absolute; bottom: 1%; width: 100%; text-align: center; color: #9a9eff; font-size: 13px; pointer-events: none; }
 }
-.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-clock[data-mode='minute'] {
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog, .tb-inline-adjustments) .radial-clock[data-mode='minute'] {
   .radial-outer-ring { opacity: .22; }
   .radial-minute-ring { opacity: 1; }
 }
-.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-clock.complete { cursor: default; }
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog, .tb-inline-adjustments) .radial-clock.complete { cursor: default; }
 @media (max-width: 1400px) {
   .rhythm-module .flow-modal.flow-unified[data-modal-size]:has(.adjust-mode, .legacy-radial-range) {
     padding: 28px;
@@ -149,7 +149,7 @@
 }
 
 /* Pointer visuals are updated once per animation frame, independently of React. */
-.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) .radial-clock {
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog, .tb-inline-adjustments) .radial-clock {
   .radial-tick {
     --lift: 0; --emphasis: 0;
     transform: translate(-50%, -50%) rotate(var(--spoke-angle)) translateY(calc(-3px * var(--lift))) scaleY(calc(1 + .65 * var(--lift)));
@@ -326,7 +326,7 @@
 }
 
 /* Shared time-window editor controls, used by the legacy planner and the three-step flow. */
-.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog) {
+.rhythm-module :where(.flow-modal.flow-unified[data-modal-size], .tb-range-dialog, .tb-inline-adjustments) {
   .plan-time-section { border: 0; padding: 0; gap: 32px; min-width: 0; }
   .plan-presets { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; }
   .plan-presets button { display: flex; gap: 12px; align-items: center; min-width: 0; padding: 12px; border: 1px solid #ffffff14; border-radius: 20px; background: #ffffff08; color: #fff; text-align: left; cursor: pointer; }

@@ -55,7 +55,7 @@ try {
  for(const name of ['Frequent Breaks','Deep Focus','Balanced']){await flow.getByRole('radio',{name:new RegExp('^'+name)}).check();assert.deepEqual(await order(),original);await expect(recovery).toHaveCount(1);}
  await recovery.getByRole('button',{name:'Remove break',exact:true}).click();await expect(recovery).toHaveCount(0);
  await flow.getByRole('radio',{name:/^Frequent Breaks/}).check();await expect(recovery).toHaveCount(0);
- await flow.locator('.tb-recovery-overrides summary').click();await flow.getByRole('button',{name:'Restore automatic',exact:true}).click();await expect(recovery).toHaveCount(1);
+ await flow.getByText('Advanced options',{exact:true}).click();await flow.locator('.tb-recovery-overrides summary').click();await flow.getByRole('button',{name:'Restore automatic',exact:true}).click();await expect(recovery).toHaveCount(1);
  await flow.getByRole('radio',{name:/^Balanced/}).check();
  await flow.getByRole('button',{name:'Move Write documentation up',exact:true}).click();
  const reordered=await order();assert.notDeepEqual(reordered,original);

@@ -1,8 +1,7 @@
-import { generateScheduleResult } from '../recovery/recovery-planner';
+import { calculatePlanningSchedule } from '../planning-workspace';
 import type { BreakPreferences, RecoveryAnchor, RecoveryOverride } from '../recovery/recovery-types';
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import type { DayConfig, ScheduleBlock, Task } from '../types';
-import { reorderSchedule } from '../reorder-schedule';
 import { SCHEDULE_MOTION_MS, SCHEDULE_SPRING } from '../schedule-motion';
 import { timerBlockHeight } from '../live-timer';
 import { TimerBlock } from './LiveTimer';
@@ -12,7 +11,8 @@ import { useLayoutMotion } from './use-layout-motion';
 
 const noop = () => {};
 type Drag = { id: string; pointer: number; y: number; originY: number; grab: number; active: boolean; blocks: ScheduleBlock[]; base?: ScheduleBlock[]; node: HTMLDivElement; invalid: boolean };
-export function ScheduleBlocks({ preferences, onOverride, blocks, tasks, config, spaces, editing, onChange, onMessage }: {
+export function ScheduleBlocks({ preferences, blocks, tasks, config, spaces, editing, onChange, onMessage, pending = false }: {
+  onTaskUpdate?(id:string,patch:Partial<Task>):void; onTaskRemove?(id:string):void; onAddBreak?(id:string,minutes:number):void; pending?:boolean; pendingBreak?:boolean;
   preferences: BreakPreferences; onOverride(anchor: RecoveryAnchor, override?: Omit<RecoveryOverride,'anchor'>): void;
   blocks: ScheduleBlock[]; tasks: Task[]; config: DayConfig; spaces: CatalogSpace[]; editing: boolean;
   onChange(blocks: ScheduleBlock[]): void; onMessage(message: string): void;
@@ -22,7 +22,7 @@ export function ScheduleBlocks({ preferences, onOverride, blocks, tasks, config,
   const drag = useRef<Drag | null>(null);
   const shown = draft ?? blocks;
   const list = useLayoutMotion(shown.map(b => `${b.id}:${b.start}`).join(','), SCHEDULE_MOTION_MS, SCHEDULE_SPRING, true);
-  const fixed = (block: ScheduleBlock) => !!block.recovery || tasks.some(t => t.id === block.taskId && t.fixedStart);
+  const fixed = (block: ScheduleBlock) => pending || !!block.recovery || tasks.some(t => t.id === block.taskId && (t.fixedStart || t.plannedBreakAfterTaskId));
   const reorder = (current: ScheduleBlock[], from: number, to: number): {blocks: ScheduleBlock[];base: ScheduleBlock[];error?: string;unchanged?: boolean} => {
     const base = current.filter(b => !b.recovery);
     const moved = current[from];
@@ -31,10 +31,9 @@ export function ScheduleBlocks({ preferences, onOverride, blocks, tasks, config,
     const target = order.filter(b => !b.recovery).findIndex(b => b.id === moved.id);
     const source = base.findIndex(b => b.id===moved.id);
     if (source===target) return {blocks:current,base,unchanged:true};
-    const ordered = reorderSchedule(base,tasks,config,source,target);
-    if (ordered.error) return {...ordered,base};
-    const paced = generateScheduleResult(tasks,config,{preferences,baseSchedule:ordered.blocks});
-    return {blocks:paced.blocks,base:ordered.blocks,error:paced.status==='invalid' ? paced.errors.join(' ') : undefined};
+    const requested = order.filter(b=>!b.recovery);
+    const paced = calculatePlanningSchedule({tasks,config,preferences},{blocks:requested,tasks:[],config});
+    return {blocks:paced.blocks,base:paced.baseSchedule,error:paced.status==='invalid' ? paced.errors.join(' ') : undefined};
   };
   const position = () => {
     const d = drag.current;
@@ -47,7 +46,7 @@ export function ScheduleBlocks({ preferences, onOverride, blocks, tasks, config,
   };
   useLayoutEffect(position, [draft, dragging]);
   const start = (e: PointerEvent<HTMLDivElement>, block: ScheduleBlock) => {
-    if (fixed(block) || e.button !== 0 || (e.target as HTMLElement).closest('button, input, select, a')) return;
+    if (fixed(block) || e.button !== 0 || (e.target as HTMLElement).closest('button, input, select, a, details, label')) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     drag.current = { id: block.id, pointer: e.pointerId, y: e.clientY, originY: e.clientY, grab: e.clientY - e.currentTarget.getBoundingClientRect().top, active: false, blocks, node: e.currentTarget, invalid: false };
   };
@@ -118,7 +117,6 @@ export function ScheduleBlocks({ preferences, onOverride, blocks, tasks, config,
       onDragStart={e => e.preventDefault()} onPointerDown={e => start(e, block)} onPointerMove={movePointer} onPointerUp={() => finish()} onPointerCancel={() => finish(true)}
       onKeyDown={e => { if (e.key === 'Escape' && drag.current) { e.preventDefault(); e.stopPropagation(); finish(true); } }}>
       <TimerBlock block={block} metadata={<TaskSpaceBadge id={block.taskId} spaces={spaces} />} state="preview" timezone={config.timezone} height={timerBlockHeight(block, 'preview')} onRetain={noop} onReflow={noop} scheduleDraggable={!fixed(block)} />
-      {block.recovery && <div className="tb-recovery-controls"><label>Duration <select aria-label={`Recovery duration after ${tasks.find(t => t.id===block.recovery!.anchor.taskId)?.name ?? 'task'}`} value={(Date.parse(block.end)-Date.parse(block.start))/60000} onChange={e => onOverride(block.recovery!.anchor,{durationMinutes:Number(e.target.value)})}>{[...new Set([1,5,10,15,20,30,45,60,90,120,(Date.parse(block.end)-Date.parse(block.start))/60000])].sort((a,b)=>a-b).map(minutes => <option key={minutes} value={minutes}>{minutes} min</option>)}</select></label><button type="button" className="tb-small" onClick={() => onOverride(block.recovery!.anchor,{removed:true})}>Remove break</button>{block.recovery.source==='manual-override' && <button type="button" className="tb-small" onClick={() => onOverride(block.recovery!.anchor)}>Restore automatic</button>}</div>}
       {editing && !block.recovery && <div className="tb-reorder"><button type="button" disabled={index === 0 || fixed(block)} aria-label={`Move ${block.taskName} up`} onClick={() => move(index,index-1)}>↑</button><button type="button" disabled={index === shown.length - 1 || fixed(block)} aria-label={`Move ${block.taskName} down`} onClick={() => move(index,index+1)}>↓</button></div>}
     </div>)}
     {!shown.length && <p className="tb-empty">No tasks fit this time window. Go back to review your workload.</p>}
