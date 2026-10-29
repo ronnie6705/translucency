@@ -1,5 +1,15 @@
 # Rhythm
 
+Active development on `main` is Rhythm-only. The complete integrated Translucency implementation is preserved on the local `translucency` branch at `b48abd5`, before the separation. Switch to that branch in a clean checkout when resuming reflection work.
+
+The active app opens planning, provides Tasks, Timeblocks and Rhythm settings, and syncs only Rhythm. Retired reflection links redirect to planning. Existing Translucency databases and cloud documents are not deleted or migrated; account backup exports retain any cached reflection document. Legacy storage/domain helpers and shared CSS remain for compatibility, but reflection screens are removed from the active application.
+
+The historical integrated-app documentation below describes the archived branch, not the current product navigation.
+
+---
+
+# Rhythm
+
 A local-first Next.js PWA that brings reflection and energy-aware planning into one application. Rhythm is the name of the unified project; Translucency remains its reflection module. The shared visual system comes from Rhythm: system typography, black and indigo backgrounds, glass surfaces, rounded cards and controls, and light/indigo task-building dialogs.
 
 ## Run locally

@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "Rhythm",
     short_name: "Rhythm",
-    description: "Reflection and energy-aware planning, together in Rhythm.",
+    description: "Energy-aware task planning with Rhythm.",
     start_url: "/",
     scope: "/",
     display: "standalone",

@@ -7,7 +7,7 @@ import { authErrorMessage, rememberReturnPage } from '@/lib/cloud/auth-ui';
 type Mode = 'signin' | 'signup' | 'reset' | 'link';
 export function AuthFrame({ children }: { children: ReactNode }) {
   return <main className="auth-screen">
-    <div className="auth-brand"><Waves size={27} aria-hidden="true" /><span>rhythm<span className="auth-brand-caption">REFLECT. PLAN. LIVE.</span></span></div>
+    <div className="auth-brand"><Waves size={27} aria-hidden="true" /><span>rhythm<span className="auth-brand-caption">PLAN. FOCUS. LIVE.</span></span></div>
     <section className="auth-card" aria-label="Your account">{children}</section>
     <p className="auth-footer">A little structure. A little space. All yours.</p>
   </main>;
@@ -68,7 +68,7 @@ export function LoginScreen() {
   return <AuthFrame>
     <p className="auth-eyebrow">ONE ACCOUNT. BOTH SPACES.</p>
     <h1>{title}</h1>
-    <p className="auth-intro">{mode === 'signin' ? 'Your plans, reflections, and a little room to breathe. Sign in to pick up where you left off.' : mode === 'signup' ? 'Bring your Rhythm plans and Translucency reflections together.' : mode === 'reset' ? 'Forgot your password, or only used email links before? We’ll send a link to set a password. Open it in this browser.' : 'We’ll email a sign-in link. Open it in this browser to continue.'}</p>
+    <p className="auth-intro">{mode === 'signin' ? 'Your plans and a little room to breathe. Sign in to pick up where you left off.' : mode === 'signup' ? 'Make room for focused work with energy-aware planning.' : mode === 'reset' ? 'Forgot your password, or only used email links before? We’ll send a link to set a password. Open it in this browser.' : 'We’ll email a sign-in link. Open it in this browser to continue.'}</p>
     {!configured ? <p className="auth-error" role="alert">Accounts are not configured for this deployment. Your stored data has not been changed. Please contact the app owner.</p> : <>
       <form className="auth-form" onSubmit={async event => {
         event.preventDefault();

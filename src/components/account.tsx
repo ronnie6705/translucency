@@ -4,10 +4,7 @@ import type { User } from '@supabase/supabase-js';
 import { cloudClient } from '@/lib/cloud/client';
 import { accountBackup, activeAccount, hasPendingChanges, readAccount, setActiveAccount, syncAccount, useCloudVersion, writeAccount } from '@/lib/cloud/storage';
 import type { Module } from '@/lib/cloud/model';
-import { loadGuestData } from '@/lib/storage';
-import { emptyData } from '@/lib/seed';
 import { emptyLibrary, loadGuestLibrary, mergeLibraries } from '@/modules/rhythm/library';
-import type { AppData } from '@/lib/types';
 import { LoginScreen, PasswordUpdateForm } from '@/components/login-screen';
 
 interface AccountContextValue { user: User | null; status: string; conflicts: Module[]; sync: () => Promise<void> }
@@ -89,8 +86,8 @@ export function AccountProvider({children}: {children: ReactNode}) {
     if (!user) { setStatus('Device only'); return; }
     let stopped = false;
     const run = () => { if (!stopped) void sync(); };
-    // Initialize both account documents before starting background sync.
-    void Promise.all([readAccount(user.id, 'rhythm', emptyLibrary), readAccount(user.id, 'translucency', emptyData)])
+    // Only Rhythm is active; archived reflection documents remain untouched.
+    void readAccount(user.id, 'rhythm', emptyLibrary)
       .then(run).catch(() => { if (!stopped) setStatus('Connect to the internet to open this account on this device.'); });
     const timer = setInterval(run, 30000);
     window.addEventListener('online', run);
@@ -147,7 +144,7 @@ export function AccountControls() {
   return <details className="account-panel">
     <summary><span>{user.email}</span><span>{status}</span></summary>
     <div className="account-content">
-      <h2>One account. Both spaces.</h2>
+      <h2>Your Rhythm account.</h2>
         <p>Signed in as {user.email}. Saved changes sync when connected. This browser retains an offline copy; use a trusted device. This is not end-to-end encryption.</p>
         <p role="status">{status}</p>
         <div className="account-actions">
@@ -163,14 +160,10 @@ export function AccountControls() {
           if (!confirm('Replace this module’s device copy with the cloud version? Export your device account copy first if you need to keep these edits.')) return;
           await useCloudVersion(user.id, module); await sync();
         })}>Use cloud version</button></section>)}
-        <details><summary>Import this browser’s device-only data</summary><p>This uploads your guest reflections and planning records into this account. Matching record IDs keep the account version. Your guest copy remains untouched. Data from localhost must first be exported there.</p>
+        <details><summary>Import this browser’s device-only data</summary><p>This uploads your guest Rhythm planning records into this account. Matching record IDs keep the account version. Your guest copy remains untouched. Data from localhost must first be exported there.</p>
           <button className="button secondary" disabled={busy || conflicts.length > 0} onClick={() => void perform(async () => {
-            if (!confirm('Upload this browser’s guest check-ins, reflections, profile and Rhythm plans to your signed-in Supabase account?')) return;
-            const [guest, rhythm] = await Promise.all([loadGuestData(), loadGuestLibrary()]);
-            await writeAccount<AppData>(user.id, 'translucency', current => {
-              const merge = <T extends {id:string;demo?:boolean}>(a:T[], b:T[]) => [...a,...b.filter(x => !x.demo && !a.some(y => y.id === x.id))];
-              return {...current,profile:current.profile.onboarded ? current.profile : guest.profile,checkIns:merge(current.checkIns,guest.checkIns),roles:merge(current.roles,guest.roles),sessions:merge(current.sessions,guest.sessions),influences:merge(current.influences,guest.influences)};
-            });
+            if (!confirm('Upload this browser’s guest Rhythm plans to your signed-in Supabase account?')) return;
+            const rhythm = await loadGuestLibrary();
             await writeAccount(user.id, 'rhythm', current => mergeLibraries(current as ReturnType<typeof emptyLibrary>, rhythm));
             window.dispatchEvent(new Event('cloud-refreshed')); await sync(); setMessage('Guest data copied into your account workspace. Check the sync status above.');
           })}>Import guest data into my account</button>

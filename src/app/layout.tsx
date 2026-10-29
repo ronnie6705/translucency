@@ -1,13 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import "./influences.css";
 import "@/modules/rhythm/App.css";
 import "./design-system.css";
 export const metadata: Metadata = {
   title: "Rhythm",
   applicationName: "Rhythm",
   description:
-    "Rhythm brings reflection and energy-aware planning together. Understand what you are carrying, then plan a day that respects it.",
+    "Energy-aware task planning. Build a day that respects your energy and helps you focus.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

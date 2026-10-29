@@ -1,5 +1,6 @@
-export const modules = ['translucency', 'rhythm'] as const;
-export type Module = typeof modules[number];
+// Archived data remains readable/exportable, but only Rhythm syncs on main.
+export type Module = 'translucency' | 'rhythm';
+export const modules: readonly Module[] = ['rhythm'];
 export interface CachedDocument { payload: unknown; revision: number; dirty: boolean }
 export interface RemoteDocument { payload: unknown; revision: number }
 function canonical(value: unknown): string {
