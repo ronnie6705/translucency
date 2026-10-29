@@ -68,6 +68,8 @@ test('partial coverage, overlaps, excess duration, unknown blocks and moved anch
 
 test('energy edits instantly replace estimates; dropdown edits and fixed commitments remain supported',()=>{
  const initial={...task('new',45),...DEFAULT_TASK_ESTIMATE};
+ assert.equal(initial.energyRequired,1);
+ assert.equal(initial.durationMinutes,15);
  for(const energy of [1,2,3,4,5] as const) assert.equal(updateTaskEstimate(initial,{energyRequired:energy}).durationMinutes,ENERGY_DURATIONS[energy]);
  const custom=updateTaskEstimate(initial,{durationMinutes:20});
  assert.equal(custom.durationMode,'custom');
@@ -76,7 +78,7 @@ test('energy edits instantly replace estimates; dropdown edits and fixed commitm
  assert.equal(updateTaskEstimate(custom,{energyRequired:5}).durationMinutes,90);
  assert.equal(updateTaskEstimate({...custom,energyRequired:5},{durationMode:'automatic'}).durationMinutes,90);
  assert.equal(updateTaskEstimate(task('legacy',90),{energyRequired:1}).durationMinutes,15);
- for(const protectedTask of [{...initial,fixedStart:'12:00'},{...initial,isBreak:true}]) assert.equal(updateTaskEstimate(protectedTask,{energyRequired:5}).durationMinutes,45);
+ for(const protectedTask of [{...initial,durationMinutes:45,fixedStart:'12:00'},{...initial,durationMinutes:45,isBreak:true}]) assert.equal(updateTaskEstimate(protectedTask,{energyRequired:5}).durationMinutes,45);
  const changed=updateTaskEstimate(initial,{energyRequired:5});
  assert.equal(validateSchedule([changed],{...config,endTime:'13:00'},generateSchedule([changed],{...config,endTime:'13:00'})).excess,30);
 });

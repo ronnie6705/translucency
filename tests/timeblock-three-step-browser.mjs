@@ -74,7 +74,7 @@ try {
  await expect(initialWorkload).toHaveCSS('outline-style','none');
  await expect(flow.locator('.tb-workload-row').first()).toHaveCSS('border-top-color','color(srgb 1 0.360784 0.407843 / 0.5)');
  await expect(flow.locator('.tb-workload-row').first()).toHaveCSS('background-color','rgba(255, 92, 104, 0.3)');
- await expect(flow.locator('.tb-workload-row').first()).toHaveCSS('scale','1');
+ await expect(flow.locator('.tb-workload-row').first()).toHaveCSS('scale','1.02');
  await page.keyboard.press('ArrowDown');
  await expect(flow.locator('.tb-workload-row').nth(1)).toHaveClass(/selected/);
  await page.keyboard.press('ArrowUp');

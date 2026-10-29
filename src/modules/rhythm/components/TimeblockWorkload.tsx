@@ -1,3 +1,4 @@
+import { TaskElementSelector } from "./TaskElementSelector";
 import type { validateSchedule } from '../schedule-validation';
 import { PlanTaskSettings } from './PlanTaskSettings';
 import { taskEnergyStyle } from '../task-energy';
@@ -43,6 +44,7 @@ export function TimeblockWorkload({ tasks, spaces, start, end, feasibility, onUp
   const visibleTasks = [...tasks];
   retiring.forEach(row => { if (!visibleTasks.some(t=>t.id===row.task.id)) visibleTasks.splice(Math.min(row.index,visibleTasks.length),0,row.task); });
   const [selected, setSelected] = useState(0);
+  const [energyShortcuts, setEnergyShortcuts] = useState<Record<string, number>>({});
   const list = useLayoutMotion(visibleTasks.map(t => `${t.id}:${t.durationMinutes}`).join(','));
   const summary = workloadSummary(tasks, start, end);
   const selectedIndex = Math.min(selected, Math.max(0, tasks.length - 1));
@@ -56,19 +58,19 @@ export function TimeblockWorkload({ tasks, spaces, start, end, feasibility, onUp
   return <>
     <section className="tb-workload-main"><div className="tb-list-toolbar"><span>{summary.count} tasks selected</span><button type="button" className="tb-small" onClick={onReset}><FlowIcon name="refresh" />Reset all estimates</button></div>
       <div className="tb-workload-list" ref={list} role="group" aria-label="Workload tasks" aria-describedby="tb-keyboard-hint" tabIndex={0}
-        onKeyDown={e => handleAdjustKey(e, tasks, selectedIndex, focusRow, onUpdate)}>
+        onKeyDown={e => {
+          handleAdjustKey(e, tasks, selectedIndex, focusRow, onUpdate);
+          const task = tasks[selectedIndex];
+          if (e.defaultPrevented && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && task && !task.isBreak) {
+            // A repeated press at the minimum/maximum is still shortcut activity.
+            setEnergyShortcuts(current => ({ ...current, [task.id]: (current[task.id] ?? 0) + 1 }));
+          }
+        }}>
         {visibleTasks.map((task, index) => <div inert={retiring.some(row=>row.task.id===task.id)} key={task.id} data-motion-id={task.id} data-row-index={index} style={taskEnergyStyle(task.energyRequired, task.isBreak)} data-energy={task.isBreak ? undefined : task.energyRequired} className={`tb-workload-row${retiring.some(row=>row.task.id===task.id) ? ' retiring' : ''}${index === selectedIndex ? ' selected' : ''}`}
           onFocusCapture={() => setSelected(index)} onClick={e => { setSelected(index); if (!(e.target as HTMLElement).closest('button,input,select')) list.current?.focus({ preventScroll: true }); }}>
           <FlowIcon name="row-grip" /><div className="tb-task-title">{task.isBreak ? <input aria-label="Break name" value={task.name} onChange={e => onUpdate(task.id, { name: e.target.value })} /> : <span>{task.name}</span>}<TaskSpaceBadge id={task.id} spaces={spaces} /></div>
           <div className="tb-row-controls">
-            {!task.isBreak && <div className={`tb-energy ${energyBand(task.energyRequired).toLowerCase()}`} role="group" aria-label={`Energy for ${task.name}`}>
-              <span className="tb-energy-icon" aria-hidden="true" />
-              {[1,2,3,4,5].map(n => <button key={n} type="button" aria-label={`Set energy ${n} for ${task.name}`} aria-pressed={task.energyRequired === n} onClick={() => onUpdate(task.id, { energyRequired: n as Task['energyRequired'] })}><i className={n <= task.energyRequired ? 'filled' : ''} /></button>)}
-            </div>}
-
-            <label className="tb-duration"><FlowIcon name="task-duration" /><select aria-label={`Duration for ${task.name}`} value={task.durationMinutes} onChange={e => onUpdate(task.id, { durationMinutes: Number(e.target.value) })}>
-              {Array.from(new Set([...Array.from({ length: 48 }, (_, n) => (n + 1) * 15), task.durationMinutes])).sort((a,b) => a-b).map(n => <option key={n} value={n}>{formatTaskDuration(n)}</option>)}
-            </select></label>
+            <TaskElementSelector task={task} energyShortcutPulse={energyShortcuts[task.id] ?? 0} priority={false} onChange={updates => onUpdate(task.id, updates)} />
             <PlanTaskSettings workload task={task} open={openSettings === task.id} onOpenChange={open => setOpenSettings(current => open ? task.id : current === task.id ? null : current)} defaultFixedStart={start} onUpdate={onUpdate} onRemove={() => remove(task,index)} />
           </div>
         </div>)}

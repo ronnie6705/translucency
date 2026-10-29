@@ -7,6 +7,8 @@ import {
 } from "../src/modules/rhythm/library";
 import {
   changeTasks,
+  reorderTask,
+  reorderTaskList,
   groupTasks,
   moveTask,
   updateTask,
@@ -176,4 +178,26 @@ test("malformed Spaces, orphan lists and invalid completion states are rejected"
       ],
     }),
   );
+});
+
+test("rearrange tasks by stable IDs within and between lists without mutating saved data", () => {
+ const data = {...emptyLibrary(), spaces:[space("s",[task("a"), {...task("hidden"),completed:true},task("b")])], taskLists:[{id:"l",spaceId:"s",name:"List",createdAt:"2026-09-10T00:00:00Z",tasks:[task("c")]}]};
+ const reordered = reorderTask(data,{spaceId:"s",taskId:"b"},{spaceId:"s",taskId:"a"});
+ assert.deepEqual(reordered.spaces![0].tasks.map(t=>t.id),["b","a","hidden"]);
+ assert.deepEqual(data.spaces[0].tasks.map(t=>t.id),["a","hidden","b"]);
+ const moved = reorderTask(reordered,{spaceId:"s",taskId:"b"},{spaceId:"s",listId:"l",taskId:"c"},true);
+ assert.deepEqual(moved.taskLists[0].tasks.map(t=>t.id),["c","b"]);
+ assert.deepEqual(moved.spaces![0].tasks.map(t=>t.id),["a","hidden"]);
+ assert.equal(moved.timeblocks,data.timeblocks);
+ assert.throws(()=>reorderTask(data,{spaceId:"s",taskId:"missing"},{spaceId:"s",taskId:"a"}));
+ assert.equal(reorderTask(data,{spaceId:"s",taskId:"a"},{spaceId:"s",taskId:"a"}),data);
+});
+test("rearrange whole lists preserves their tasks and rejects cross-space targets", () => {
+ const lists = ["a","b","c"].map(id=>({id,spaceId:"s",name:id,createdAt:"2026-09-10T00:00:00Z",tasks:[task(id)]}));
+ const data={...emptyLibrary(),spaces:[space("s"),space("other")],taskLists:[...lists,{...lists[0],id:"other",spaceId:"other"}]};
+ const next=reorderTaskList(data,"c","a");
+ assert.deepEqual(next.taskLists.map(l=>l.id),["c","a","b","other"]);
+ assert.equal(next.taskLists[0],lists[2]);
+ assert.deepEqual(data.taskLists.map(l=>l.id),["a","b","c","other"]);
+ assert.throws(()=>reorderTaskList(data,"a","other"));
 });

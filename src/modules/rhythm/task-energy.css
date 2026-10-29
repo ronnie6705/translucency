@@ -8,8 +8,8 @@
 .rhythm-module .tb-flow .plan-catalog-task { border-color:color-mix(in srgb,#ffffff1a var(--task-card-border-opacity),transparent); }
 .rhythm-module .tb-flow .plan-catalog-task[aria-pressed=true] { border-color:#9a9eff88; }
 .rhythm-module .tb-stack-row { border-color:color-mix(in srgb,#9a9eff33 var(--task-card-border-opacity),transparent); }
-.rhythm-module .tb-workload-row { border-color:var(--task-card-border); background:var(--task-energy-tint); transition:border-color 150ms,background-color 150ms; }
-.rhythm-module .tb-workload-row.selected { scale:1; box-shadow:inset 0 0 0 1px #ffffff55; }
+.rhythm-module .tb-workload-row { border-color:var(--task-card-border); background:var(--task-energy-tint); transition:border-color 150ms,background-color 150ms,scale 180ms ease; }
+.rhythm-module .tb-workload-row.selected { scale:1.02; background-image:linear-gradient(#ffffff0a,#ffffff0a); box-shadow:inset 0 0 0 1px #ffffff55; }
 .rhythm-module .tb-energy { color:var(--task-energy-solid); transition:color 150ms; }
 .rhythm-module .live-timer-block:not(.is-break), .rhythm-module .schedule-list li:not(.schedule-break) { border-color:var(--task-card-border); background:var(--task-energy-tint); }
 .rhythm-module .live-timer-block:not(.is-break) .live-timer-task-icon { box-shadow:inset 0 0 0 1px var(--task-energy-solid); }
@@ -86,3 +86,5 @@
 .rhythm-module .timeblock-workspace-card:not(.is-live):not(:hover) { border-color:color-mix(in srgb,#ffffff1a var(--task-card-border-opacity),transparent); }
 .rhythm-module .live-timer-card.live-timer-embedded .live-timer-block { border-color:color-mix(in srgb,#bfc1f133 var(--task-card-border-opacity),transparent); }
 .rhythm-module .live-timer-block:not(.is-break):is(.active,.is-dragging) { border-color:var(--task-energy-solid); }
+
+@media(prefers-reduced-motion:reduce) { .rhythm-module .tb-workload-row { transition:none; } .rhythm-module .tb-workload-row.selected { scale:1; } }

@@ -1,11 +1,10 @@
 import { DEFAULT_TASK_ESTIMATE, updateTaskEstimate } from "../task-duration";
 import { useRef, useState, type PointerEvent } from "react";
 import { useTaskWorkspace } from "../task-workspace";
-import { changeTasks, formatTaskDuration, type TaskLocation } from "../task-spaces";
+import { changeTasks, type TaskLocation } from "../task-spaces";
 import type { Task } from "../types";
-import { QuickTaskValue } from "./task-dialogs";
+import { TaskElementSelector } from "./TaskElementSelector";
 import { TaskAsset } from "./space-icons";
-import { taskEnergyStyle } from "../task-energy";
 
 type Mode = "task" | "list";
 
@@ -15,8 +14,9 @@ export function InlineTaskComposer({ spaceId, listId, listName }: TaskLocation &
   const [mode, setMode] = useState<Mode | null>(null);
   const [taskName, setTaskName] = useState("");
   const [listTitle, setListTitle] = useState("");
-  const [values, setValues] = useState<Pick<Task, "durationMinutes" | "energyRequired" | "durationMode">>({ ...DEFAULT_TASK_ESTIMATE });
-  const [quick, setQuick] = useState<"energy" | "time" | null>(null);
+  const [values, setValues] = useState<Pick<Task, "durationMinutes" | "energyRequired" | "durationMode" | "priority">>({ ...DEFAULT_TASK_ESTIMATE, priority: 3 });
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [draftVersion, setDraftVersion] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -24,7 +24,7 @@ export function InlineTaskComposer({ spaceId, listId, listName }: TaskLocation &
   const taskInput = useRef<HTMLInputElement>(null);
   const listInput = useRef<HTMLInputElement>(null);
   const saving = useRef(false);
-  const pinned = !!taskName || !!listTitle || !!quick || busy;
+  const pinned = !!taskName || !!listTitle || selectorOpen || busy;
   const preview = (next: Mode, event: PointerEvent) => {
     if (!listId && event.pointerType === "mouse" && !pinned && !root.current?.contains(document.activeElement)) setMode(next);
   };
@@ -43,42 +43,32 @@ export function InlineTaskComposer({ spaceId, listId, listName }: TaskLocation &
     const id = crypto.randomUUID();
     try {
       const ok = await library.save(d => kind === "task"
-        ? changeTasks(d, { spaceId, listId }, tasks => [...tasks, { id, name, ...values, priority: 2, completed: false }])
+        ? changeTasks(d, { spaceId, listId }, tasks => [...tasks, { id, name, ...values, completed: false }])
         : { ...d, taskLists: [...d.taskLists, { id, name, spaceId, createdAt: new Date().toISOString(), tasks: [] }] });
       if (ok) {
-        if (kind === "task") setTaskName(""); else setListTitle("");
+        if (kind === "task") {
+          setTaskName("");
+          setValues({ ...DEFAULT_TASK_ESTIMATE, priority: 3 });
+          setSelectorOpen(false);
+          setDraftVersion(v => v + 1);
+        } else setListTitle("");
         setNotice(`${kind === "task" ? "Task" : "Task list"} added.`);
         requestAnimationFrame(() => (kind === "task" ? taskInput : listInput).current?.focus());
       } else setError("Couldn’t save. Your entry is still here—please try again.");
     } catch { setError("Couldn’t save. Your entry is still here—please try again."); }
     finally { saving.current = false; setBusy(false); }
   };
-  const picker = (kind: "energy" | "time") => (
-    <div className="task-quick-anchor">
-      <button type="button" disabled={busy} className={kind === "energy" ? "task-energy-value" : undefined}
-        style={kind === "energy" ? taskEnergyStyle(values.energyRequired) : undefined}
-        aria-label={kind === "energy" ? "Task energy" : "Task duration"} aria-expanded={quick === kind}
-        onClick={() => { setMode("task"); setQuick(quick === kind ? null : kind); }}>
-        <TaskAsset name={kind === "energy" ? "composer-energy" : "composer-duration"} />
-        {taskName && <span>{kind === "energy" ? values.energyRequired : formatTaskDuration(values.durationMinutes)}</span>}
-      </button>
-      {quick === kind && <QuickTaskValue task={values} mode={kind}
-        onChange={updates => { setValues(v => updateTaskEstimate(v, updates)); return true; }}
-        onClose={() => { setQuick(null); taskInput.current?.focus(); }} />}
-    </div>
-  );
   return <div ref={root} className={`inline-create ${listId ? "inline-create-in-list" : ""}`} data-mode={mode ?? "idle"}
     onPointerLeave={leave}
     onBlur={e => {
       if (!e.currentTarget.contains(e.relatedTarget)) {
-        setQuick(null);
-        if (!taskName && !listTitle && !busy) setMode(null);
+        if (!selectorOpen && !taskName && !listTitle && !busy) setMode(null);
       }
     }}
     onKeyDown={e => {
       if (e.key === "Escape" && !busy) {
         e.preventDefault(); e.stopPropagation();
-        if (quick) { setQuick(null); taskInput.current?.focus(); return; }
+        if (selectorOpen) return;
         setMode(null);
         (document.activeElement as HTMLElement)?.blur();
         requestAnimationFrame(() => root.current?.querySelector<HTMLButtonElement>(`.inline-create-trigger[data-kind="${mode ?? "task"}"]`)?.focus());
@@ -90,7 +80,7 @@ export function InlineTaskComposer({ spaceId, listId, listName }: TaskLocation &
         return <div key={kind} className={`inline-create-lane lane-${kind}`} aria-hidden={mode !== null && !active ? true : undefined} inert={mode !== null && !active ? true : undefined}
           onPointerEnter={e => preview(kind, e)}>
           <form aria-hidden={!active && !listId ? true : undefined} className="inline-create-form" aria-label={kind === "task" ? `Add task to ${listName ?? "Space"}` : "Add task list"}
-            onSubmit={e => { e.preventDefault(); if (!quick) void save(kind); }}>
+            onSubmit={e => { e.preventDefault(); void save(kind); }}>
             <span className="inline-create-icon" aria-hidden="true"><TaskAsset name={listId ? "composer-list-plus" : kind === "task" ? "composer-add-task" : "composer-add-list"} /></span>
             <input ref={kind === "task" ? taskInput : listInput} className="inline-create-name" disabled={busy}
               tabIndex={active ? 0 : -1} aria-label={kind === "task" ? "Task name" : "Task list name"}
@@ -98,7 +88,10 @@ export function InlineTaskComposer({ spaceId, listId, listName }: TaskLocation &
               maxLength={kind === "task" ? 500 : 100} value={kind === "task" ? taskName : listTitle}
               onFocus={() => setMode(kind)} onChange={e => { (kind === "task" ? setTaskName : setListTitle)(e.target.value); setError(""); setNotice(""); }} />
             <div className="inline-create-controls" inert={!active && !listId ? true : undefined}>
-              {kind === "task" && <>{picker("energy")}{picker("time")}</>}
+              {kind === "task" && <TaskElementSelector key={draftVersion}
+                task={{ id: "new-task", name: "new task", ...values }} disabled={busy}
+                onChange={updates => { setValues(v => updateTaskEstimate(v, updates)); }}
+                onExpandedChange={open => { setSelectorOpen(open); setMode("task"); }} /> }
               {(!listId || active) && <button type="submit" disabled={busy || !library.ready || !(kind === "task" ? taskName : listTitle).trim()}>{busy ? "Saving…" : "Save"}</button>}
             </div>
           </form>

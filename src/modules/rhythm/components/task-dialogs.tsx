@@ -345,7 +345,7 @@ export function AddTaskOverlay({
     id: crypto.randomUUID(),
     name: name.trim(),
     ...task,
-    priority: 2,
+    priority: 3,
     completed: false,
   });
   const save = async () => {

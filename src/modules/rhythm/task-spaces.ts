@@ -228,3 +228,25 @@ export function formatTaskDuration(total: number) {
     m = total % 60;
   return h ? `${h}h${m ? ` ${m}m` : ""}` : `${m}m`;
 }
+
+/** Move relative to a stable task ID, preserving hidden/completed tasks and saved plans. */
+export function reorderTask(data: RhythmLibrary, source: TaskReference, target: TaskReference, after = false): RhythmLibrary {
+  if (source.taskId === target.taskId) return data;
+  const task = tasksAt(data, source).find(t => t.id === source.taskId);
+  if (!task || !tasksAt(data, target).some(t => t.id === target.taskId)) throw new Error("A task was moved or deleted. Please try again.");
+  const next = changeTasks(data, source, tasks => tasks.filter(t => t.id !== source.taskId));
+  return changeTasks(next, target, tasks => {
+    const ordered = [...tasks];
+    ordered.splice(ordered.findIndex(t => t.id === target.taskId) + Number(after), 0, task);
+    return ordered;
+  });
+}
+export function reorderTaskList(data: RhythmLibrary, sourceId: string, targetId: string, after = false): RhythmLibrary {
+  if (sourceId === targetId) return data;
+  const source = data.taskLists.find(l => l.id === sourceId);
+  const target = data.taskLists.find(l => l.id === targetId);
+  if (!source || !target || source.spaceId !== target.spaceId) throw new Error("Choose lists in the same Space.");
+  const taskLists = data.taskLists.filter(l => l.id !== sourceId);
+  taskLists.splice(taskLists.findIndex(l => l.id === targetId) + Number(after), 0, source);
+  return {...data, taskLists};
+}

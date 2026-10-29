@@ -113,11 +113,11 @@
 .rhythm-module .tb-workload-main { min-width:0; min-height:0; display:flex; flex-direction:column; }
 .rhythm-module .tb-list-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; min-height:31px; color:var(--tb-accent); font-size:16px; font-weight:500; }
 .rhythm-module .tb-list-toolbar .tb-small { border-radius:20px; padding:8px 16px; }
-.rhythm-module .tb-workload-list { display:flex; flex-direction:column; gap:12px; overflow:auto; position:relative; min-height:0; padding:6px 8px; border-radius:20px; scrollbar-width:thin; }
+.rhythm-module .tb-workload-list { display:flex; flex-direction:column; gap:12px; overflow:auto; position:relative; min-height:0; padding:8px max(12px, 1.25%); border-radius:0; scrollbar-width:thin; }
 /* Selection on the individual card replaces the group's browser focus outline. */
 .rhythm-module .tb-workload-list:focus,.rhythm-module .tb-workload-list:focus-visible { outline:none; box-shadow:none; }
 .rhythm-module .tb-workload-row { display:flex; gap:12px; align-items:center; min-height:64px; flex-shrink:0; padding:14px 16px 14px 20px; border:1px solid var(--task-energy-solid); border-radius:20px; background:var(--task-energy-tint); scale:1; transition:border-color 150ms ease,background-color 150ms ease; }
-.rhythm-module .tb-workload-row.selected { scale:1; position:relative; z-index:1; }
+.rhythm-module .tb-workload-row.selected { scale:1.02; position:relative; z-index:1; }
 .rhythm-module .tb-workload-row > .tb-icon { max-width:8px; height:16px; }
 .rhythm-module .tb-task-title { display:flex; align-items:center; gap:12px; font-size:20px; flex:1; min-width:0; }
 .rhythm-module .tb-task-title > span:first-child { overflow-wrap:anywhere; }

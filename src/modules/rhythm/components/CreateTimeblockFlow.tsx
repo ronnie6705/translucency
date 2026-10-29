@@ -125,7 +125,7 @@ export function CreateTimeblockFlow({ initialAdjustments, initialPreferences, in
     const existing = catalog.find(t => t.name.toLowerCase() === name.toLowerCase());
     if (existing) { add(existing); setQuery(''); return; }
     setCreating(true);
-    const task: Task = { id: crypto.randomUUID(), name, ...DEFAULT_TASK_ESTIMATE, priority: 2, completed: false };
+    const task: Task = { id: crypto.randomUUID(), name, ...DEFAULT_TASK_ESTIMATE, priority: 3, completed: false };
     try { if (await onCreateTask(task, filter)) { add(task); setQuery(''); } } finally { setCreating(false); }
   };
   const clear = () => { removalTimers.current.forEach(clearTimeout); removalTimers.current.clear(); setRemoving(new Set()); onTasksChange([]); };
