@@ -34,6 +34,10 @@ test('deduplication survives reflow and task splits but allows a new launch', ()
 test('subscriptions cannot target local, arbitrary, or spoofed push endpoints', () => {
   const subscription = { endpoint: 'https://fcm.googleapis.com/fcm/send/capability', keys: { p256dh: 'B'.repeat(87), auth: 'A'.repeat(22) } };
   assert.equal(validPushSubscription(subscription), true);
+  assert.equal(validPushSubscription({ ...subscription, endpoint: 'https://jmt17.google.com/fcm/send/capability' }), true);
+  for (const endpoint of ['https://jmt17.google.com.evil.test/fcm/send/a', 'https://jmt17.google.com/other', 'https://other.google.com/fcm/send/a', 'http://jmt17.google.com/fcm/send/a', 'https://jmt17.google.com:444/fcm/send/a', 'https://user@jmt17.google.com/fcm/send/a']) {
+    assert.equal(validPushSubscription({ ...subscription, endpoint }), false);
+  }
   for (const endpoint of ['http://fcm.googleapis.com/a', 'https://localhost/a', 'https://fcm.googleapis.com.evil.test/a', 'https://fcm.googleapis.com:444/a', 'https://user@fcm.googleapis.com/a']) {
     assert.equal(validPushSubscription({ ...subscription, endpoint }), false);
   }

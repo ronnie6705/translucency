@@ -27,6 +27,8 @@ export function validPushSubscription(value: unknown): value is { endpoint: stri
   try {
     const url = new URL(s.endpoint);
     const allowed = url.hostname === 'fcm.googleapis.com' || url.hostname === 'updates.push.services.mozilla.com'
+      // Chromium's alternative FCM endpoint, also returned by Arc on Windows.
+      || (url.hostname === 'jmt17.google.com' && url.pathname.startsWith('/fcm/send/'))
       || url.hostname.endsWith('.push.apple.com') || url.hostname.endsWith('.notify.windows.com');
     return allowed && url.protocol === 'https:' && !url.port && !url.username && !url.password && !url.hash
       && typeof s.keys?.p256dh === 'string' && /^[A-Za-z0-9_-]{87}$/.test(s.keys.p256dh)
