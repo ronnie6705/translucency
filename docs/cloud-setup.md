@@ -1,5 +1,8 @@
 # Supabase + Vercel
 
+Task-start browser notifications have additional server configuration and a
+Supabase scheduled dispatcher; see [task-notifications.md](task-notifications.md).
+
 ## Provisioned resources
 
 - App: https://rhythm-platform-seven.vercel.app

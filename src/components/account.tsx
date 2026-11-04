@@ -6,6 +6,7 @@ import { accountBackup, activeAccount, hasPendingChanges, readAccount, setActive
 import type { Module } from '@/lib/cloud/model';
 import { emptyLibrary, loadGuestLibrary, mergeLibraries } from '@/modules/rhythm/library';
 import { LoginScreen, PasswordUpdateForm } from '@/components/login-screen';
+import { disableTaskNotifications } from '@/lib/notifications/client';
 
 interface AccountContextValue { user: User | null; status: string; conflicts: Module[]; sync: () => Promise<void> }
 const AccountContext = createContext<AccountContextValue>({user:null,status:'Device only',conflicts:[],sync:async () => {}});
@@ -152,6 +153,7 @@ export function AccountControls() {
           <button className="button secondary" disabled={busy} onClick={() => void perform(async () => download(await accountBackup(user.id), 'rhythm-account-backup.json'))}>Export device account copy</button>
           <button className="button secondary" disabled={busy} onClick={() => void perform(async () => {
             if (await hasPendingChanges(user.id) && !confirm('Some changes have not synced. They will remain in this browser for this account. Sign out anyway?')) return;
+            await disableTaskNotifications();
             const {error} = await cloudClient()!.auth.signOut({scope:'local'}); if (error) throw error;
           })}>Sign out</button>
         </div>

@@ -10,7 +10,7 @@ import type { CatalogSpace } from './PlanTaskCatalog';
 import { useLayoutMotion } from './use-layout-motion';
 
 const noop = () => {};
-type Drag = { id: string; pointer: number; y: number; originY: number; grab: number; active: boolean; blocks: ScheduleBlock[]; base?: ScheduleBlock[]; node: HTMLDivElement; invalid: boolean };
+type Drag = { id: string; pointer: number; y: number; originY: number; grab: number; active: boolean; blocks: ScheduleBlock[]; targets: number[]; base?: ScheduleBlock[]; node: HTMLDivElement; invalid: boolean };
 export function ScheduleBlocks({ preferences, blocks, tasks, config, spaces, editing, onChange, onMessage, pending = false }: {
   onTaskUpdate?(id:string,patch:Partial<Task>):void; onTaskRemove?(id:string):void; onAddBreak?(id:string,minutes:number):void; pending?:boolean; pendingBreak?:boolean;
   preferences: BreakPreferences; onOverride(anchor: RecoveryAnchor, override?: Omit<RecoveryOverride,'anchor'>): void;
@@ -32,7 +32,7 @@ export function ScheduleBlocks({ preferences, blocks, tasks, config, spaces, edi
     const source = base.findIndex(b => b.id===moved.id);
     if (source===target) return {blocks:current,base,unchanged:true};
     const requested = order.filter(b=>!b.recovery);
-    const paced = calculatePlanningSchedule({tasks,config,preferences},{blocks:requested,tasks:[],config});
+    const paced = calculatePlanningSchedule({tasks,config,preferences},{blocks:requested,tasks:[],config,fillFixedGaps:true});
     return {blocks:paced.blocks,base:paced.baseSchedule,error:paced.status==='invalid' ? paced.errors.join(' ') : undefined};
   };
   const position = () => {
@@ -48,7 +48,9 @@ export function ScheduleBlocks({ preferences, blocks, tasks, config, spaces, edi
   const start = (e: PointerEvent<HTMLDivElement>, block: ScheduleBlock) => {
     if (fixed(block) || e.button !== 0 || (e.target as HTMLElement).closest('button, input, select, a, details, label')) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    drag.current = { id: block.id, pointer: e.pointerId, y: e.clientY, originY: e.clientY, grab: e.clientY - e.currentTarget.getBoundingClientRect().top, active: false, blocks, node: e.currentTarget, invalid: false };
+    const targets = [...list.current!.querySelectorAll<HTMLElement>('.tb-schedule-slot[data-motion-id]')]
+      .filter(row => row.dataset.motionId !== block.id).map(row => row.offsetTop + row.offsetHeight / 2);
+    drag.current = { id: block.id, pointer: e.pointerId, y: e.clientY, originY: e.clientY, grab: e.clientY - e.currentTarget.getBoundingClientRect().top, active: false, blocks, targets, node: e.currentTarget, invalid: false };
   };
   const movePointer = (e: PointerEvent<HTMLDivElement>) => {
     const d = drag.current;
@@ -65,17 +67,15 @@ export function ScheduleBlocks({ preferences, blocks, tasks, config, spaces, edi
     const bounds = container.getBoundingClientRect();
     if (d.y < bounds.top + 36) container.scrollTop -= 14;
     if (d.y > bounds.bottom - 36) container.scrollTop += 14;
-    const rows = [...container.querySelectorAll<HTMLElement>('.tb-schedule-slot[data-motion-id]')];
     const from = d.blocks.findIndex(b => b.id === d.id);
-    const others = rows.filter(row => row.dataset.motionId !== d.id);
-    // Untransformed layout positions avoid targets chasing the spring animation.
-    const to = others.filter(row => d.y > bounds.top + row.offsetTop - container.scrollTop + row.offsetHeight / 2).length;
-    if (from === to) { d.invalid = false; return; }
+    // Each preview starts from the drag's original segments and layout. A preview
+    // may split work around a fixed event; those temporary pieces aren't new targets.
+    const to = d.targets.filter(midpoint => d.y > bounds.top + midpoint - container.scrollTop).length;
+    if (from === to) { d.invalid = false; d.base = undefined; setDraft(null); onMessage(''); return; }
     const result = reorder(d.blocks, from, to);
     d.invalid = !!result.error;
-    if (result.unchanged) return;
+    if (result.unchanged) { d.base = undefined; setDraft(null); onMessage(''); return; }
     if (result.error) { onMessage(result.error); return; }
-    d.blocks = result.blocks;
     d.base = result.base;
     setDraft(result.blocks);
     onMessage('');

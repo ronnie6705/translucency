@@ -23,13 +23,13 @@ test('branding update retires old app shells but leaves unrelated caches alone',
       clients: { claim: async () => { claimed = true; } },
     },
     caches: {
-      keys: async () => ['translucency-shell-v5-login', 'rhythm-shell-v5', 'rhythm-shell-v6-brand', 'unrelated-cache'],
+      keys: async () => ['translucency-shell-v5-login', 'rhythm-shell-v5', 'rhythm-shell-v6-brand', 'rhythm-shell-v7-notifications', 'unrelated-cache'],
       delete: async (name: string) => { removed.push(name); },
     },
   });
   let completion: Promise<void> | undefined;
   listeners.get('activate')!({ waitUntil: work => { completion = work; } });
   await completion;
-  assert.deepEqual(removed, ['translucency-shell-v5-login', 'rhythm-shell-v5']);
+  assert.deepEqual(removed, ['translucency-shell-v5-login', 'rhythm-shell-v5', 'rhythm-shell-v6-brand']);
   assert.equal(claimed, true);
 });

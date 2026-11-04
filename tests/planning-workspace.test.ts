@@ -104,6 +104,35 @@ test('invalid ranges, fixed conflicts and oversized work produce pending results
   const r=calculatePlanningSchedule(i);assert.equal(r.status,'invalid');
  }
 });
+
+test('moving work to the end fills capacity around fixed lunch and meeting times',()=>{
+ const day={...config,startTime:'11:00',endTime:'17:00'};
+ const tasks=[task('post',45),task('site',45),task('bugs',60),task('lunch',60,{isBreak:true,fixedStart:'13:00'}),task('meeting',60,{fixedStart:'14:00'}),task('home',90)];
+ const initialOrder=order([tasks[0],tasks[1],{...tasks[2],durationMinutes:30},tasks[3],tasks[4],{...tasks[2],id:'bugs-tail',durationMinutes:30},tasks[5]],day);
+ initialOrder.blocks=initialOrder.blocks.map(b=>b.id==='bugs-tail'?{...b,taskId:'bugs',workOffsetMinutes:30}:b);
+ const initial=calculatePlanningSchedule({...inputs(tasks,day),preferences:{preset:'none',overrides:[]}},{...initialOrder,tasks});
+ assert.notEqual(initial.status,'invalid');
+ const moved=initial.baseSchedule.find(b=>b.taskId==='site')!;
+ const requested=[...initial.baseSchedule.filter(b=>b.id!==moved.id),moved];
+ const before=structuredClone(requested);
+ for(const preset of ['none','balanced','deep-focus','frequent'] as const){
+  const r=calculatePlanningSchedule({...inputs(tasks,day),preferences:{preset,overrides:[]}},{blocks:requested,tasks:[],config:day,fillFixedGaps:true});
+  assert.notEqual(r.status,'invalid',r.errors.join(' '));
+  assert.equal(validateSchedule(tasks,day,r.blocks).valid,true);
+  assert.equal(r.blocks.at(-1)?.taskId,'site');
+  assert.equal(r.blocks.at(-1)?.end,'2026-10-23T17:00:00.000Z');
+  for(const id of ['lunch','meeting']) assert.equal(r.blocks.find(b=>b.taskId===id)?.start,initial.blocks.find(b=>b.taskId===id)?.start);
+ }
+ assert.deepEqual(requested,before);
+});
+
+test('fixed commitments remain scheduled when flexible work finishes before them',()=>{
+ const tasks=[task('a',30),task('meeting',60,{fixedStart:'14:00'})];
+ const r=calculatePlanningSchedule({...inputs(tasks),preferences:{preset:'none',overrides:[]}},{...order(tasks),tasks:[],fillFixedGaps:true});
+ assert.equal(r.status,'valid');
+ assert.equal(r.blocks.at(-1)?.taskId,'meeting');
+ assert.equal(r.blocks.at(-1)?.start,'2026-10-23T14:00:00.000Z');
+});
 test('protected break metadata roundtrips and ICS contains only accepted, fully placed blocks',()=>{
  const i=inputs([task('a'),task('b'),protectedBreak]);const r=calculatePlanningSchedule(i);assert.notEqual(r.status,'invalid');
  const saved={id:'new',name:'Copy',createdAt:'2026-10-23T00:00:00Z',dayConfig:config,tasks:i.tasks,schedule:r.blocks,breakPreferences:i.preferences,recoveryBaseSchedule:r.baseSchedule};

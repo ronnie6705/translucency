@@ -5,6 +5,7 @@ import { TaskWorkspaceProvider } from "@/modules/rhythm/task-workspace";
 import Rhythm from "@/modules/rhythm/App";
 import { RhythmDataSettings } from "@/modules/rhythm/data-settings";
 import { AccountControls } from "./account";
+import { TaskNotificationSettings } from './task-notification-settings';
 export type Page = "rhythm" | "rhythm-tasks" | "rhythm-timeblocks" | "settings" | "privacy";
 const pages: readonly string[] = ["rhythm", "rhythm-tasks", "rhythm-timeblocks", "settings", "privacy"];
 export default function App() {
@@ -45,7 +46,7 @@ export default function App() {
         {page === "rhythm" && <header className="module-heading"><p>PLAN WITH YOUR ENERGY</p><h1>Find your rhythm.</h1><span>A little structure. More room for life.</span></header>}
         <Rhythm section={page} />
       </div>
-      {settings && <section className="rhythm-settings"><header className="module-heading"><h1>Settings &amp; privacy</h1><p>Manage your Rhythm planning data.</p></header><RhythmDataSettings /></section>}
+      {settings && <section className="rhythm-settings"><header className="module-heading"><h1>Settings &amp; privacy</h1><p>Manage your Rhythm planning data.</p></header><TaskNotificationSettings /><RhythmDataSettings /></section>}
       {notice && <div className="platform-toast" role="status">{notice}</div>}
     </main>
   </PlatformShell></TaskWorkspaceProvider>;

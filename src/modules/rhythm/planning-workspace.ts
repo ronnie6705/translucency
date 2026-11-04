@@ -8,7 +8,11 @@ import { validateTimeblockPlan } from './timeblock-plan';
 import { createDateInTimeZone } from './utils/timezone';
 
 export interface PlanningInputs { tasks: Task[]; config: DayConfig; preferences: BreakPreferences }
-export interface PlanningOrder { blocks: ScheduleBlock[]; tasks: Task[]; config: DayConfig }
+export interface PlanningOrder {
+  blocks: ScheduleBlock[]; tasks: Task[]; config: DayConfig;
+  /** Explicit reordering can fill space freed before fixed commitments. */
+  fillFixedGaps?: boolean;
+}
 export interface PlanningSnapshot extends PlanningInputs { adjustments?:TimeAdjustments; result: SchedulingResult; order: PlanningOrder | null }
 const invalid = (errors: string[], baseSchedule: ScheduleBlock[] = []): SchedulingResult => ({
   status:'invalid', blocks:[], baseSchedule, errors, notices:[], inactiveOverrideKeys:[],
@@ -53,7 +57,7 @@ export function calculatePlanningSchedule(inputs: PlanningInputs, order: Plannin
   if (missing.length) return invalid(missing.map(t=>`${t.name} needs a new task boundary. Reposition or cancel this break.`));
   const ordinary = tasks.filter(t=>!t.plannedBreakAfterTaskId);
   // Preserve an untouched accepted schedule, including intentional idle gaps.
-  if (order && JSON.stringify(order.tasks)===JSON.stringify(tasks) && JSON.stringify(order.config)===JSON.stringify(config)) {
+  if (order && !order.fillFixedGaps && JSON.stringify(order.tasks)===JSON.stringify(tasks) && JSON.stringify(order.config)===JSON.stringify(config)) {
     return generateScheduleResult(tasks,config,{preferences,baseSchedule:order.blocks});
   }
   let base = order ? updateOrderedEstimates(order,ordinary,config) : generateSchedule(ordinary,config);
@@ -70,7 +74,7 @@ export function calculatePlanningSchedule(inputs: PlanningInputs, order: Plannin
     base.splice(index+1,0,{id:`planned-${task.id}`,taskId:task.id,taskName:task.name,isBreak:true,start:new Date(start).toISOString(),end:new Date(start+task.durationMinutes*60000).toISOString()});
   }
   if (order || anchored.length) {
-    const placed = placeOrderedBlocks(base,createDateInTimeZone(config.date,config.startTime,config.timezone).getTime(),createDateInTimeZone(config.date,config.endTime,config.timezone).getTime(),false,true);
+    const placed = placeOrderedBlocks(base,createDateInTimeZone(config.date,config.startTime,config.timezone).getTime(),createDateInTimeZone(config.date,config.endTime,config.timezone).getTime(),false,true,order?.fillFixedGaps);
     if (placed.error) return invalid([placed.error],base);
     base = placed.blocks;
   }

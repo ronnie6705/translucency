@@ -6,7 +6,7 @@ export function sliceScheduleBlock(block: ScheduleBlock, offsetMinutes: number, 
   return { ...block, id, start: new Date(start).toISOString(), end: new Date(start + durationMinutes * 60000).toISOString() };
 }
 /** Ordered placement used by drag/recovery; fixed commitments are never moved. */
-export function placeOrderedBlocks(blocks: ScheduleBlock[], start: number, end: number, preserveGaps = false, splitAroundFixed = false): { blocks: ScheduleBlock[]; error?: string } {
+export function placeOrderedBlocks(blocks: ScheduleBlock[], start: number, end: number, preserveGaps = false, splitAroundFixed = false, fillFixedGaps = false): { blocks: ScheduleBlock[]; error?: string } {
   if (splitAroundFixed) {
     // Planning may redistribute work around fixed commitments, using the same slicing primitive.
     // Fixed cards retain their clock times; flexible work retains its relative order and full estimate.
@@ -16,7 +16,9 @@ export function placeOrderedBlocks(blocks: ScheduleBlock[], start: number, end: 
     let cursor = start;
     const emitFixed = (block:ScheduleBlock) => { queue.push(block); emitted.add(block.id); cursor=Date.parse(block.end); };
     for (const block of blocks) {
-      if (block.isFixed) { if(!emitted.has(block.id)) emitFixed(block); continue; }
+      // Fixed cards are clock anchors, not queue barriers. Moving work past one
+      // must let the remaining flexible work fill the space before it.
+      if (block.isFixed) { if (!fillFixedGaps && !emitted.has(block.id)) emitFixed(block); continue; }
       let remaining = blockMinutes(block), offset = 0;
       while (remaining > 0) {
         const commitment = fixed.find(b=>!emitted.has(b.id));
@@ -29,6 +31,7 @@ export function placeOrderedBlocks(blocks: ScheduleBlock[], start: number, end: 
         if (remaining>0 && commitment) emitFixed(commitment);
       }
     }
+    for (const block of fixed) if (!emitted.has(block.id)) emitFixed(block);
     return placeOrderedBlocks(queue,start,end);
   }
   let cursor = start;

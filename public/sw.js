@@ -1,4 +1,4 @@
-const CACHE = "rhythm-shell-v6-brand";
+const CACHE = "rhythm-shell-v7-notifications";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -24,6 +24,30 @@ self.addEventListener("install", (event) => {
       await self.skipWaiting();
     })(),
   );
+});
+
+self.addEventListener('push', event => {
+  event.waitUntil((async () => {
+    let message;
+    try { message = event.data?.json(); } catch { return; }
+    if (!message || typeof message.title !== 'string' || typeof message.tag !== 'string') return;
+    if (typeof message.expiresAt !== 'number' || message.expiresAt <= Date.now()) return;
+    await self.registration.showNotification(message.title, {
+      body: message.body, icon: '/icon-192.png', badge: '/icon-192.png',
+      tag: message.tag, renotify: false, data: { url: '/#rhythm-timeblocks' },
+    });
+  })());
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const url = new URL('/#rhythm-timeblocks', self.location.origin).href;
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const existing = windows.find(client => new URL(client.url).origin === self.location.origin);
+    if (existing) { await existing.navigate(url); await existing.focus(); }
+    else await self.clients.openWindow(url);
+  })());
 });
 self.addEventListener("activate", (event) => {
   event.waitUntil(
